@@ -1,0 +1,63 @@
+name: DomScan
+description: >-
+  Domain intelligence API for domain availability, DNS, WHOIS/RDAP, valuation, security checks, email posture, social
+  handle checks, and monitoring workflows. Offers REST API, machine-readable contracts, a hosted MCP server, and
+  llms.txt.
+url: https://domscan.apievangelist.com/apis.yml
+created: '2026-07-12'
+modified: '2026-07-12'
+specificationVersion: '0.21'
+tags:
+  - domains
+  - dns
+  - whois
+  - rdap
+  - ssl-tls
+  - email-security
+  - domain-valuation
+  - brand-protection
+  - osint
+  - threat-intelligence
+  - mcp
+  - agent-native
+apis:
+  - name: DomScan API
+    description: >-
+      REST domain-intelligence API (40+ endpoints under /v1) for availability, DNS, WHOIS/RDAP, SSL/TLS, email auth,
+      valuation, security, and OSINT, with API-key authentication.
+    humanURL: https://domscan.net/docs
+    baseURL: https://domscan.net
+    tags:
+      - domains
+      - dns
+      - whois
+      - rdap
+      - ssl-tls
+      - email-security
+      - domain-valuation
+      - brand-protection
+      - osint
+      - threat-intelligence
+      - mcp
+      - agent-native
+    properties:
+      - type: OpenAPI
+        url: https://domscan.net/v1/openapi.json
+      - type: OpenAPI
+        url: https://domscan.net/v1/swagger.json
+      - type: PostmanCollection
+        url: https://domscan.net/v1/postman.json
+      - type: LLMSTxt
+        url: https://domscan.net/llms.txt
+      - type: MCP
+        url: https://domscan.net/mcp
+      - type: Documentation
+        url: https://domscan.net/docs
+maintainers:
+  - FN: estevecastells
+    url: https://github.com/estevecastells
+generated:
+  by: apis.io/add
+  model: claude-opus-4-8
+  confidence: 95
+  at: '2026-07-12T14:21:20.829Z'
