@@ -61,7 +61,7 @@ apis:
         url: https://domscan.net/v1/postman.json
       - type: LLMSTxt
         url: https://domscan.net/llms.txt
-      - type: MCP
+      - type: MCPServer
         url: https://domscan.net/mcp
       - type: Documentation
         url: https://domscan.net/docs
