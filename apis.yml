@@ -15,7 +15,7 @@ description: >-
   Domain intelligence API for domain availability, DNS, WHOIS/RDAP, valuation, security checks, email posture, social
   handle checks, and monitoring workflows. Offers REST API, machine-readable contracts, a hosted MCP server, and
   llms.txt.
-url: https://domscan.apievangelist.com/apis.yml
+url: https://raw.githubusercontent.com/api-evangelist/domscan/refs/heads/main/apis.yml
 created: '2026-07-12'
 modified: '2026-07-12'
 specificationVersion: '0.21'
