@@ -20,6 +20,19 @@ created: '2026-07-12'
 modified: '2026-07-12'
 specificationVersion: '0.23'
 tags:
+  - Domains
+  - DNS
+  - WHOIS
+  - rdap
+  - SSL/TLS
+  - Email Security
+  - domain-valuation
+  - Brand Protection
+  - OSINT
+  - Threat Intelligence
+  - MCP
+  - agent-native
+tags_raw:
   - domains
   - dns
   - whois
@@ -40,6 +53,19 @@ apis:
     humanURL: https://domscan.net/docs
     baseURL: https://domscan.net
     tags:
+      - Domains
+      - DNS
+      - WHOIS
+      - rdap
+      - SSL/TLS
+      - Email Security
+      - domain-valuation
+      - Brand Protection
+      - OSINT
+      - Threat Intelligence
+      - MCP
+      - agent-native
+    tags_raw:
       - domains
       - dns
       - whois
