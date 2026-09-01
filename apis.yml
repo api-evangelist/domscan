@@ -32,13 +32,13 @@ modified: '2026-07-12'
 specificationVersion: '0.23'
 tags:
   - Domains
-  - dns
-  - whois
+  - DNS
+  - WHOIS
   - rdap
-  - ssl-tls
-  - email-security
+  - SSL/TLS
+  - Email Security
   - domain-valuation
-  - brand-protection
+  - Brand Protection
   - OSINT
   - Threat Intelligence
   - MCP
@@ -65,13 +65,13 @@ apis:
     baseURL: https://domscan.net
     tags:
       - Domains
-      - dns
-      - whois
+      - DNS
+      - WHOIS
       - rdap
-      - ssl-tls
-      - email-security
+      - SSL/TLS
+      - Email Security
       - domain-valuation
-      - brand-protection
+      - Brand Protection
       - OSINT
       - Threat Intelligence
       - MCP
