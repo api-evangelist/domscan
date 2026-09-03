@@ -1,0 +1,37 @@
+generated: '2026-09-03'
+method: probed
+source: live probes of domscan.net and www.domscan.net
+note: 'domscan.net serves three real well-known documents: an RFC 8414 OAuth authorization server metadata doc, an RFC 9728 OAuth protected resource
+  doc for the MCP endpoint, and an RFC 9727 api-catalog linkset (application/linkset+json) pointing at the OpenAPI, docs, and MCP endpoint. security.txt,
+  openid-configuration, ai-plugin.json, and A2A agent-card.json/agent.json all 404. www.domscan.net 301-redirects every well-known path to the
+  apex.'
+hosts:
+- host: domscan.net
+  documents:
+  - path: /.well-known/oauth-authorization-server
+    status: 200
+    file: well-known/domscan-oauth-authorization-server.json
+  - path: /.well-known/oauth-protected-resource
+    status: 200
+    file: well-known/domscan-oauth-protected-resource.json
+  - path: /.well-known/api-catalog
+    status: 200
+    file: well-known/domscan-api-catalog.json
+    content_type: application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"
+  - path: /.well-known/security.txt
+    status: 404
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /.well-known/mcp.json
+    status: 404
+- host: www.domscan.net
+  documents:
+  - path: /.well-known/security.txt
+    status: 301
+    note: 301 to apex domscan.net for every well-known path

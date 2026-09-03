@@ -1,0 +1,18 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/changelog + openapi/domscan-openapi.json + probe of https://domscan.net/status
+versioning:
+  scheme: URL path versioning (/v1; /v2/whois for the enhanced WHOIS surface)
+  spec_version: 2.15.0 (OpenAPI info.version)
+deprecation:
+  policy_page: null
+  statement: '"Track breaking changes, new features, and deprecations. We notify developers before making breaking changes." — changelog page
+    header; the changelog carries a Breaking Changes filter. No standalone deprecation policy document or Sunset/Deprecation header usage found.'
+  deprecated_operations: []
+status_page:
+  url: null
+  probe: https://domscan.net/status returned 404; no status page advertised in docs or footer
+sla: null
+changelog:
+  url: https://domscan.net/changelog
+  artifact: changelog/domscan-changelog.yml

@@ -1,0 +1,43 @@
+generated: '2026-09-03'
+method: probed
+source: live probes of domscan.net well-known endpoints + openapi/domscan-openapi.json
+standards:
+- id: rfc9727-api-catalog
+  conforms: true
+  evidence: https://domscan.net/.well-known/api-catalog returns 200 application/linkset+json with profile="https://www.rfc-editor.org/info/rfc9727",
+    linking service-desc (OpenAPI), service-doc (docs), and service (MCP endpoint).
+- id: rfc9728-oauth-protected-resource
+  conforms: true
+  evidence: https://domscan.net/.well-known/oauth-protected-resource returns 200 naming resource https://domscan.net/mcp, authorization_servers,
+    scopes_supported [mcp:tools], bearer_methods_supported [header].
+- id: rfc8414-authorization-server-metadata
+  conforms: true
+  evidence: https://domscan.net/.well-known/oauth-authorization-server returns 200 with issuer, authorization/token/registration endpoints, PKCE
+    S256, authorization_code grant.
+- id: oauth2
+  conforms: true
+  evidence: OAuth 2.0 authorization-code flow with PKCE (S256) and dynamic client registration for the MCP endpoint; REST API uses API keys.
+- id: mcp
+  conforms: true
+  evidence: Hosted remote MCP server over Streamable HTTP at https://domscan.net/mcp (tools/list probe returned an OAuth challenge, confirming
+    a live MCP endpoint); 136 tools published at https://domscan.net/mcp-domain-checker.
+- id: rdap
+  conforms: true
+  evidence: GET /v1/rdap and POST /v1/rdap/bulk (operationIds getRdap, bulkGetRdap in openapi/domscan-openapi.json) return raw RDAP (RFC 7480/9082/9083)
+    lookups for domains, IPs, and ASNs; GET /v1/coverage reports RDAP TLD coverage; availability checks are RDAP-backed across 1,100+ TLDs.
+  note: 'domain-standard signature for the domain-intelligence market: the contract exposes the registry-standard RDAP protocol surface directly.'
+- id: rfc9457
+  conforms: false
+  evidence: Errors use a documented proprietary JSON envelope (error.{code,type,message,status,retryable,request_id,docs_url}), not application/problem+json.
+- id: idempotency
+  conforms: true
+  evidence: Idempotency-Key header (1-128 printable ASCII chars) on async job/batch creation; reuse with different input returns 409. Partial
+    coverage — see conventions/domscan-conventions.yml.
+  note: partial
+- id: pagination
+  conforms: true
+  evidence: Signed-cursor pagination on async job/batch results; ordered results with expiry windows stated in the contract.
+- id: ratelimit-headers
+  conforms: true
+  evidence: X-RateLimit-Plan/Limit/Remaining/Policy on every authenticated response, Retry-After on 429 (X-RateLimit-* convention, not the IETF
+    RateLimit draft header names).

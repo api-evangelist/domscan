@@ -1,0 +1,19 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/.well-known/oauth-authorization-server
+docs: https://domscan.net/mcp-domain-checker
+note: 'The REST API authenticates with API keys (no OAuth scopes in the OpenAPI). OAuth 2.0 is used for the MCP endpoint: authorization-code flow
+  with PKCE S256, dynamic client registration, public clients (token_endpoint_auth_methods_supported: none). One scope is published.'
+authorization:
+  issuer: https://domscan.net
+  authorization_endpoint: https://domscan.net/oauth/authorize
+  token_endpoint: https://domscan.net/oauth/token
+  registration_endpoint: https://domscan.net/oauth/register
+  grant_types:
+  - authorization_code
+  pkce:
+  - S256
+scopes:
+- scope: mcp:tools
+  description: Invoke DomScan MCP tools at https://domscan.net/mcp on behalf of the authorizing account.
+  source: scopes_supported in RFC 8414 metadata and RFC 9728 protected-resource metadata

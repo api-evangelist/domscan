@@ -1,0 +1,23 @@
+generated: '2026-09-03'
+method: searched
+source: https://github.com/estevecastells/domscan-cli (README + releases)
+name: domscan
+official: true
+version: 0.2.0
+published: '2026-08-02'
+license: MIT
+requires: Node.js 18.18+
+install:
+- method: npm (GitHub release tarball)
+  command: npm install -g https://github.com/estevecastells/domscan-cli/releases/latest/download/domscan-cli.tgz
+auth: DOMSCAN_API_KEY env var or --api-key flag (dsk_-prefixed keys); DOMSCAN_BASE_URL / --base-url / --local for base selection
+commands:
+- command: domscan list
+  purpose: show all API operations from the live OpenAPI spec
+- command: domscan <operation> [flags]
+  purpose: call any named API operation, e.g. check-domain-availability --name acme --tlds com,io
+- command: domscan call <path> --query k=v
+  purpose: generic fallback caller for any endpoint
+- command: domscan get-open-api-spec
+  purpose: fetch the OpenAPI contract
+note: Operation surface is generated from the live OpenAPI spec, so the CLI tracks the full public API.

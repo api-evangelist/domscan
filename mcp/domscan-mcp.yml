@@ -1,0 +1,41 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/mcp-domain-checker + POST https://domscan.net/mcp (tools/list probe) + /.well-known/oauth-protected-resource
+name: DomScan MCP Server
+description: Official hosted remote MCP server exposing 136 domain-intelligence tools (domain search, DNS, web intelligence, security, identity,
+  monitoring, and workflow recipes) over Streamable HTTP. Works with Claude, ChatGPT, Cursor, and other MCP clients; OAuth is preferred for new
+  clients, API keys (Authorization, X-API-Key, or legacy api_key URL parameter) remain supported.
+status: official
+deployment:
+  mode: remote
+  endpoint: https://domscan.net/mcp
+  auth: oauth
+  verified: probed
+transport: streamable-http
+tools_count: 136
+tool_groups:
+- group: Web Data
+  tools: 21
+- group: Domain Intelligence
+  tools: 33
+- group: DNS & Infrastructure
+  tools: 12
+- group: Security & Trust
+  tools: 29
+- group: Identity & Verification
+  tools: 12
+- group: Monitoring & Automation
+  tools: 29
+oauth:
+  protected_resource: https://domscan.net/.well-known/oauth-protected-resource
+  authorization_server_metadata: https://domscan.net/.well-known/oauth-authorization-server
+  scopes:
+  - mcp:tools
+  flow: authorization_code + PKCE (S256), dynamic client registration at https://domscan.net/oauth/register
+  fallback: 'API key via Authorization: Bearer, X-API-Key header, or legacy api_key URL parameter'
+local_bridge: clients without remote MCP support can wrap the URL with mcp-remote (npx -y mcp-remote https://domscan.net/mcp) per provider docs
+x-evidence:
+  fetched: '2026-09-03'
+  probe: POST tools/list returned HTTP 401 {"error":"unauthorized"} — live schema is auth-gated; tool catalog published at https://domscan.net/mcp-domain-checker
+  well_known_status: 200
+crosswalk: mcp/domscan-tool-crosswalk.yml

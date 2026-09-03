@@ -1,0 +1,89 @@
+generated: '2026-09-03'
+method: derived
+source: openapi/domscan-openapi.json + https://domscan.net/docs + https://domscan.net/mcp-domain-checker
+authentication:
+  style: API key
+  header: 'x-api-key (also Authorization: Bearer)'
+  key_prefix: dsk_
+  alternative: session cookie for logged-in dashboard/tools use; OAuth 2.0 (PKCE) for the MCP endpoint
+  docs: https://domscan.net/docs
+versioning:
+  style: URL path
+  current: '/v1 (one /v2 endpoint: GET /v2/whois Enhanced WHOIS)'
+  spec_version: 2.15.0
+idempotency:
+  coverage: partial
+  mechanism: Idempotency-Key request header (printable ASCII, 1-128 chars); reuse with identical input returns the original job, reuse with different
+    input returns 409
+  scope:
+  - createScrapeJob (required)
+  - createTechScanJob (optional)
+  - createDomainDiscoveryJob (optional)
+  - createApiBatch (optional)
+  retention: not stated
+  note: Scoped to asynchronous job/batch creation only; other writes (watchlist, brand monitor, account) document no replay protection. Most of
+    the surface is read-only lookups where idempotency is inherent but no header mechanism applies.
+pagination:
+  style: cursor (signed cursors) on async job/batch results; page/limit params on list endpoints
+  response_fields: job results are ordered and cursor-paginated; full scrape results expire after 24h, tech scan results after 48h
+request_tracing:
+  field: error.request_id in every error envelope
+rate_limit_signaling:
+  headers:
+  - X-RateLimit-Plan
+  - X-RateLimit-Limit
+  - X-RateLimit-Remaining
+  - X-RateLimit-Policy
+  - Retry-After
+  see: rate-limits/domscan-rate-limits.yml
+metering_signaling:
+  headers:
+  - X-Credits-Requested
+  - X-Credits-Charged
+  - X-Credits-Refunded
+  - X-Credits-Remaining
+  note: Per-call credit accounting is returned on every response; verified platform failures are refunded automatically.
+error_envelope:
+  shape: error.{code,type,message,status,retryable,request_id,docs_url}
+  see: errors/domscan-problem-types.yml
+reversibility:
+  grade: verified
+  note: The write surface is small (async jobs/batches, watchlist, brand monitors, API keys). Cancellation semantics and their windows are stated
+    in the contract; cancellation settles item-level credit refunds for unstarted work.
+  writes:
+  - operation: cancelApiBatch
+    reversal_of: createApiBatch
+    method: DELETE /v1/batches/{job_id}
+    window: before queued items start processing; unstarted items are refunded
+    source: openapi/domscan-openapi.json
+  - operation: cancelTechScanJob
+    reversal_of: createTechScanJob
+    method: DELETE /v1/tech/jobs/{job_id}
+    window: unstarted work only — work already in progress may finish and remains billed/available in results
+    source: https://domscan.net/mcp-domain-checker (cancel_tech_scan_job) + openapi
+  - operation: removeFromWatchlist
+    reversal_of: addToWatchlist
+    method: DELETE /v1/watchlist
+    window: any time
+    source: openapi/domscan-openapi.json
+  - operation: deleteBrandMonitor
+    reversal_of: createBrandMonitor
+    method: DELETE /v1/brand-monitor
+    window: any time
+    source: openapi/domscan-openapi.json
+  - operation: revokeApiKey
+    reversal_of: createApiKey
+    method: DELETE /v1/user/keys/{id}
+    window: any time
+    source: openapi/domscan-openapi.json
+  non_reversible: Credit consumption on completed lookups is final except automatic refunds for verified platform failures (X-Credits-Refunded);
+    refund policy at https://domscan.net/legal/refund.
+dry_run:
+  supported: false
+  note: No dry-run/preview mode documented; zero-credit reference endpoints (coverage, taxonomies, info endpoints) let agents rehearse request
+    shapes without spend.
+cross_links:
+- errors/domscan-problem-types.yml
+- lifecycle/domscan-lifecycle.yml
+- authentication/domscan-authentication.yml
+- rate-limits/domscan-rate-limits.yml

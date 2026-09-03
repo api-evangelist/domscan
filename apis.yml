@@ -22,15 +22,47 @@ accessModel:
   method: derived
 image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/domscan.png
 name: DomScan
-description: >-
-  Domain intelligence API for domain availability, DNS, WHOIS/RDAP, valuation, security checks, email posture, social
-  handle checks, and monitoring workflows. Offers REST API, machine-readable contracts, a hosted MCP server, and
-  llms.txt.
+description: Domain intelligence API for domain availability, DNS, WHOIS/RDAP, valuation, security checks, email
+  posture, social handle checks, and monitoring workflows. Offers REST API, machine-readable contracts, a hosted
+  MCP server, and llms.txt.
 url: https://raw.githubusercontent.com/api-evangelist/domscan/refs/heads/main/apis.yml
 created: '2026-07-12'
-modified: '2026-07-12'
+modified: '2026-09-03'
 specificationVersion: '0.23'
 tags:
+- Domains
+- DNS
+- WHOIS
+- rdap
+- SSL/TLS
+- Email Security
+- domain-valuation
+- Brand Protection
+- OSINT
+- Threat Intelligence
+- MCP
+- agent-native
+tags_raw:
+- domains
+- dns
+- whois
+- rdap
+- ssl-tls
+- email-security
+- domain-valuation
+- brand-protection
+- osint
+- threat-intelligence
+- mcp
+- agent-native
+apis:
+- name: DomScan API
+  image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/domscan.png
+  description: REST domain-intelligence API (40+ endpoints under /v1) for availability, DNS, WHOIS/RDAP, SSL/TLS,
+    email auth, valuation, security, and OSINT, with API-key authentication.
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
   - Domains
   - DNS
   - WHOIS
@@ -43,7 +75,7 @@ tags:
   - Threat Intelligence
   - MCP
   - agent-native
-tags_raw:
+  tags_raw:
   - domains
   - dns
   - whois
@@ -56,57 +88,91 @@ tags_raw:
   - threat-intelligence
   - mcp
   - agent-native
-apis:
-  - name: DomScan API
-    description: >-
-      REST domain-intelligence API (40+ endpoints under /v1) for availability, DNS, WHOIS/RDAP, SSL/TLS, email auth,
-      valuation, security, and OSINT, with API-key authentication.
-    humanURL: https://domscan.net/docs
-    baseURL: https://domscan.net
-    tags:
-      - Domains
-      - DNS
-      - WHOIS
-      - rdap
-      - SSL/TLS
-      - Email Security
-      - domain-valuation
-      - Brand Protection
-      - OSINT
-      - Threat Intelligence
-      - MCP
-      - agent-native
-    tags_raw:
-      - domains
-      - dns
-      - whois
-      - rdap
-      - ssl-tls
-      - email-security
-      - domain-valuation
-      - brand-protection
-      - osint
-      - threat-intelligence
-      - mcp
-      - agent-native
-    properties:
-      - type: OpenAPI
-        url: https://domscan.net/v1/openapi.json
-      - type: OpenAPI
-        url: https://domscan.net/v1/swagger.json
-      - type: PostmanCollection
-        url: https://domscan.net/v1/postman.json
-      - type: LLMSTxt
-        url: https://domscan.net/llms.txt
-      - type: MCPServer
-        url: https://domscan.net/mcp
-      - type: Documentation
-        url: https://domscan.net/docs
+  properties:
+  - type: OpenAPI
+    url: https://domscan.net/v1/openapi.json
+  - type: OpenAPI
+    url: https://domscan.net/v1/swagger.json
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: MCPServer
+    url: https://domscan.net/mcp
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
 maintainers:
-  - FN: estevecastells
-    url: https://github.com/estevecastells
+- FN: estevecastells
+  email: support@domscan.net
+  url: https://github.com/estevecastells
 generated:
   by: apis.io/add
   model: claude-opus-4-8
   confidence: 95
   at: '2026-07-12T14:21:20.829Z'
+x-enrichment:
+  date: '2026-09-03'
+  status: enriched
+  artifacts_added: 29
+  pass: local-v2
+common:
+- type: Website
+  url: https://domscan.net
+- type: DomainSecurity
+  url: security/domscan-domain-security.yml
+- type: Authentication
+  url: authentication/domscan-authentication.yml
+- type: WellKnown
+  url: well-known/domscan-well-known.yml
+- type: MCPServer
+  url: mcp/domscan-mcp.yml
+- type: OAuthScopes
+  url: scopes/domscan-scopes.yml
+- type: ErrorCatalog
+  url: errors/domscan-problem-types.yml
+- type: Lifecycle
+  url: lifecycle/domscan-lifecycle.yml
+- type: ChangeLog
+  url: changelog/domscan-changelog.yml
+- type: Conventions
+  url: conventions/domscan-conventions.yml
+- type: Idempotency
+  url: conventions/domscan-conventions.yml
+- type: Conformance
+  url: conformance/domscan-conformance.yml
+- type: Plans
+  url: plans/domscan-plans-pricing.yml
+- type: RateLimits
+  url: rate-limits/domscan-rate-limits.yml
+- type: DataModel
+  url: data-model/domscan-data-model.yml
+- type: CLI
+  url: cli/domscan-cli.yml
+- type: Packages
+  url: packages/domscan-packages.yml
+- type: SDKs
+  url: packages/domscan-packages.yml
+- type: Webhooks
+  url: asyncapi/domscan-webhooks.yml
+- type: AgentSkill
+  url: skills/_index.yml
+- type: Overlay
+  url: overlays/domscan-openapi-overlay.yaml
+- type: APIReference
+  url: https://domscan.net/apis
+- type: GettingStarted
+  url: https://domscan.net/quickstart
+- type: Blog
+  url: https://domscan.net/blog
+- type: Pricing
+  url: https://domscan.net/pricing
+- type: SignUp
+  url: https://domscan.net/login
+- type: TermsOfService
+  url: https://domscan.net/legal/terms
+- type: PrivacyPolicy
+  url: https://domscan.net/legal/privacy
+- type: GitHubOrganization
+  url: https://github.com/estevecastells

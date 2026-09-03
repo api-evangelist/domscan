@@ -1,0 +1,39 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/pricing
+model: credit packs (pay-as-you-go), no subscriptions
+plan_count: 4
+plans:
+- name: Free
+  price: 0
+  currency: USD
+  billing: monthly reset (1st of month)
+  included: 10,000 credits/month
+  notes: 'All public endpoints, MCP integration, no credit card required. Free-tier rate limits: 120 req/min sustained, burst 60; bulk budget
+    20 req/min.'
+- name: 50K Credits
+  price: 10.0
+  currency: USD
+  billing: one-time
+  included: 50,000 credits
+  overage: null
+  notes: $0.00020/credit; never expires; auto-recharge; priority support. Also sold from €9.
+- name: 250K Credits
+  price: 30.0
+  currency: USD
+  billing: one-time
+  included: 250,000 credits
+  notes: $0.00012/credit; never expires; auto-recharge; priority support.
+- name: 1M Credits
+  price: 85.0
+  currency: USD
+  billing: one-time
+  included: 1,000,000 credits
+  notes: $0.00009/credit; best value; never expires; auto-recharge; priority support.
+metering: 'Per-endpoint credit costs published in docs and MCP tool catalog: 1 credit for status/DNS/tool builders, 2-5 for health/valuation/OSINT,
+  per-item pricing on bulk endpoints, 6-25 for recipe compound operations. Paid accounts get 600 req/min sustained rate.'
+currencies_displayed:
+- USD
+- EUR
+- GBP
+- JPY

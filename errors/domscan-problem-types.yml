@@ -1,0 +1,91 @@
+generated: '2026-09-03'
+method: derived
+source: openapi/domscan-openapi.json (ErrorResponse schema + info.description Error Handling section)
+format: json-envelope
+media_type: application/json
+note: 'Not RFC 9457 problem+json. Standardized JSON envelope: error.{code, type, message, status, retryable, request_id, docs_url}, optionally
+  retry_after, suggestion, details, login_url, and credit fields (credits_remaining, credits_required, purchase_url on 402).'
+envelope_fields:
+- code
+- type
+- message
+- status
+- retryable
+- request_id
+- docs_url
+- retry_after (temporary errors)
+- suggestion
+- details
+- login_url
+error_types:
+- authentication_error
+- credits_error
+- permission_error
+- not_found_error
+- conflict_error
+- rate_limit_error
+- timeout_error
+- validation_error
+- upstream_error
+- api_error
+- request_error
+problem_types:
+- code: BAD_REQUEST
+  status: 400
+  title: Invalid request or parameters
+- code: UNAUTHORIZED
+  status: 401
+  title: Missing or invalid API key / session
+- code: INSUFFICIENT_CREDITS
+  status: 402
+  title: Credit balance exhausted
+  remediation: Response carries credits_remaining, credits_required, and purchase_url; purchase a credit pack or wait for the monthly free refresh.
+- code: FORBIDDEN
+  status: 403
+  title: Not permitted for this account or plan
+- code: NOT_FOUND
+  status: 404
+  title: Resource not found
+- code: CONFLICT
+  status: 409
+  title: Conflict, including an Idempotency-Key reused with different input
+- code: GONE
+  status: 410
+  title: Expired job or batch results
+- code: VALIDATION_ERROR
+  status: 422
+  title: Request understood but semantically invalid
+- code: FAILED_DEPENDENCY
+  status: 424
+  title: Dependent upstream operation failed
+- code: RATE_LIMIT_EXCEEDED
+  status: 429
+  title: Rate limit exceeded
+  remediation: Wait the number of seconds indicated by Retry-After before retrying.
+- code: INTERNAL
+  status: 500
+  title: Internal server error
+- code: UPSTREAM_ERROR
+  status: 502
+  title: Upstream source failure
+- code: SERVICE_UNAVAILABLE
+  status: 503
+  title: Temporary unavailability; verified platform failures are refunded
+- code: TIMEOUT
+  status: 504
+  title: Upstream or processing timeout
+status_distribution:
+  '400': 127
+  '401': 160
+  '402': 126
+  '403': 10
+  '404': 19
+  '409': 11
+  '410': 3
+  '422': 1
+  '424': 2
+  '429': 165
+  '500': 7
+  '502': 7
+  '503': 18
+  '504': 3

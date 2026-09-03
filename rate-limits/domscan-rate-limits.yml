@@ -1,0 +1,40 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/v1/openapi.json (info.description Rate Limits section + RateLimited component)
+limit_count: 4
+limits:
+- scope: per-account (free tier, all API keys + dashboard sessions share the budget)
+  window: 1 minute
+  limit: 120
+  burst: 60
+- scope: per-account (free tier, bulk endpoints, additional fixed-window budget across all bulk endpoints)
+  window: 1 minute
+  limit: 20
+  burst: null
+- scope: per-IPv4 address or IPv6 /56 network (free-tier bulk traffic cap)
+  window: 1 minute
+  limit: 100
+  burst: null
+- scope: per-API-key (paid accounts; browser-session requests counted per IP)
+  window: 1 minute
+  limit: 600
+  burst: 120
+headers:
+- X-RateLimit-Plan
+- X-RateLimit-Limit
+- X-RateLimit-Remaining
+- X-RateLimit-Policy
+- Retry-After
+headers_note: Every authenticated response carries X-RateLimit-Plan/Limit/Remaining/Policy. Limit and Remaining describe the immediate burst bucket;
+  X-RateLimit-Policy states the sustained per-minute rate, scope, and any free bulk limits.
+exhaustion:
+  status: 429
+  retry_header: Retry-After
+  body: JSON error envelope with code RATE_LIMITED / RATE_LIMIT_EXCEEDED
+credits_headers:
+- X-Credits-Requested
+- X-Credits-Charged
+- X-Credits-Refunded
+- X-Credits-Remaining
+credits_note: Separate from rate limits, calls consume credits (10,000 free/month); exhaustion returns HTTP 402 with credits_remaining, credits_required,
+  and purchase_url.

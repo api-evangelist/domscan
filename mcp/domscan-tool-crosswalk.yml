@@ -1,0 +1,1003 @@
+generated: '2026-09-03'
+method: derived
+source: https://domscan.net/mcp-domain-checker (published tool list) + openapi/domscan-openapi.json
+note: DomScan publishes its full MCP tool catalog (136 tools) on the MCP page with per-tool descriptions, credit costs, and for many tools the
+  backing REST endpoint. Live tools/list is OAuth-gated (401), so bindings without a stated endpoint are mapped by name/semantics against OpenAPI
+  operationIds; live inputSchema needs authenticated introspection. 135 tool names were extractable from the page; the provider states 136.
+surfaces:
+  openapi: openapi/domscan-openapi.json
+  mcp:
+    url: https://domscan.net/mcp
+    gated: oauth (API-key fallback documented)
+  graphql: null
+coverage:
+  tools_advertised: 136
+  tools_extracted: 135
+  mapped: 135
+  mapped_high: 70
+  mapped_medium: 65
+  mcp_only: 0
+  rest_only: 33
+crosswalk:
+- tool: get_redirects
+  category: redirects
+  rest:
+  - getRedirects
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 2 credits'
+- tool: tech_stack
+  category: tech
+  rest:
+  - getTechStack
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: Fast scans cost 3 credits, one-page JavaScript-rendered scans cost 6, and deep scans of up to five same-origin pages cost 9.'
+- tool: scrape_page
+  category: scrape
+  rest:
+  - scrapePage
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: Standard costs 1 credit, resilient costs 2, rendered costs 10, and rendered resilient costs 20. Billing is based on processing
+    effort, not target-site success. '
+- tool: post_tech_stack_bulk
+  category: tech
+  rest:
+  - postTechStackBulk
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: Each valid target costs 3 credits. Invalid targets cost zero.'
+- tool: create_tech_scan_job
+  category: tech
+  rest:
+  - createTechScanJob
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: Each target costs 3 credits in fast mode, 6 in rendered mode, or 9 in deep mode. There is no bulk discount.'
+- tool: create_scrape_job
+  category: scrape
+  rest:
+  - createScrapeJob
+  binding: endpoint-stated
+  confidence: high
+- tool: get_scrape_job
+  category: scrape
+  rest:
+  - getScrapeJob
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_scrape_job_results
+  category: scrape
+  rest:
+  - getScrapeJobResults
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: list_tech_scan_jobs
+  category: tech
+  rest:
+  - listTechScanJobs
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_tech_scan_job
+  category: tech
+  rest:
+  - getTechScanJob
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_tech_scan_job_results
+  category: tech
+  rest:
+  - getTechScanJobResults
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: cancel_tech_scan_job
+  category: tech
+  rest:
+  - cancelTechScanJob
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: categorize_website
+  category: categorize
+  rest:
+  - categorizeWebsite
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 3 credits'
+- tool: get_categorization_taxonomy
+  category: categorize
+  rest:
+  - getCategorizationTaxonomy
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: categorize_website_bulk
+  category: categorize
+  rest:
+  - categorizeWebsiteBulk
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 3 credits per item'
+- tool: url_intelligence
+  category: url-intelligence
+  rest:
+  - getUrlIntelligence
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_url_intelligence
+  category: url-intelligence
+  rest:
+  - bulkGetUrlIntelligence
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: agent_readiness
+  category: agent-readiness
+  rest:
+  - checkAgentReadiness
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: hosting_detection
+  category: hosting
+  rest:
+  - getHosting
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: bulk_hosting_detection
+  category: hosting
+  rest:
+  - bulkGetHosting
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 3 credits per item'
+- tool: parking_detection
+  category: parking
+  rest:
+  - getParkingDetection
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: get_status
+  category: status
+  rest:
+  - checkDomainAvailability
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: bulk_status
+  category: status
+  rest:
+  - bulkCheckDomains
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 1 credit per item'
+- tool: suggest_domains
+  category: suggest
+  rest:
+  - suggestDomains
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits when check=false; 5 credits when availability is checked.'
+- tool: domain_valuation
+  category: value
+  rest:
+  - getDomainValue
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_domain_value
+  category: value
+  rest:
+  - bulkDomainValue
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 2 credits per item'
+- tool: domain_health
+  category: health
+  rest:
+  - getDomainHealth
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: get_quick_health
+  category: health
+  rest:
+  - getQuickHealth
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: compare_domains
+  category: compare
+  rest:
+  - compareDomains
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: get_domain_score
+  category: score
+  rest:
+  - getDomainScore
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: compare_brand_names
+  category: score
+  rest:
+  - compareBrandNames
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 2 credits'
+- tool: get_score_info
+  category: score
+  rest:
+  - getScoreInfo
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_domain_profile
+  category: profile
+  rest:
+  - getDomainProfile
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 3 credits'
+- tool: bulk_domain_profile
+  category: profile
+  rest:
+  - bulkGetDomainProfile
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 3 credits per item'
+- tool: domain_overview
+  category: overview
+  rest:
+  - getDomainOverview
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 5 credits'
+- tool: domain_popularity
+  category: popularity
+  rest:
+  - getDomainPopularity
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: get_domain_popularity_history
+  category: popularity
+  rest:
+  - getDomainPopularityHistory
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: discover_domains
+  category: domain-discovery
+  rest:
+  - createDomainDiscoveryJob
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: Each word-TLD pair uses the normal /v1/status credit cost, currently 1 credit. Billing and any eligible item refunds follow
+    /v1/status behavior.'
+- tool: whois_lookup
+  category: whois
+  rest:
+  - getWhois
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: enhanced_whois_lookup
+  category: GET /v2/whois
+  rest:
+  - getWhoisV2
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: bulk_whois
+  category: whois
+  rest:
+  - bulkWhois
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 3 credits per item'
+- tool: whois_history
+  category: whois
+  rest:
+  - getWhoisHistory
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: get_rdap
+  category: rdap
+  rest:
+  - getRdap
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 2 credits'
+- tool: bulk_rdap_lookup
+  category: rdap
+  rest:
+  - bulkGetRdap
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: domain_lifecycle
+  category: lifecycle
+  rest:
+  - getDomainLifecycle
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: list_tlds
+  category: tlds
+  rest:
+  - getTlds
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 0 credits'
+- tool: tld_info
+  category: tlds
+  rest:
+  - getTldDetail
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: get_prices
+  category: prices
+  rest:
+  - getPrices
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: The input catalog is free when tlds is omitted. Otherwise, 1 credit is charged per unique TLD and selected registrar pair. Registrar
+    filters reduce the planned '
+- tool: get_tld_pricing
+  category: prices
+  rest:
+  - getTldPricing
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 1 credit per selected registrar pair for this TLD. Registrar filters reduce the planned and charged pair count.'
+- tool: bulk_pricing
+  category: prices
+  rest:
+  - bulkPricing
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 1 credit per unique TLD and selected registrar pair. Registrar filters reduce the planned and charged pair count.'
+- tool: get_registrars
+  category: prices
+  rest:
+  - getRegistrars
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: compare_prices
+  category: prices
+  rest:
+  - comparePrices
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 1 credit per selected registrar pair for the exact domain. Standard rows and exact quotes remain separate.'
+- tool: get_pricing_info
+  category: pricing
+  rest:
+  - getPricingInfo
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: dns_lookup
+  category: dns
+  rest:
+  - getDnsRecords
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: get_all_dns_records
+  category: dns
+  rest:
+  - getAllDnsRecords
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 2 credits'
+- tool: dns_security
+  category: dns
+  rest:
+  - getDnsSecurity
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: dns_propagation
+  category: dns
+  rest:
+  - getDnsPropagation
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_dns_propagation
+  category: dns
+  rest:
+  - bulkDnsPropagation
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: get_dns_servers
+  category: dns
+  rest:
+  - getDnsServers
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: dns_history
+  category: dns
+  rest:
+  - getDnsHistory
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: enumerate_subdomains
+  category: subdomains
+  rest:
+  - getSubdomains
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 4 credits by default; 5 credits when verify=true.'
+- tool: bulk_enumerate_subdomains
+  category: subdomains
+  rest:
+  - bulkGetSubdomains
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 4 credits per item by default; 5 credits per item when verify=true.'
+- tool: ip_lookup
+  category: ip
+  rest:
+  - getIpInfo
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: lookup_mac
+  category: mac
+  rest:
+  - getMacInfo
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: get_mac_lookup_info
+  category: mac
+  rest:
+  - getMacLookupInfo
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: spf_build
+  category: tools
+  rest:
+  - buildSpf
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: spf_validate
+  category: tools
+  rest:
+  - validateSpf
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: spf_flatten
+  category: tools
+  rest:
+  - flattenSpf
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: dmarc_build
+  category: tools
+  rest:
+  - buildDmarc
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: dmarc_validate
+  category: tools
+  rest:
+  - validateDmarc
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: dkim_check
+  category: tools
+  rest:
+  - checkDkim
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: dkim_discover
+  category: tools
+  rest:
+  - discoverDkim
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: typosquatting_check
+  category: typos
+  rest:
+  - getTyposquatting
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits by default; 3 credits when check_registered=true.'
+- tool: analyze_typosquatting_threats
+  category: typos
+  rest:
+  - analyzeTyposquattingThreats
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 12 credits'
+- tool: generate_typosquatting_report
+  category: typos
+  rest:
+  - generateTyposquattingReport
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 18 credits'
+- tool: quick_typosquatting_check
+  category: typos
+  rest:
+  - quickTyposquattingCheck
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 6 credits'
+- tool: protection_score
+  category: typos
+  rest:
+  - getProtectionScore
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: domain_reputation
+  category: reputation
+  rest:
+  - getDomainReputation
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: search_certificates
+  category: certificates
+  rest:
+  - getCertificates
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_search_certificates
+  category: certificates
+  rest:
+  - bulkGetCertificates
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: ssl_audit
+  category: ssl
+  rest:
+  - getSslAudit
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 5 credits'
+- tool: get_ssl_deep_scan
+  category: ssl
+  rest:
+  - getSslDeepScan
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 10 credits'
+- tool: ssl_grade
+  category: ssl
+  rest:
+  - getSslGrade
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: ssl_chain
+  category: ssl
+  rest:
+  - getSslChain
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: ssl_expiring
+  category: ssl
+  rest:
+  - getSslExpiring
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: email_security
+  category: email-auth
+  rest:
+  - getEmailAuth
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: bulk_email_security
+  category: email-auth
+  rest:
+  - bulkGetEmailAuth
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 3 credits per item'
+- tool: get_email_compliance
+  category: email
+  rest:
+  - getEmailCompliance
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 6 credits'
+- tool: check_email_blacklist
+  category: email
+  rest:
+  - checkEmailBlacklist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: bulk_email_check
+  category: email
+  rest:
+  - bulkEmailCheck
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 1 credit per item'
+- tool: get_email_blacklist_info
+  category: email
+  rest:
+  - getEmailBlacklistInfo
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: download_email_blacklist
+  category: email
+  rest:
+  - downloadEmailBlacklist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: vulnerability_snapshot
+  category: vulnerabilities
+  rest:
+  - getVulnerabilities
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: Standard passive scans cost 8 credits. Deep scans add isolated JavaScript rendering and cost 12 credits.'
+- tool: get_domain_similarity
+  category: similarity
+  rest:
+  - getDomainSimilarity
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 2 credits'
+- tool: verify_email
+  category: email
+  rest:
+  - verifyEmail
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: verify_email_bulk
+  category: email
+  rest:
+  - verifyEmailBulk
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: 2 credits per item'
+- tool: validate_phone_number
+  category: phone
+  rest:
+  - validatePhoneNumber
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 1 credit'
+- tool: validate_phone_numbers_bulk
+  category: phone
+  rest:
+  - validatePhoneNumbersBulk
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 1 credit per item'
+- tool: company_lookup
+  category: company
+  rest:
+  - getCompany
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 3 credits'
+- tool: website_identity_assets
+  category: identity-assets
+  rest:
+  - getWebsiteIdentityAssets
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_website_identity_assets
+  category: identity-assets
+  rest:
+  - bulkGetWebsiteIdentityAssets
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: resolve_internet_identity
+  category: identity-resolution
+  rest:
+  - resolveInternetIdentity
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_resolve_internet_identity
+  category: identity-resolution
+  rest:
+  - bulkResolveInternetIdentity
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: social_handles
+  category: social
+  rest:
+  - checkSocialHandles
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 2 credits'
+- tool: bulk_check_social_handles
+  category: social
+  rest:
+  - bulkCheckSocialHandles
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: 2 credits per item'
+- tool: get_social_info
+  category: social
+  rest:
+  - getSocialInfo
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: create_api_batch
+  category: batches
+  rest:
+  - createApiBatch
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: Each accepted item uses the normal credit cost of its target endpoint.'
+- tool: list_api_batches
+  category: batches
+  rest:
+  - listApiBatches
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_batch
+  category: batches
+  rest:
+  - getApiBatch
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 0 credits'
+- tool: get_batch_results
+  category: batches
+  rest:
+  - getApiBatchResults
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 0 credits'
+- tool: cancel_batch
+  category: batches
+  rest:
+  - cancelApiBatch
+  binding: name-semantic
+  confidence: medium
+  note: 'credits: costs 0 credits'
+- tool: recipe_due_diligence
+  category: recipes
+  rest:
+  - recipeDueDiligence
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 12 credits'
+- tool: recipe_brand_launch
+  category: recipes
+  rest:
+  - recipeBrandLaunch
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 10 credits'
+- tool: recipe_threat_assessment
+  category: recipes
+  rest:
+  - recipeThreatAssessment
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 18 credits'
+- tool: recipe_domain_finder
+  category: recipes
+  rest:
+  - recipeDomainFinder
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 12 credits'
+- tool: recipe_competitor_intel
+  category: recipes
+  rest:
+  - recipeCompetitorIntel
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 15 credits'
+- tool: recipe_portfolio_audit
+  category: recipes
+  rest:
+  - recipePortfolioAudit
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 25 credits'
+- tool: recipe_portfolio_audit_post
+  category: recipes
+  rest:
+  - recipePortfolioAuditPost
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 25 credits'
+- tool: recipe_email_deliverability
+  category: recipes
+  rest:
+  - recipeEmailDeliverability
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 10 credits'
+- tool: recipe_dns_migration
+  category: recipes
+  rest:
+  - recipeDnsMigration
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 7 credits'
+- tool: recipe_infrastructure_discovery
+  category: recipes
+  rest:
+  - recipeInfrastructureDiscovery
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 15 credits'
+- tool: recipe_defensive_registration
+  category: recipes
+  rest:
+  - recipeDefensiveRegistration
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 12 credits'
+- tool: recipe_phishing_investigation
+  category: recipes
+  rest:
+  - recipePhishingInvestigation
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 12 credits'
+- tool: get_watchlist
+  category: watchlist
+  rest:
+  - getWatchlist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: add_to_watchlist
+  category: watchlist
+  rest:
+  - addToWatchlist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: remove_from_watchlist
+  category: watchlist
+  rest:
+  - removeFromWatchlist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 0 credits'
+- tool: get_expiring_watchlist
+  category: watchlist
+  rest:
+  - getExpiringWatchlist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: get_available_watchlist
+  category: watchlist
+  rest:
+  - getAvailableWatchlist
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: get_brand_monitors
+  category: brand-monitor
+  rest:
+  - getBrandMonitors
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: create_brand_monitor
+  category: brand-monitor
+  rest:
+  - createBrandMonitor
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 3 credits'
+- tool: trigger_brand_scan
+  category: brand-monitor
+  rest:
+  - triggerBrandScan
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 6 credits'
+- tool: delete_brand_monitor
+  category: brand-monitor
+  rest:
+  - deleteBrandMonitor
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: get_brand_monitor_status
+  category: brand-monitor
+  rest:
+  - getBrandMonitorStatus
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: reset_brand_monitor_baseline
+  category: brand-monitor
+  rest:
+  - resetBrandMonitorBaseline
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+- tool: update_brand_monitor_alerts
+  category: brand-monitor
+  rest:
+  - updateBrandMonitorAlerts
+  binding: endpoint-stated
+  confidence: high
+  note: 'credits: costs 1 credit'
+mcp_only: []
+rest_only:
+- acceptAccountInvitation
+- bulkDnsLookup
+- bulkDomainReputation
+- bulkHealthCheck
+- cancelAccountInvitation
+- checkWatchlist
+- createAccountInvitation
+- createApiKey
+- getApiRequestLog
+- getCoverage
+- getCreditBalance
+- getCredits
+- getCustomerAccount
+- getEmailPreferences
+- getFullReport
+- getOpenApiSpec
+- getPostmanCollection
+- getRapidApiSpec
+- getSslDeepScanStatus
+- getSwaggerSpec
+- getTypoPermutations
+- getUsage
+- leaveCustomerAccount
+- listApiKeys
+- listApiRequestLogs
+- listRecipes
+- postApiRequestLogAiHelp
+- removeAccountMember
+- revokeApiKey
+- updateAccountMemberRole
+- updateApiKey
+- updateCustomerAccount
+- updateEmailPreferences

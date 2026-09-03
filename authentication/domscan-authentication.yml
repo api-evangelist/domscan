@@ -1,0 +1,27 @@
+generated: '2026-09-03'
+method: derived
+source: openapi/domscan-openapi.json, openapi/domscan-swagger.json
+summary:
+  types:
+  - apiKey
+  api_key_in:
+  - cookie
+  - header
+schemes:
+- name: apiKey
+  type: apiKey
+  in: header
+  parameter: x-api-key
+  description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts
+    Authorization: Bearer header.'
+  sources:
+  - openapi/domscan-openapi.json
+  - openapi/domscan-swagger.json
+- name: sessionCookie
+  type: apiKey
+  in: cookie
+  parameter: session
+  description: Active DomScan browser session. Used by account-management endpoints.
+  sources:
+  - openapi/domscan-openapi.json
+  - openapi/domscan-swagger.json

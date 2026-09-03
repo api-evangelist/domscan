@@ -1,0 +1,189 @@
+# DomScan
+
+> DomScan is a domain intelligence API for domain availability, DNS, WHOIS/RDAP, valuation, security checks, email posture, social handle checks, and monitoring workflows.
+
+Use DomScan for programmatic domain research and security automation. Most API endpoints live under `https://domscan.net/v1` and require an API key or signed-in session. The OpenAPI document is the canonical source for exact schemas, parameters, and response formats.
+
+This file is generated from the DomScan endpoint registry so new public APIs appear here with minimal manual maintenance.
+
+## Documentation
+
+- [API documentation](https://domscan.net/docs): Developer guides, authentication, credits, status codes, and endpoint examples.
+- [API catalog](https://domscan.net/apis): Public API catalog with dedicated guide pages.
+- [Pricing](https://domscan.net/pricing): Credit costs, plans, and billing details.
+- [OpenAPI 3.0](https://domscan.net/v1/openapi.json): Machine-readable API schema.
+- [Swagger 2.0](https://domscan.net/v1/swagger.json): Swagger 2.0 variant for older API tooling.
+- [Postman collection](https://domscan.net/v1/postman.json): Importable collection for API clients and manual testing.
+
+## Availability APIs
+
+- [GET /v1/coverage](https://domscan.net/docs/products/rdap-coverage#getCoverage): RDAP Coverage. Check which TLDs are supported by the API. Endpoint: GET https://domscan.net/v1/coverage.
+- [POST /v1/domain-discovery/jobs](https://domscan.net/docs/products/domain-discovery#createDomainDiscoveryJob): Create Domain Discovery Job. Queue up to 100 single-word domain checks across 1 to 5 TLDs. Endpoint: POST https://domscan.net/v1/domain-discovery/jobs.
+- [GET /v1/status](https://domscan.net/docs/products/domain-availability#checkDomainAvailability): Domain Availability. Check if domains are available for registration across 1,100+ TLDs. Endpoint: GET https://domscan.net/v1/status.
+- [POST /v1/status/bulk](https://domscan.net/docs/products/domain-availability#bulkCheckDomains): Bulk Domain Check. Check up to 50 domains in parallel. Endpoint: POST https://domscan.net/v1/status/bulk.
+
+## Domain Intelligence APIs
+
+- [GET /v1/compare](https://domscan.net/docs/products/domain-compare#compareDomains): Domain Compare. Compare domains side-by-side. Endpoint: GET https://domscan.net/v1/compare.
+- [GET /v1/health](https://domscan.net/docs/products/domain-health#getDomainHealth): Domain Health. Run comprehensive domain health and live edge/mail checks. Endpoint: GET https://domscan.net/v1/health.
+- [GET /v1/health/quick](https://domscan.net/docs/products/domain-health#getQuickHealth): Quick Health Check. Quick domain health check. Endpoint: GET https://domscan.net/v1/health/quick.
+- [GET /v1/overview](https://domscan.net/docs/products/domain-profile#getDomainOverview): Domain Overview. Get a sourced domain overview with explicit unknowns. Endpoint: GET https://domscan.net/v1/overview.
+- [GET /v1/popularity](https://domscan.net/docs/products/domain-profile#getDomainPopularity): Domain Popularity. Get a sourced Tranco rank with explicit unknowns. Endpoint: GET https://domscan.net/v1/popularity.
+- [GET /v1/popularity/history](https://domscan.net/docs/products/domain-profile#getDomainPopularityHistory): Domain Popularity History. Read lookup-driven Tranco rank history. Endpoint: GET https://domscan.net/v1/popularity/history.
+- [GET /v1/profile](https://domscan.net/docs/products/domain-profile#getDomainProfile): Domain Profile. Get domain registration profile data. Endpoint: GET https://domscan.net/v1/profile.
+- [POST /v1/profile/bulk](https://domscan.net/docs/products/domain-profile#bulkGetDomainProfile): Domain Profile. Get domain registration profile data. Endpoint: POST https://domscan.net/v1/profile/bulk.
+- [GET /v1/score](https://domscan.net/docs/products/domain-score#getDomainScore): Domain Score. Calculate domain quality score. Endpoint: GET https://domscan.net/v1/score.
+- [POST /v1/score/compare](https://domscan.net/docs/products/domain-score#compareBrandNames): Compare Brand Names. Compare and rank multiple brand names. Endpoint: POST https://domscan.net/v1/score/compare.
+- [GET /v1/score/info](https://domscan.net/docs/products/domain-score#getScoreInfo): Brand Scoring Reference. Get brand scoring methodology details. Endpoint: GET https://domscan.net/v1/score/info.
+- [GET /v1/suggest](https://domscan.net/docs/products/domain-suggestions#suggestDomains): Domain Suggestions. AI-powered domain name suggestions based on keywords. Endpoint: GET https://domscan.net/v1/suggest.
+- [GET /v1/tlds](https://domscan.net/docs/products/tld-intelligence#getTlds): TLD List. List all supported TLDs. Endpoint: GET https://domscan.net/v1/tlds.
+- [GET /v1/tlds/:tld](https://domscan.net/docs/products/tld-intelligence#getTldDetail): TLD Detail. Get TLD details and pricing. Endpoint: GET https://domscan.net/v1/tlds/:tld.
+- [GET /v1/value](https://domscan.net/docs/products/domain-valuation#getDomainValue): Domain Valuation. Estimate domain market value algorithmically. Endpoint: GET https://domscan.net/v1/value.
+- [POST /v1/value/bulk](https://domscan.net/docs/products/domain-valuation#bulkDomainValue): Bulk Domain Valuation. Bulk domain valuation for portfolios. Endpoint: POST https://domscan.net/v1/value/bulk.
+
+## DNS APIs
+
+- [GET /v1/dns](https://domscan.net/docs/products/dns-lookup#getDnsRecords): DNS Lookup. Query DNS records with TTL, DNSSEC, and TXT classification. Endpoint: GET https://domscan.net/v1/dns.
+- [GET /v1/dns/all](https://domscan.net/docs/products/dns-lookup#getAllDnsRecords): DNS All Records. Get all DNS record types plus summary signals at once. Endpoint: GET https://domscan.net/v1/dns/all.
+- [GET /v1/dns/history](https://domscan.net/docs/products/dns-lookup#getDnsHistory): DNS History. Review DNS values previously observed by DomScan lookups. Endpoint: GET https://domscan.net/v1/dns/history.
+- [GET /v1/dns/propagation](https://domscan.net/docs/products/dns-propagation#getDnsPropagation): DNS Resolver Comparison. Compare configured public recursive resolvers. Endpoint: GET https://domscan.net/v1/dns/propagation.
+- [POST /v1/dns/propagation/bulk](https://domscan.net/docs/products/dns-propagation#bulkDnsPropagation): Bulk DNS Resolver Comparison. Compare resolver answers for up to 10 domains. Endpoint: POST https://domscan.net/v1/dns/propagation/bulk.
+- [GET /v1/dns/security](https://domscan.net/docs/products/dns-security#getDnsSecurity): DNS Security. Check DNS and mail security configuration in depth. Endpoint: GET https://domscan.net/v1/dns/security.
+- [GET /v1/dns/servers](https://domscan.net/docs/products/dns-propagation#getDnsServers): DNS Resolver Providers. List configured recursive DoH providers. Endpoint: GET https://domscan.net/v1/dns/servers.
+- [GET /v1/tools/dkim/check](https://domscan.net/docs/products/email-authentication#checkDkim): DKIM Check. Check DKIM selector. Endpoint: GET https://domscan.net/v1/tools/dkim/check.
+- [GET /v1/tools/dkim/discover](https://domscan.net/docs/products/email-authentication#discoverDkim): DKIM Discovery. Discover DKIM selectors. Endpoint: GET https://domscan.net/v1/tools/dkim/discover.
+- [POST /v1/tools/dmarc/build](https://domscan.net/docs/products/email-authentication#buildDmarc): DMARC Builder. Build DMARC records. Endpoint: POST https://domscan.net/v1/tools/dmarc/build.
+- [POST /v1/tools/dmarc/validate](https://domscan.net/docs/products/email-authentication#validateDmarc): DMARC Validator. Validate DMARC records. Endpoint: POST https://domscan.net/v1/tools/dmarc/validate.
+- [POST /v1/tools/spf/build](https://domscan.net/docs/products/email-authentication#buildSpf): SPF Builder. Build SPF records. Endpoint: POST https://domscan.net/v1/tools/spf/build.
+- [POST /v1/tools/spf/flatten](https://domscan.net/docs/products/email-authentication#flattenSpf): SPF Flattener. Flatten SPF records. Endpoint: POST https://domscan.net/v1/tools/spf/flatten.
+- [POST /v1/tools/spf/validate](https://domscan.net/docs/products/email-authentication#validateSpf): SPF Validator. Validate SPF records. Endpoint: POST https://domscan.net/v1/tools/spf/validate.
+
+## Security APIs
+
+- [DELETE /v1/brand-monitor](https://domscan.net/docs/products/brand-monitor#deleteBrandMonitor): Delete Brand Monitor. Remove a brand monitor. Endpoint: DELETE https://domscan.net/v1/brand-monitor.
+- [GET /v1/brand-monitor](https://domscan.net/docs/products/brand-monitor#getBrandMonitors): Get Brand Monitors. View brand monitors. Endpoint: GET https://domscan.net/v1/brand-monitor.
+- [POST /v1/brand-monitor](https://domscan.net/docs/products/brand-monitor#createBrandMonitor): Create Brand Monitor. Create brand monitor. Endpoint: POST https://domscan.net/v1/brand-monitor.
+- [PUT /v1/brand-monitor/alerts](https://domscan.net/docs/products/brand-monitor#updateBrandMonitorAlerts): Update Brand Monitor Alerts. Update brand threat alerts. Endpoint: PUT https://domscan.net/v1/brand-monitor/alerts.
+- [POST /v1/brand-monitor/reset-baseline](https://domscan.net/docs/products/brand-monitor#resetBrandMonitorBaseline): Reset Brand Monitor Baseline. Reset the threat baseline. Endpoint: POST https://domscan.net/v1/brand-monitor/reset-baseline.
+- [POST /v1/brand-monitor/scan](https://domscan.net/docs/products/brand-monitor#triggerBrandScan): Trigger Brand Scan. Run brand protection scan. Endpoint: POST https://domscan.net/v1/brand-monitor/scan.
+- [GET /v1/brand-monitor/status](https://domscan.net/docs/products/brand-monitor#getBrandMonitorStatus): Get Brand Monitor Status. View detailed monitor status. Endpoint: GET https://domscan.net/v1/brand-monitor/status.
+- [GET /v1/certificates](https://domscan.net/docs/products/certificate-intelligence#getCertificates): SSL Certificates. Search Certificate Transparency logs. Endpoint: GET https://domscan.net/v1/certificates.
+- [POST /v1/certificates/bulk](https://domscan.net/docs/products/certificate-intelligence#bulkGetCertificates): Bulk SSL Certificate Search. Search certificates for up to 10 domains. Endpoint: POST https://domscan.net/v1/certificates/bulk.
+- [GET /v1/email-auth](https://domscan.net/docs/products/email-authentication#getEmailAuth): Email Authentication. Check email auth records and mail transport policies. Endpoint: GET https://domscan.net/v1/email-auth.
+- [POST /v1/email-auth/bulk](https://domscan.net/docs/products/email-authentication#bulkGetEmailAuth): Bulk Email Authentication. Audit email authentication for up to 10 domains. Endpoint: POST https://domscan.net/v1/email-auth/bulk.
+- [GET /v1/email/check](https://domscan.net/docs/products/email-blacklist#checkEmailBlacklist): Email Blacklist Check. Check if email domain is disposable. Endpoint: GET https://domscan.net/v1/email/check.
+- [POST /v1/email/check/bulk](https://domscan.net/docs/products/email-blacklist#bulkEmailCheck): Bulk Email Check. Bulk email blacklist checking. Endpoint: POST https://domscan.net/v1/email/check/bulk.
+- [GET /v1/email/compliance](https://domscan.net/docs/products/email-compliance#getEmailCompliance): Email Compliance. Check Gmail and Outlook sender readiness for a domain. Endpoint: GET https://domscan.net/v1/email/compliance.
+- [GET /v1/email/verify](https://domscan.net/docs/products/email-verification#verifyEmail): Email Verification. Verify email addresses with deliverability status, confidence, risk signals, and DNS evidence. Endpoint: GET https://domscan.net/v1/email/verify.
+- [POST /v1/email/verify/bulk](https://domscan.net/docs/products/email-verification#verifyEmailBulk): Bulk Email Verification. Bulk email verification. Endpoint: POST https://domscan.net/v1/email/verify/bulk.
+- [POST /v1/phone/validate](https://domscan.net/docs/products/phone-validation#validatePhoneNumber): Phone Number Validation. Validate and enrich phone numbers privately with offline carrier, location, dialing, and allocation metadata. Endpoint: POST https://domscan.net/v1/phone/validate.
+- [POST /v1/phone/validate/bulk](https://domscan.net/docs/products/phone-validation#validatePhoneNumbersBulk): Bulk Phone Number Validation. Validate and enrich up to 100 phone numbers with shared or per-item country and language context. Endpoint: POST https://domscan.net/v1/phone/validate/bulk.
+- [GET /v1/reputation](https://domscan.net/docs/products/domain-reputation#getDomainReputation): Domain Reputation. Check domain trust signals with confidence metadata. Endpoint: GET https://domscan.net/v1/reputation.
+- [GET /v1/ssl/audit](https://domscan.net/docs/products/certificate-intelligence#getSslAudit): SSL Audit. Get a comprehensive live SSL/TLS audit. Endpoint: GET https://domscan.net/v1/ssl/audit.
+- [GET /v1/ssl/chain](https://domscan.net/docs/products/certificate-intelligence#getSslChain): SSL Chain. Analyze certificate chain. Endpoint: GET https://domscan.net/v1/ssl/chain.
+- [GET /v1/ssl/deep-scan](https://domscan.net/docs/products/certificate-intelligence#getSslDeepScan): SSL Deep Scan. Run or fetch a premium cached deep SSL/TLS scan. Endpoint: GET https://domscan.net/v1/ssl/deep-scan.
+- [GET /v1/ssl/expiring](https://domscan.net/docs/products/certificate-intelligence#getSslExpiring): SSL Expiry Check. Check certificate expiry status. Endpoint: GET https://domscan.net/v1/ssl/expiring.
+- [GET /v1/ssl/grade](https://domscan.net/docs/products/certificate-intelligence#getSslGrade): SSL Grade. Get SSL/TLS grade with HSTS preload audit details. Endpoint: GET https://domscan.net/v1/ssl/grade.
+- [GET /v1/subdomains](https://domscan.net/docs/products/subdomains#getSubdomains): Subdomain Finder. Find best-effort public hostname evidence with source labels. Endpoint: GET https://domscan.net/v1/subdomains.
+- [POST /v1/subdomains/bulk](https://domscan.net/docs/products/subdomains#bulkGetSubdomains): Bulk Subdomain Discovery. Find subdomain evidence for up to 10 domains. Endpoint: POST https://domscan.net/v1/subdomains/bulk.
+- [GET /v1/typos](https://domscan.net/docs/products/typosquatting#getTyposquatting): Typosquatting Detection. Detect typosquatting threats for your brand. Endpoint: GET https://domscan.net/v1/typos.
+- [GET /v1/typos/quick](https://domscan.net/docs/products/typosquatting#quickTyposquattingCheck): Quick Typosquatting Check. Find registered typo domains quickly. Endpoint: GET https://domscan.net/v1/typos/quick.
+- [GET /v1/typos/report](https://domscan.net/docs/products/typosquatting#generateTyposquattingReport): Brand Protection Report. Generate a full brand protection report. Endpoint: GET https://domscan.net/v1/typos/report.
+- [GET /v1/typos/threats](https://domscan.net/docs/products/typosquatting#analyzeTyposquattingThreats): Typosquatting Threat Analysis. Run a live typosquatting threat scan. Endpoint: GET https://domscan.net/v1/typos/threats.
+- [GET /v1/vulnerabilities](https://domscan.net/docs/products/vulnerability-intelligence#getVulnerabilities): Vulnerability Intelligence. Correlate exposed software versions with authoritative advisories and exploitation evidence. Endpoint: GET https://domscan.net/v1/vulnerabilities.
+
+## Intelligence APIs
+
+- [GET /v1/agent-readiness](https://domscan.net/docs/products/technology-detection#checkAgentReadiness): Agent Readiness. Score website agent readiness across four evidence dimensions. Endpoint: GET https://domscan.net/v1/agent-readiness.
+- [GET /v1/categorize](https://domscan.net/docs/products/website-categorization#categorizeWebsite): Website Categorization. Categorize websites by content type. Endpoint: GET https://domscan.net/v1/categorize.
+- [POST /v1/categorize/bulk](https://domscan.net/docs/products/website-categorization#categorizeWebsiteBulk): Bulk Website Categorization. Bulk categorize websites. Endpoint: POST https://domscan.net/v1/categorize/bulk.
+- [GET /v1/categorize/taxonomy](https://domscan.net/docs/products/website-categorization#getCategorizationTaxonomy): Categorization Taxonomy. List category IDs and subcategories used by categorization. Endpoint: GET https://domscan.net/v1/categorize/taxonomy.
+- [GET /v1/company](https://domscan.net/docs/products/company-lookup#getCompany): Company Lookup. Extract source-backed public company metadata from a domain. Endpoint: GET https://domscan.net/v1/company.
+- [GET /v1/hosting](https://domscan.net/docs/products/technology-detection#getHosting): Hosting Detection. Detect hosting infrastructure. Endpoint: GET https://domscan.net/v1/hosting.
+- [POST /v1/hosting/bulk](https://domscan.net/docs/products/technology-detection#bulkGetHosting): Bulk Hosting Detection. Detect infrastructure for up to 10 domains. Endpoint: POST https://domscan.net/v1/hosting/bulk.
+- [GET /v1/identity-assets](https://domscan.net/docs/products/identity-assets#getWebsiteIdentityAssets): Website Identity Assets. Extract website logos and public brand assets. Endpoint: GET https://domscan.net/v1/identity-assets.
+- [POST /v1/identity-assets/bulk](https://domscan.net/docs/products/identity-assets#bulkGetWebsiteIdentityAssets): Bulk Website Identity Assets. Extract brand assets for up to 10 domains. Endpoint: POST https://domscan.net/v1/identity-assets/bulk.
+- [GET /v1/identity-resolution](https://domscan.net/docs/products/identity-resolution#resolveInternetIdentity): Internet Identity Resolution. Resolve declared public identities from a domain. Endpoint: GET https://domscan.net/v1/identity-resolution.
+- [POST /v1/identity-resolution/bulk](https://domscan.net/docs/products/identity-resolution#bulkResolveInternetIdentity): Bulk Internet Identity Resolution. Resolve identities for up to 10 domains. Endpoint: POST https://domscan.net/v1/identity-resolution/bulk.
+- [GET /v1/parking](https://domscan.net/docs/products/technology-detection#getParkingDetection): Parking Detection. Detect parked domains and aftermarket listings. Endpoint: GET https://domscan.net/v1/parking.
+- [GET /v1/redirects](https://domscan.net/docs/products/redirects#getRedirects): Redirect Chain. Follow and analyze redirect chains. Endpoint: GET https://domscan.net/v1/redirects.
+- [POST /v1/scrape](https://domscan.net/docs/products/web-scraping#scrapePage): Single Page Scrape. Retrieve one public page with standard, resilient, or rendered processing. Endpoint: POST https://domscan.net/v1/scrape.
+- [POST /v1/scrape/jobs](https://domscan.net/docs/products/web-scraping#createScrapeJob): Create Async Scrape Job. Queue an asynchronous scrape job for up to 100 public URLs. Endpoint: POST https://domscan.net/v1/scrape/jobs.
+- [GET /v1/scrape/jobs/:job_id](https://domscan.net/docs/products/web-scraping#getScrapeJob): Get Async Scrape Job. Get asynchronous scrape job progress. Endpoint: GET https://domscan.net/v1/scrape/jobs/:job_id.
+- [GET /v1/scrape/jobs/:job_id/results](https://domscan.net/docs/products/web-scraping#getScrapeJobResults): Get Async Scrape Results. Get ordered results for an asynchronous scrape job. Endpoint: GET https://domscan.net/v1/scrape/jobs/:job_id/results.
+- [GET /v1/similarity](https://domscan.net/docs/products/domain-similarity#getDomainSimilarity): Domain Similarity. Calculate domain similarity scores. Endpoint: GET https://domscan.net/v1/similarity.
+- [GET /v1/tech](https://domscan.net/docs/products/technology-detection#getTechStack): Tech Stack Detection. Detect 500+ verified technologies across 80+ categories with fast, rendered, and deep scans, confidence, and coverage details. Endpoint: GET https://domscan.net/v1/tech.
+- [POST /v1/tech/bulk](https://domscan.net/docs/products/technology-detection#postTechStackBulk): Bulk Tech Stack Detection. Run up to 10 ordered fast technology scans. Endpoint: POST https://domscan.net/v1/tech/bulk.
+- [GET /v1/tech/jobs](https://domscan.net/docs/products/technology-detection#listTechScanJobs): List Async Tech Scan Jobs. List recent technology scan jobs. Endpoint: GET https://domscan.net/v1/tech/jobs.
+- [POST /v1/tech/jobs](https://domscan.net/docs/products/technology-detection#createTechScanJob): Create Async Tech Scan Job. Create an asynchronous technology scan job for up to 100 targets. Endpoint: POST https://domscan.net/v1/tech/jobs.
+- [DELETE /v1/tech/jobs/:job_id](https://domscan.net/docs/products/technology-detection#cancelTechScanJob): Cancel Async Tech Scan Job. Cancel a technology scan job and settle eligible refunds. Endpoint: DELETE https://domscan.net/v1/tech/jobs/:job_id.
+- [GET /v1/tech/jobs/:job_id](https://domscan.net/docs/products/technology-detection#getTechScanJob): Get Async Tech Scan Job. Get technology scan job progress. Endpoint: GET https://domscan.net/v1/tech/jobs/:job_id.
+- [GET /v1/tech/jobs/:job_id/results](https://domscan.net/docs/products/technology-detection#getTechScanJobResults): Get Async Tech Scan Results. Get ordered results for a technology scan job. Endpoint: GET https://domscan.net/v1/tech/jobs/:job_id/results.
+- [GET /v1/url-intelligence](https://domscan.net/docs/products/url-intelligence#getUrlIntelligence): Unified URL Intelligence. Extract normalized public URL metadata. Endpoint: GET https://domscan.net/v1/url-intelligence.
+- [POST /v1/url-intelligence/bulk](https://domscan.net/docs/products/url-intelligence#bulkGetUrlIntelligence): Bulk Unified URL Intelligence. Extract metadata for up to 10 URLs. Endpoint: POST https://domscan.net/v1/url-intelligence/bulk.
+
+## Social APIs
+
+- [GET /v1/social](https://domscan.net/docs/products/social-handles#checkSocialHandles): Social Handle Checker. Check usernames and scoped platform resources. Endpoint: GET https://domscan.net/v1/social.
+- [POST /v1/social/bulk](https://domscan.net/docs/products/social-handles#bulkCheckSocialHandles): Bulk Social Handle Check. Check up to 10 social identifiers at 2 credits per valid item. Endpoint: POST https://domscan.net/v1/social/bulk.
+- [GET /v1/social/info](https://domscan.net/docs/products/social-handles#getSocialInfo): Social Handle Reference. Get social platform and resource details. Endpoint: GET https://domscan.net/v1/social/info.
+
+## OSINT APIs
+
+- [GET /v1/ip](https://domscan.net/docs/products/ip-intelligence#getIpInfo): IP Geolocation. IP or resolved-domain network data with scoped enrichment. Endpoint: GET https://domscan.net/v1/ip.
+- [GET /v1/lifecycle](https://domscan.net/docs/products/domain-lifecycle#getDomainLifecycle): Domain Lifecycle. Domain registration dates and lifecycle phase. Endpoint: GET https://domscan.net/v1/lifecycle.
+- [GET /v1/mac](https://domscan.net/docs/products/mac-lookup#getMacInfo): MAC Address Lookup. MAC address vendor lookup. Endpoint: GET https://domscan.net/v1/mac.
+- [GET /v1/mac/info](https://domscan.net/docs/products/mac-lookup#getMacLookupInfo): MAC Lookup Reference. Get MAC lookup endpoint details. Endpoint: GET https://domscan.net/v1/mac/info.
+- [GET /v1/rdap](https://domscan.net/docs/products/rdap#getRdap): RDAP Lookup. Raw RDAP lookup for domains, IPs, and ASNs. Endpoint: GET https://domscan.net/v1/rdap.
+- [POST /v1/rdap/bulk](https://domscan.net/docs/products/rdap#bulkGetRdap): Bulk RDAP Lookup. Run up to 10 raw RDAP lookups. Endpoint: POST https://domscan.net/v1/rdap/bulk.
+- [GET /v1/whois](https://domscan.net/docs/products/whois#getWhois): WHOIS Lookup. WHOIS domain registration lookup. Endpoint: GET https://domscan.net/v1/whois.
+- [POST /v1/whois/bulk](https://domscan.net/docs/products/whois#bulkWhois): Bulk WHOIS Lookup. Bulk WHOIS lookup. Endpoint: POST https://domscan.net/v1/whois/bulk.
+- [GET /v1/whois/history](https://domscan.net/docs/products/whois#getWhoisHistory): WHOIS History. Query normalized WHOIS observations recorded by DomScan. Endpoint: GET https://domscan.net/v1/whois/history.
+- [GET /v2/whois](https://domscan.net/docs/products/whois#getWhoisV2): Enhanced WHOIS Lookup. Merge normalized RDAP with traditional WHOIS enrichment. Endpoint: GET https://domscan.net/v2/whois.
+
+## Pricing APIs
+
+- [GET /v1/prices](https://domscan.net/docs/products/domain-pricing#getPrices): Domain Pricing. Get available TLD prices from integrated sources. Endpoint: GET https://domscan.net/v1/prices.
+- [POST /v1/prices/bulk](https://domscan.net/docs/products/domain-pricing#bulkPricing): Bulk Pricing. Bulk integrated TLD pricing lookup. Endpoint: POST https://domscan.net/v1/prices/bulk.
+- [GET /v1/prices/compare](https://domscan.net/docs/products/domain-pricing#comparePrices): Compare Registrar Prices. Compare standard rows and official exact-domain quotes. Endpoint: GET https://domscan.net/v1/prices/compare.
+- [GET /v1/prices/registrars](https://domscan.net/docs/products/domain-pricing#getRegistrars): List Registrars. List registrar metadata and pricing integration status. Endpoint: GET https://domscan.net/v1/prices/registrars.
+- [GET /v1/prices/tld/:tld](https://domscan.net/docs/products/domain-pricing#getTldPricing): TLD Pricing. Get source-labeled TLD pricing rows. Endpoint: GET https://domscan.net/v1/prices/tld/:tld.
+
+## Recipe APIs
+
+- [GET /v1/recipes/brand-launch](https://domscan.net/docs/products/workflow-recipes#recipeBrandLaunch): Brand Launch Readiness. Pre-launch brand readiness checklist. Endpoint: GET https://domscan.net/v1/recipes/brand-launch.
+- [GET /v1/recipes/competitor-intel](https://domscan.net/docs/products/workflow-recipes#recipeCompetitorIntel): Competitor Intelligence. Competitor infrastructure analysis. Endpoint: GET https://domscan.net/v1/recipes/competitor-intel.
+- [GET /v1/recipes/defensive-registration](https://domscan.net/docs/products/workflow-recipes#recipeDefensiveRegistration): Defensive Registration. Defensive domain recommendations. Endpoint: GET https://domscan.net/v1/recipes/defensive-registration.
+- [GET /v1/recipes/dns-migration](https://domscan.net/docs/products/workflow-recipes#recipeDnsMigration): DNS Migration Check. DNS migration readiness check. Endpoint: GET https://domscan.net/v1/recipes/dns-migration.
+- [GET /v1/recipes/domain-finder](https://domscan.net/docs/products/workflow-recipes#recipeDomainFinder): Domain Finder. AI-powered available domain discovery. Endpoint: GET https://domscan.net/v1/recipes/domain-finder.
+- [GET /v1/recipes/due-diligence](https://domscan.net/docs/products/workflow-recipes#recipeDueDiligence): Domain Due Diligence. Complete domain acquisition analysis. Endpoint: GET https://domscan.net/v1/recipes/due-diligence.
+- [GET /v1/recipes/email-deliverability](https://domscan.net/docs/products/workflow-recipes#recipeEmailDeliverability): Email Deliverability Audit. Email deliverability analysis. Endpoint: GET https://domscan.net/v1/recipes/email-deliverability.
+- [GET /v1/recipes/infrastructure-discovery](https://domscan.net/docs/products/workflow-recipes#recipeInfrastructureDiscovery): Infrastructure Discovery. Infrastructure and attack surface mapping. Endpoint: GET https://domscan.net/v1/recipes/infrastructure-discovery.
+- [GET /v1/recipes/phishing-investigation](https://domscan.net/docs/products/workflow-recipes#recipePhishingInvestigation): Phishing Investigation. Phishing domain investigation. Endpoint: GET https://domscan.net/v1/recipes/phishing-investigation.
+- [GET /v1/recipes/portfolio-audit](https://domscan.net/docs/products/workflow-recipes#recipePortfolioAudit): Portfolio Audit. Domain portfolio audit and optimization. Endpoint: GET https://domscan.net/v1/recipes/portfolio-audit.
+- [POST /v1/recipes/portfolio-audit](https://domscan.net/docs/products/workflow-recipes#recipePortfolioAuditPost): Portfolio Audit (POST). Domain portfolio audit (POST). Endpoint: POST https://domscan.net/v1/recipes/portfolio-audit.
+- [GET /v1/recipes/threat-assessment](https://domscan.net/docs/products/workflow-recipes#recipeThreatAssessment): Threat Assessment. Brand threat and typosquatting analysis. Endpoint: GET https://domscan.net/v1/recipes/threat-assessment.
+
+## Watchlist APIs
+
+- [DELETE /v1/watchlist](https://domscan.net/docs/products/watchlist#removeFromWatchlist): Remove from Watchlist. Remove domain from watchlist. Endpoint: DELETE https://domscan.net/v1/watchlist.
+- [GET /v1/watchlist](https://domscan.net/docs/products/watchlist#getWatchlist): Get Watchlist. View watched domains. Endpoint: GET https://domscan.net/v1/watchlist.
+- [POST /v1/watchlist](https://domscan.net/docs/products/watchlist#addToWatchlist): Add to Watchlist. Add domain to watchlist. Endpoint: POST https://domscan.net/v1/watchlist.
+- [GET /v1/watchlist/available](https://domscan.net/docs/products/watchlist#getAvailableWatchlist): Get Available Domains. View available watched domains. Endpoint: GET https://domscan.net/v1/watchlist/available.
+- [GET /v1/watchlist/expiring](https://domscan.net/docs/products/watchlist#getExpiringWatchlist): Get Expiring Domains. View expiring watched domains. Endpoint: GET https://domscan.net/v1/watchlist/expiring.
+
+## Meta APIs
+
+- [GET /v1/batches](https://domscan.net/docs/products/batch-jobs#listApiBatches): List Async API Batches. List asynchronous API batches. Endpoint: GET https://domscan.net/v1/batches.
+- [POST /v1/batches](https://domscan.net/docs/products/batch-jobs#createApiBatch): Create Async API Batch. Create an asynchronous API batch. Endpoint: POST https://domscan.net/v1/batches.
+- [DELETE /v1/batches/:job_id](https://domscan.net/docs/products/batch-jobs#cancelApiBatch): Cancel Async API Batch. Cancel an asynchronous API batch. Endpoint: DELETE https://domscan.net/v1/batches/:job_id.
+- [GET /v1/batches/:job_id](https://domscan.net/docs/products/batch-jobs#getApiBatch): Get Async API Batch. Get asynchronous API batch progress. Endpoint: GET https://domscan.net/v1/batches/:job_id.
+- [GET /v1/batches/:job_id/results](https://domscan.net/docs/products/batch-jobs#getApiBatchResults): Get Async API Batch Results. Get JSON or CSV asynchronous API batch results. Endpoint: GET https://domscan.net/v1/batches/:job_id/results.
+- [GET /v1/email/blacklist](https://domscan.net/docs/products/email-blacklist#getEmailBlacklistInfo): Disposable Email Dataset. Browse disposable email domain data. Endpoint: GET https://domscan.net/v1/email/blacklist.
+- [GET /v1/email/blacklist/download](https://domscan.net/docs/products/email-blacklist#downloadEmailBlacklist): Download Disposable Email Dataset. Download disposable email domain data. Endpoint: GET https://domscan.net/v1/email/blacklist/download.
+- [GET /v1/pricing](https://domscan.net/docs/products/domain-pricing#getPricingInfo): API Pricing Info. View API pricing. Endpoint: GET https://domscan.net/v1/pricing.
+
+## Optional
+
+- [DomScan home](https://domscan.net/): Product overview and navigation for human readers.
+- [Changelog](https://domscan.net/changelog): Recent API and product updates.

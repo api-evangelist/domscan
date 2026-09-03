@@ -1,0 +1,96 @@
+generated: '2026-09-03'
+method: searched
+source: https://github.com/estevecastells/domscan-sdk + GitHub releases API + registry probes
+note: 'Official SDKs for 10 languages are generated from DomScan''s endpoint registry and distributed via GitHub releases (v0.3.0, 13 assets),
+  not via public package registries: pypi.org/pypi/domscan-sdk 404, and the npm package name "domscan" (0.0.5, 2023) is an unrelated third-party
+  XSS scanner — do not confuse it with DomScan. Versions below are read from the GitHub release tag, the only provider-published version source.'
+packages:
+- name: '@domscan/sdk'
+  language: Node.js / TypeScript
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  install: release tarball from https://github.com/estevecastells/domscan-sdk/releases
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/node
+- name: domscan-sdk
+  language: Python
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: release source archive and wheel; not on PyPI (pypi.org/pypi/domscan-sdk returned 404)
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/python
+- name: github.com/estevecastells/domscan-sdk/go
+  language: Go
+  registry: go-module
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/go
+- name: domscan-sdk
+  language: Ruby
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: release gem; not on rubygems.org
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/ruby
+- name: estevecastells/domscan-sdk
+  language: PHP
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: Composer artifact archive
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/php
+- name: net.domscan:domscan-sdk-java
+  language: Java
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: release JAR
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/java
+- name: DomScan.Sdk
+  language: C#
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: release NuGet package (GitHub asset, not nuget.org)
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/csharp
+- name: net.domscan:domscan-sdk-kotlin
+  language: Kotlin
+  registry: github-release
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/kotlin
+- name: DomScan
+  language: Swift
+  registry: git-tag
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: tagged Swift package
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/swift
+- name: domscan-sdk
+  language: Rust
+  registry: git-tag
+  official: true
+  version: 0.3.0
+  published: '2026-08-25'
+  note: tagged Git dependency and crate archive; not on crates.io
+  url: https://github.com/estevecastells/domscan-sdk/tree/main/rust
+- name: domscan-cli
+  language: Node.js (CLI)
+  registry: github-release
+  official: true
+  version: 0.2.0
+  published: '2026-08-02'
+  install: npm install -g https://github.com/estevecastells/domscan-cli/releases/latest/download/domscan-cli.tgz
+  url: https://github.com/estevecastells/domscan-cli
+coverage: Public packages cover 120 public non-session endpoints across availability, DNS, WHOIS, security, pricing, recipes, and intelligence
+  workflows (per SDK repo README).
+license: MIT

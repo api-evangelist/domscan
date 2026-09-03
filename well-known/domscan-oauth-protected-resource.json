@@ -1,0 +1,1 @@
+{"resource":"https://domscan.net/mcp","authorization_servers":["https://domscan.net"],"scopes_supported":["mcp:tools"],"bearer_methods_supported":["header"],"resource_documentation":"https://domscan.net/mcp-domain-checker"}

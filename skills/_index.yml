@@ -1,0 +1,16 @@
+generated: '2026-09-03'
+method: generated
+source: openapi/domscan-openapi.json + llms/domscan-llms.txt
+skills:
+- name: domscan-domain-acquisition-due-diligence
+  file: skills/domscan-domain-acquisition-due-diligence.md
+  description: Evaluate a domain before buying or launching on it.
+- name: domscan-brand-protection-monitoring
+  file: skills/domscan-brand-protection-monitoring.md
+  description: Detect typosquatting threats and stand up continuous brand monitoring.
+- name: domscan-email-deliverability-audit
+  file: skills/domscan-email-deliverability-audit.md
+  description: Audit SPF/DKIM/DMARC and mailbox-provider sender readiness.
+- name: domscan-find-available-domain
+  file: skills/domscan-find-available-domain.md
+  description: Find, rank, and price an available domain for a new brand.

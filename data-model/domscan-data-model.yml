@@ -1,0 +1,70 @@
+generated: '2026-09-03'
+method: derived
+source: openapi/domscan-openapi.json
+note: 'DomScan is a lookup-centric API: most resources are keyed by domain, URL, IP, email, phone, or TLD rather than by stored entity ids. Stateful
+  entities are account-scoped monitors, watchlist entries, async jobs/batches, and API keys.'
+entities:
+- Account
+- ApiKey
+- WatchlistEntry
+- BrandMonitor
+- ScrapeJob
+- TechScanJob
+- DomainDiscoveryJob
+- ApiBatch
+- Domain (lookup key)
+- TLD
+- Registrar
+relationships:
+- from: Account
+  to: ApiKey
+  type: has_many
+  via: /v1/user/keys (revokeApiKey by id)
+- from: Account
+  to: WatchlistEntry
+  type: has_many
+  via: /v1/watchlist (domain-keyed)
+- from: Account
+  to: BrandMonitor
+  type: has_many
+  via: /v1/brand-monitor (domain-keyed)
+- from: Account
+  to: ScrapeJob
+  type: has_many
+  via: /v1/scrape/jobs/{job_id} (owner-scoped)
+- from: Account
+  to: TechScanJob
+  type: has_many
+  via: /v1/tech/jobs/{job_id} (owner-scoped)
+- from: Account
+  to: ApiBatch
+  type: has_many
+  via: /v1/batches/{job_id} (owner-scoped)
+- from: ScrapeJob
+  to: ScrapeResult
+  type: has_many
+  via: /v1/scrape/jobs/{job_id}/results (ordered, expire after 24h)
+- from: TechScanJob
+  to: TechScanResult
+  type: has_many
+  via: /v1/tech/jobs/{job_id}/results (ordered, expire after 48h)
+- from: ApiBatch
+  to: BatchResult
+  type: has_many
+  via: /v1/batches/{job_id}/results (JSON or CSV)
+- from: TLD
+  to: Registrar
+  type: has_many
+  via: /v1/prices/tld/{tld} pricing rows per registrar
+- from: Domain
+  to: DNSRecord
+  type: has_many
+  via: /v1/dns, /v1/dns/all, /v1/dns/history
+- from: Domain
+  to: Certificate
+  type: has_many
+  via: /v1/certificates (Certificate Transparency search)
+id_conventions:
+  api_key_prefix: dsk_
+  job_id: opaque job identifier returned by job/batch creation
+  request_id: error.request_id on every error envelope

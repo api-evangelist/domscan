@@ -1,0 +1,27 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the DomScan OpenAPI
+  version: 1.0.0
+generated: '2026-09-03'
+method: generated
+source: openapi/domscan-openapi.json
+extends: https://domscan.net/v1/openapi.json
+actions:
+  - target: $.info
+    update:
+      x-apis-json:
+        provider: domscan
+        catalog: https://raw.githubusercontent.com/api-evangelist/domscan/refs/heads/main/apis.yml
+        artifacts:
+          authentication: authentication/domscan-authentication.yml
+          conventions: conventions/domscan-conventions.yml
+          errors: errors/domscan-problem-types.yml
+          rate-limits: rate-limits/domscan-rate-limits.yml
+          mcp: mcp/domscan-mcp.yml
+          tool-crosswalk: mcp/domscan-tool-crosswalk.yml
+  - target: $.info
+    update:
+      x-agent-surfaces:
+        mcp: https://domscan.net/mcp
+        llms-txt: https://domscan.net/llms.txt
+        api-catalog: https://domscan.net/.well-known/api-catalog

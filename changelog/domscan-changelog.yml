@@ -1,0 +1,35 @@
+generated: '2026-09-03'
+method: searched
+source: https://domscan.net/changelog
+scheme: dated product updates tagged feature / improvement / fix / breaking / security; contract version tracked separately in OpenAPI info.version
+  (2.15.0)
+current_version: 2.15.0
+entries:
+- date: '2026-09-01'
+  type: fix
+  highlights: More reliable scraping and WHOIS availability; scrape distinguishes unreachable targets from platform failures; transient failed
+    TLS deep-scan starts are refunded.
+- date: '2026-08-31'
+  type: feature
+  highlights: Account admins for shared billing — owners can promote members to admins who manage billing and credits without owning the account.
+- date: '2026-08-31'
+  type: fix
+  highlights: Threads username checks use exact validation; GitHub reserved usernames and deleted Reddit usernames now resolve as unavailable.
+- date: '2026-08-30'
+  type: improvement
+  highlights: Registrar pricing coverage follows current evidence; stale or quarantined provider coverage is not published. More resilient social
+    username checks; MAC, website scan, and hosted-domain lookups recover from transient failures.
+- date: '2026-08-29'
+  type: fix
+  highlights: IP lookups reliably return geolocation and network data; temporary unavailability now returns a retryable 503 and refunds the request
+    credit instead of an all-null 200.
+- date: '2026-08-28'
+  type: feature
+  highlights: 'Agent Readiness scoring: transparent 0-100 score across discoverability, content, access policy, and capabilities with 35+ bounded
+    checks (sitemaps, Markdown delivery, crawler policy, API catalogs, OAuth metadata, Agent Skills, WebMCP, remote MCP). Public HTML pages support
+    Accept: text/markdown with Vary: Accept, a Markdown sitemap, and a sanitized public agent guide.'
+- date: '2026-08-27'
+  type: feature
+  highlights: DomScan Postman workspace publicly available on the Postman API Network with the complete collection aligned to the current OpenAPI
+    contract; Zyla marketplace catalog prepared (106 operations).
+breaking_recent: false

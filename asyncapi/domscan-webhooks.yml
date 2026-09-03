@@ -1,0 +1,15 @@
+generated: '2026-09-03'
+method: derived
+source: openapi/domscan-openapi.json (brand monitor operations)
+asyncapi_published: false
+note: 'No AsyncAPI document published. The documented event surface is outbound alerting on brand monitors: createBrandMonitor and updateBrandMonitorAlerts
+  accept an alert_webhook URI (alongside alert_email) that receives brand-threat alerts when new typosquatting registrations are detected. No
+  webhook payload schema, signing, or retry policy is published in the contract.'
+webhooks:
+- name: brand-monitor-alert
+  direction: outbound
+  configured_via:
+  - createBrandMonitor (POST /v1/brand-monitor, alert_webhook)
+  - updateBrandMonitorAlerts (PUT /v1/brand-monitor/alerts, alert_webhook)
+  trigger: new typosquatting registrations / brand threats detected by a brand monitor scan
+  payload_schema: not published
