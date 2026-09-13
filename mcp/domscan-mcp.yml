@@ -2,15 +2,21 @@ generated: '2026-09-03'
 method: searched
 source: https://domscan.net/mcp-domain-checker + POST https://domscan.net/mcp (tools/list probe) + /.well-known/oauth-protected-resource
 name: DomScan MCP Server
-description: Official hosted remote MCP server exposing 136 domain-intelligence tools (domain search, DNS, web intelligence, security, identity,
-  monitoring, and workflow recipes) over Streamable HTTP. Works with Claude, ChatGPT, Cursor, and other MCP clients; OAuth is preferred for new
-  clients, API keys (Authorization, X-API-Key, or legacy api_key URL parameter) remain supported.
+description: Official hosted remote MCP server exposing 136 domain-intelligence tools (domain search,
+  DNS, web intelligence, security, identity, monitoring, and workflow recipes) over Streamable HTTP. Works
+  with Claude, ChatGPT, Cursor, and other MCP clients; OAuth is preferred for new clients, API keys (Authorization,
+  X-API-Key, or legacy api_key URL parameter) remain supported.
 status: official
 deployment:
   mode: remote
   endpoint: https://domscan.net/mcp
   auth: oauth
   verified: probed
+  probe_prior: (never probed)
+  probe: gated
+  probe_why: RFC 9728 challenge on the MCP path only
+  checked: '2026-09-11'
+  source: claimed-backlog re-probe 2026-09-11
 transport: streamable-http
 tools_count: 136
 tool_groups:
@@ -33,9 +39,11 @@ oauth:
   - mcp:tools
   flow: authorization_code + PKCE (S256), dynamic client registration at https://domscan.net/oauth/register
   fallback: 'API key via Authorization: Bearer, X-API-Key header, or legacy api_key URL parameter'
-local_bridge: clients without remote MCP support can wrap the URL with mcp-remote (npx -y mcp-remote https://domscan.net/mcp) per provider docs
+local_bridge: clients without remote MCP support can wrap the URL with mcp-remote (npx -y mcp-remote https://domscan.net/mcp)
+  per provider docs
 x-evidence:
   fetched: '2026-09-03'
-  probe: POST tools/list returned HTTP 401 {"error":"unauthorized"} — live schema is auth-gated; tool catalog published at https://domscan.net/mcp-domain-checker
+  probe: POST tools/list returned HTTP 401 {"error":"unauthorized"} — live schema is auth-gated; tool
+    catalog published at https://domscan.net/mcp-domain-checker
   well_known_status: 200
 crosswalk: mcp/domscan-tool-crosswalk.yml
