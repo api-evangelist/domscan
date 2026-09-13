@@ -1,0 +1,10 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:domscan.net:mcp:domain-api",
+      "type": "application/mcp-server-card+json",
+      "url": "https://domscan.net/mcp/server-card"
+    }
+  ]
+}
