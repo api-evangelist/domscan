@@ -56,49 +56,635 @@ tags_raw:
 - mcp
 - agent-native
 apis:
-- name: DomScan API
-  image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/domscan.png
-  description: REST domain-intelligence API (40+ endpoints under /v1) for availability, DNS, WHOIS/RDAP, SSL/TLS,
-    email auth, valuation, security, and OSINT, with API-key authentication.
+- aid: domscan:domscan-agent-readiness-api
+  name: DomScan Agent Readiness API
+  description: The Agent Readiness API from DomScan — 1 operation(s) for agent readiness.
   humanURL: https://domscan.net/docs
   baseURL: https://domscan.net
   tags:
-  - Domains
-  - DNS
-  - WHOIS
-  - rdap
-  - SSL/TLS
-  - Email Security
-  - domain-valuation
-  - Brand Protection
-  - OSINT
-  - Threat Intelligence
-  - MCP
-  - agent-native
-  tags_raw:
-  - domains
-  - dns
-  - whois
-  - rdap
-  - ssl-tls
-  - email-security
-  - domain-valuation
-  - brand-protection
-  - osint
-  - threat-intelligence
-  - mcp
-  - agent-native
+  - Agent Readiness
   properties:
   - type: OpenAPI
-    url: https://domscan.net/v1/openapi.json
-  - type: OpenAPI
-    url: https://domscan.net/v1/swagger.json
+    url: openapi/domscan-agent-readiness-api-openapi.yml
   - type: PostmanCollection
     url: https://domscan.net/v1/postman.json
   - type: LLMSTxt
     url: https://domscan.net/llms.txt
-  - type: MCPServer
-    url: https://domscan.net/mcp
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-batch-api
+  name: DomScan Batch API
+  description: The Batch API from DomScan — 4 operation(s) for batch.
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Batch
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-batch-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-brand-protection-api
+  name: DomScan Brand Protection API
+  description: The Brand Protection API from DomScan — 5 operation(s) for brand protection.
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Brand Protection
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-brand-protection-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-brand-scoring-api
+  name: DomScan Brand Scoring API
+  description: Brand name quality scoring and comparison
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Brand Scoring
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-brand-scoring-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-dataset-api
+  name: DomScan Dataset API
+  description: Reference datasets and coverage metadata
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Dataset
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-dataset-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-dns-api
+  name: DomScan DNS API
+  description: DNS record lookup, security analysis, and propagation checking
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - DNS
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-dns-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-dns-history-api
+  name: DomScan DNS History API
+  description: Review lookup-driven, day-level DNS observations from DomScan
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - DNS History
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-dns-history-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-availability-api
+  name: DomScan Domain Availability API
+  description: Check if domains are available for registration using RDAP
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Availability
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-availability-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-health-api
+  name: DomScan Domain Health API
+  description: Comprehensive domain health analysis including DNS, SSL, and security
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Health
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-health-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-intelligence-api
+  name: DomScan Domain Intelligence API
+  description: Domain comparison, scoring, popularity, lifecycle, and profile intelligence
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-intelligence-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-lifecycle-api
+  name: DomScan Domain Lifecycle API
+  description: Registration lifecycle, expiry, renewal, and deletion timing signals
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Lifecycle
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-lifecycle-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-suggestions-api
+  name: DomScan Domain Suggestions API
+  description: AI-powered domain name suggestions with availability checking
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Suggestions
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-suggestions-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-domain-valuation-api
+  name: DomScan Domain Valuation API
+  description: Algorithmic domain value estimation based on multiple factors
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Domain Valuation
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-domain-valuation-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-email-api
+  name: DomScan Email API
+  description: Email blacklist checking, disposable domain detection, and email validation
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Email
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-email-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-email-authentication-api
+  name: DomScan Email Authentication API
+  description: Build and validate SPF, DMARC, and DKIM records
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Email Authentication
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-email-authentication-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-hosting-detection-api
+  name: DomScan Hosting Detection API
+  description: Detect hosting providers, CDN, WAF, and email providers
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Hosting Detection
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-hosting-detection-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-infrastructure-api
+  name: DomScan Infrastructure API
+  description: Network and hosting infrastructure discovery
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Infrastructure
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-infrastructure-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-ip-intelligence-api
+  name: DomScan IP Intelligence API
+  description: IP geolocation, ASN lookup, and reverse DNS
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - IP Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-ip-intelligence-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-meta-api
+  name: DomScan Meta API
+  description: API information and system endpoints
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Meta
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-meta-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-osint-api
+  name: DomScan OSINT API
+  description: Open source intelligence tools for domain analysis
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - OSINT
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-osint-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-phone-intelligence-api
+  name: DomScan Phone Intelligence API
+  description: >-
+    Privacy-first phone number validation and formatting against bundled numbering-plan metadata
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Phone Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-phone-intelligence-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-pricing-api
+  name: DomScan Pricing API
+  description: >-
+    Scheduled standard-TLD rows from official sources and separate exact-domain quotes. Current public
+    provider coverage and source scope are documented per integration.
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Pricing
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-pricing-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-rdap-api
+  name: DomScan RDAP API
+  description: Typed RDAP lookups and related registration analysis
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - RDAP
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-rdap-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-recipes-api
+  name: DomScan Recipes API
+  description: Compound API endpoints bundling multiple services with credit savings
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Recipes
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-recipes-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-security-api
+  name: DomScan Security API
+  description: Security posture, reputation, exposure, and vulnerability intelligence
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Security
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-security-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-social-api
+  name: DomScan Social API
+  description: Social media handle availability checking
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Social
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-social-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-ssl-analysis-api
+  name: DomScan SSL Analysis API
+  description: SSL certificate grading, chain analysis, and expiry monitoring
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - SSL Analysis
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-ssl-analysis-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-ssl-api
+  name: DomScan SSL API
+  description: TLS certificate, protocol, and transport security checks
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - SSL
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-ssl-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-ssl-certificates-api
+  name: DomScan SSL Certificates API
+  description: Certificate transparency search and subdomain discovery
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - SSL Certificates
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-ssl-certificates-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-tld-intelligence-api
+  name: DomScan TLD Intelligence API
+  description: TLD information, comparison, and coverage data
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - TLD Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-tld-intelligence-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-typosquatting-api
+  name: DomScan Typosquatting API
+  description: Detect typosquatting and brand impersonation risks
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Typosquatting
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-typosquatting-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-user-api
+  name: DomScan User API
+  description: API key management and usage statistics (requires login)
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - User
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-user-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-watchlist-api
+  name: DomScan Watchlist API
+  description: Domain monitoring for expiration and availability (requires login)
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Watchlist
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-watchlist-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-web-intelligence-api
+  name: DomScan Web Intelligence API
+  description: Tech stack detection, categorization, and reputation
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - Web Intelligence
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-web-intelligence-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
+  - type: ToolCrosswalk
+    url: mcp/domscan-tool-crosswalk.yml
+  - type: Documentation
+    url: https://domscan.net/docs
+- aid: domscan:domscan-whois-rdap-api
+  name: DomScan WHOIS/RDAP API
+  description: Domain registration data lookup via RDAP and WHOIS
+  humanURL: https://domscan.net/docs
+  baseURL: https://domscan.net
+  tags:
+  - WHOIS/RDAP
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-whois-rdap-api-openapi.yml
+  - type: PostmanCollection
+    url: https://domscan.net/v1/postman.json
+  - type: LLMSTxt
+    url: https://domscan.net/llms.txt
   - type: ToolCrosswalk
     url: mcp/domscan-tool-crosswalk.yml
   - type: Documentation
@@ -118,6 +704,8 @@ x-enrichment:
   artifacts_added: 29
   pass: local-v2
 common:
+- type: MCPServer
+  url: https://domscan.net/mcp
 - type: Website
   url: https://domscan.net
 - type: DomainSecurity
