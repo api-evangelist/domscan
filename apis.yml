@@ -36,7 +36,7 @@ tags:
 - rdap
 - SSL/TLS
 - Email Security
-- domain-valuation
+- Domain Valuation
 - Brand Protection
 - OSINT
 - Threat Intelligence
@@ -134,6 +134,8 @@ apis:
   humanURL: https://domscan.net/docs
   baseURL: https://domscan.net
   tags:
+  - Datasets
+  tags_raw:
   - Dataset
   properties:
   - type: OpenAPI
@@ -461,6 +463,8 @@ apis:
   humanURL: https://domscan.net/docs
   baseURL: https://domscan.net
   tags:
+  - rdap
+  tags_raw:
   - RDAP
   properties:
   - type: OpenAPI
