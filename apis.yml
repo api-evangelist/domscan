@@ -33,7 +33,7 @@ tags:
 - Domains
 - DNS
 - WHOIS
-- rdap
+- RDAP
 - SSL/TLS
 - Email Security
 - Domain Valuation
@@ -463,9 +463,10 @@ apis:
   humanURL: https://domscan.net/docs
   baseURL: https://domscan.net
   tags:
-  - rdap
+  - RDAP
   tags_raw:
   - RDAP
+  - rdap
   properties:
   - type: OpenAPI
     url: openapi/domscan-rdap-api-openapi.yml
