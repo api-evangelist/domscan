@@ -1,0 +1,346 @@
+openapi: 3.2.0
+info:
+  title: DomScan Infrastructure API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Infrastructure
+  description: Network and hosting infrastructure discovery
+paths:
+  /v1/hosting/bulk:
+    post:
+      operationId: bulkGetHosting
+      summary: Detect infrastructure for multiple domains
+      description: Detect hosting, CDN, WAF, DNS, and email infrastructure for multiple domains. Accepts up to 10 items, preserves input order, and uses bounded concurrency. The outer response is HTTP 200 when the batch is accepted, so inspect each result for data or an error. Billing is 3 credits per validated item with no bulk discount, including items that return a per-item lookup error.
+      tags:
+      - Infrastructure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: hostname
+            example:
+              domains:
+              - example.com
+              - cloudflare.com
+      responses:
+        '200':
+          description: Batch accepted. Each ordered result contains either data or a per-item error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkLookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 3
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

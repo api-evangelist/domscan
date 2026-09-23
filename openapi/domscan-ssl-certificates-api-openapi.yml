@@ -1,0 +1,911 @@
+openapi: 3.2.0
+info:
+  title: DomScan SSL Certificates API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: SSL Certificates
+  description: Certificate transparency search and subdomain discovery
+paths:
+  /v1/certificates:
+    get:
+      tags:
+      - SSL Certificates
+      summary: Certificate transparency search
+      description: Find SSL certificates issued for a domain via CT logs. Includes an intelligence summary with source, cache, truncation, wildcard, issuer, and expiry posture.
+      operationId: getCertificates
+      parameters:
+      - name: domain
+        description: Domain to search certificate transparency logs for.
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: include_subdomains
+        description: Include certificates issued for subdomains of the requested domain.
+        in: query
+        schema:
+          type: boolean
+          default: true
+      - name: include_expired
+        description: Include certificates that have already expired.
+        in: query
+        schema:
+          type: boolean
+          default: false
+      - name: limit
+        in: query
+        description: Maximum certificates to return on this page.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+      - name: cursor
+        in: query
+        description: Offset cursor from `pagination.next_cursor`.
+        schema:
+          type: string
+          example: '100'
+      responses:
+        '200':
+          description: Certificate list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificatesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: Certificate transparency sources were unavailable and no cached result could be served. The charged credits are automatically refunded; retry after the `retry_after` seconds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Certificate search timed out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/subdomains:
+    get:
+      tags:
+      - SSL Certificates
+      summary: Subdomain discovery
+      description: Return best-effort hostname evidence from public certificate and passive discovery sources. `sources=ct` is the only accepted compatibility selector. CT evidence uses the public append-only log model described by RFC 9162. DomScan does not brute-force labels or crawl the target site, so coverage is incomplete. Optional DNS verification checks only the names selected for the response and does not discover more. Wildcard evidence is returned separately when requested. Cache-only misses return 202 and all-source failures without stale cache return 503; both responses refund credits.
+      operationId: getSubdomains
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Root domain to search.
+        schema:
+          type: string
+          example: example.com
+      - name: sources
+        in: query
+        required: false
+        description: Compatibility selector. Only `ct` is accepted. It starts the passive discovery pipeline, but response entries identify the provider that supplied their evidence.
+        schema:
+          type: string
+          enum:
+          - ct
+          default: ct
+      - name: verify
+        in: query
+        required: false
+        description: Check DNS only for the returned names. Verification does not discover additional names. Values outside the documented enum return HTTP 400.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+          - '1'
+          - '0'
+          - 'yes'
+          - 'no'
+          default: 'false'
+          example: 'yes'
+      - name: include_wildcards
+        in: query
+        required: false
+        description: Return wildcard certificate SAN patterns in the separate `wildcards` array. Wildcards are never mixed into the concrete hostname list. Values outside the documented enum return HTTP 400.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+          - '1'
+          - '0'
+          - 'yes'
+          - 'no'
+          default: 'false'
+          example: '1'
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of concrete hostname entries to return. The value must be an integer from 1 through 2000; other values return HTTP 400.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2000
+          default: 500
+          example: 500
+      - name: prefer_cache
+        in: query
+        required: false
+        description: Serve cached results only. If no fresh or stale cache is available, return 202, queue a background refresh, and refund the request credits. Values outside the documented enum return HTTP 400.
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+          - '1'
+          - '0'
+          - 'yes'
+          - 'no'
+          default: 'false'
+          example: 'false'
+      responses:
+        '200':
+          description: Subdomain list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubdomainsResponse'
+              examples:
+                ct_primary:
+                  summary: crt.sh evidence with DNS verification and wildcard output
+                  value:
+                    domain: example.com
+                    subdomains:
+                    - name: api.example.com
+                      source: crtsh
+                      first_seen: '2025-01-15T00:00:00Z'
+                      verified: true
+                      dns_records:
+                        A:
+                        - 192.0.2.10
+                    wildcards:
+                    - pattern: '*.example.com'
+                      source: crtsh
+                      first_seen: '2024-11-20T00:00:00Z'
+                    summary:
+                      total_found: 1
+                      returned: 1
+                      verified_count: 1
+                      unverified_count: 0
+                      sources_used:
+                      - crtsh
+                      apex_included: false
+                      wildcard_suppressed_count: 1
+                      wildcard_returned_count: 1
+                    intelligence_summary:
+                      data_sources:
+                      - crtsh
+                      source_count: 1
+                      cache_status: live
+                      returned_count: 1
+                      total_found: 1
+                      truncated: false
+                      limit: 500
+                      verification_requested: true
+                      include_wildcards: true
+                      verified_count: 1
+                      verified_ratio: 1
+                      live_dns_record_count: 1
+                      apex_included: false
+                      wildcard_suppressed_count: 1
+                      wildcard_returned_count: 1
+                      first_seen_oldest: '2025-01-15T00:00:00Z'
+                      first_seen_newest: '2025-01-15T00:00:00Z'
+                      warning_count: 0
+                    meta:
+                      query_time_ms: 184
+                      cached: false
+                passive_fallback:
+                  summary: Passive fallback evidence without a first-seen certificate time
+                  value:
+                    domain: example.com
+                    subdomains:
+                    - name: archive.example.com
+                      source: wayback
+                      first_seen: null
+                      verified: false
+                      dns_records: null
+                    summary:
+                      total_found: 1
+                      returned: 1
+                      verified_count: 0
+                      unverified_count: 1
+                      sources_used:
+                      - wayback
+                      apex_included: false
+                      wildcard_suppressed_count: 0
+                      wildcard_returned_count: 0
+                    intelligence_summary:
+                      data_sources:
+                      - wayback
+                      source_count: 1
+                      cache_status: live
+                      returned_count: 1
+                      total_found: 1
+                      truncated: false
+                      limit: 500
+                      verification_requested: false
+                      include_wildcards: false
+                      verified_count: 0
+                      verified_ratio: 0
+                      live_dns_record_count: 0
+                      apex_included: false
+                      wildcard_suppressed_count: 0
+                      wildcard_returned_count: 0
+                      first_seen_oldest: null
+                      first_seen_newest: null
+                      warning_count: 0
+                    meta:
+                      query_time_ms: 412
+                      cached: false
+        '202':
+          description: No fresh or stale subdomain result was available for a cache-only request. A background refresh was queued and the request credits were refunded.
+          headers:
+            Retry-After:
+              description: Suggested delay before retrying the cache-only request.
+              schema:
+                type: integer
+                example: 30
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: pending
+                  code:
+                    type: string
+                    example: CACHE_MISS_REFRESH_QUEUED
+                  message:
+                    type: string
+                    example: Try again in a moment
+                  domain:
+                    type: string
+                    example: example.com
+                  retry_after:
+                    type: integer
+                    example: 30
+                  credits_charged:
+                    type: integer
+                    example: 0
+                    description: Pending cache refresh responses do not consume credits.
+                  billing_status:
+                    type: string
+                    example: not_charged
+                    description: Billing status for this pending response.
+                  request_id:
+                    type: string
+        '400':
+          description: Invalid domain, source selector, boolean token, or limit. Boolean query values accept only true, false, 1, 0, yes, or no.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          description: Every discovery source was unavailable and no stale cache could be served. The request credits were refunded.
+          headers:
+            Retry-After:
+              description: Suggested delay before retrying the request.
+              schema:
+                type: integer
+                example: 300
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: UPSTREAM_UNAVAILABLE
+                  message: Service temporarily unavailable
+                  suggestion: Try again in a moment
+                  retry_after: 300
+        '504':
+          description: Subdomain enumeration timed out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-domscan-credits:
+        model: per_request
+        default: 4
+        variants:
+        - parameter: verify
+          equals: true
+          credits: 5
+        note: 4 credits by default; 5 credits when verify=true.
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    SubdomainIntelligenceSummary:
+      type: object
+      description: Compact source, cache, truncation, wildcard, and optional DNS verification summary. Counts describe the best-effort response, not every subdomain that exists.
+      properties:
+        data_sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - ct
+            - crtsh
+            - crtname
+            - hackertarget
+            - threatminer
+            - wayback
+            - certspotter
+        source_count:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - live
+          - fresh_cache
+          - stale_cache
+        returned_count:
+          type: integer
+        total_found:
+          type: integer
+        truncated:
+          type: boolean
+        limit:
+          type: integer
+        verification_requested:
+          type: boolean
+          description: Whether DNS was checked for the returned concrete hostnames.
+        include_wildcards:
+          type: boolean
+          description: Whether wildcard certificate evidence was requested separately.
+        verified_count:
+          type: integer
+        verified_ratio:
+          type:
+          - number
+          - 'null'
+        live_dns_record_count:
+          type: integer
+          description: Returned hostnames with at least one A or CNAME verification record.
+        apex_included:
+          type: boolean
+        wildcard_suppressed_count:
+          type: integer
+        wildcard_returned_count:
+          type: integer
+        first_seen_oldest:
+          type:
+          - string
+          - 'null'
+          description: Oldest valid first_seen value among returned entries, or null.
+        first_seen_newest:
+          type:
+          - string
+          - 'null'
+          description: Newest valid first_seen value among returned entries, or null.
+        warning_count:
+          type: integer
+    CertificatePagination:
+      type: object
+      description: Offset cursor pagination for certificate transparency results.
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        returned:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+        next_cursor:
+          type:
+          - string
+          - 'null'
+    SubdomainsResponse:
+      type: object
+      description: Best-effort public hostname evidence. This response is not a complete inventory and can include the apex when a source returns it.
+      required:
+      - domain
+      - subdomains
+      - summary
+      - intelligence_summary
+      - meta
+      properties:
+        domain:
+          type: string
+          example: example.com
+        subdomains:
+          type: array
+          description: Concrete hostnames returned after deduplication and the requested limit. Wildcard patterns are kept out of this array.
+          items:
+            type: object
+            required:
+            - name
+            - source
+            - first_seen
+            - verified
+            - dns_records
+            properties:
+              name:
+                type: string
+                description: Returned hostname. This can equal the requested apex when the source includes it.
+                example: api.example.com
+              source:
+                type: string
+                enum:
+                - ct
+                - crtsh
+                - crtname
+                - hackertarget
+                - threatminer
+                - wayback
+                - certspotter
+                description: Provider that supplied the evidence. `ct` is retained for older cached entries; new live results use a concrete provider value.
+                example: crtsh
+              first_seen:
+                type:
+                - string
+                - 'null'
+                description: For crt.sh and CertSpotter evidence, the earliest valid certificate not-before value found for this hostname. This is certificate validity evidence, not a CT log inclusion timestamp. Passive fallback sources return null.
+                example: '2025-01-15T00:00:00Z'
+              verified:
+                type: boolean
+                description: True only when DNS verification was requested and resolution succeeded for this returned hostname.
+              dns_records:
+                type:
+                - object
+                - 'null'
+                description: A and CNAME records collected while verifying this returned hostname, or null. DNS verification does not discover additional names.
+                properties:
+                  A:
+                    type: array
+                    items:
+                      type: string
+                  CNAME:
+                    type:
+                    - string
+                    - 'null'
+        wildcards:
+          type: array
+          description: Wildcard certificate SAN evidence returned when include_wildcards is enabled. These patterns stay separate from concrete hostnames and do not count toward subdomains.
+          items:
+            type: object
+            required:
+            - pattern
+            - source
+            - first_seen
+            properties:
+              pattern:
+                type: string
+                example: '*.example.com'
+              source:
+                type: string
+                enum:
+                - ct
+                - crtsh
+                - certspotter
+                description: '`ct` can appear in legacy cached wildcard evidence.'
+              first_seen:
+                type:
+                - string
+                - 'null'
+                description: Earliest valid certificate not-before evidence for the pattern.
+        summary:
+          type: object
+          properties:
+            total_found:
+              type: integer
+              description: Concrete hostname entries found before applying the response limit.
+            returned:
+              type: integer
+              description: Concrete hostname entries returned.
+            verified_count:
+              type: integer
+              description: Returned hostnames that resolved during optional DNS verification.
+            unverified_count:
+              type: integer
+              description: Returned hostnames that were not verified, including every entry when verification was not requested.
+            sources_used:
+              type: array
+              description: Discovery providers that returned successfully during this request.
+              items:
+                type: string
+                enum:
+                - ct
+                - crtsh
+                - crtname
+                - hackertarget
+                - threatminer
+                - wayback
+                - certspotter
+            apex_included:
+              type: boolean
+              description: Whether the concrete hostname list contains the requested apex.
+            wildcard_suppressed_count:
+              type: integer
+              description: Wildcard SAN observations excluded from the concrete hostname list.
+            wildcard_returned_count:
+              type: integer
+              description: Wildcard patterns returned in the separate wildcards array.
+        intelligence_summary:
+          $ref: '#/components/schemas/SubdomainIntelligenceSummary'
+        warnings:
+          type: array
+          description: Non-fatal upstream warnings when a useful response can still be served.
+          items:
+            type: string
+        meta:
+          type: object
+          properties:
+            query_time_ms:
+              type: integer
+            cached:
+              type: boolean
+            stale:
+              type: boolean
+    CertificateIntelligenceSummary:
+      type: object
+      description: Compact source, freshness, truncation, and certificate posture summary for CT search results.
+      properties:
+        data_source:
+          type: string
+        ct_log_sources:
+          type: array
+          items:
+            type: string
+        source_count:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - live
+          - fresh_cache
+          - stale_cache
+          - partial_unavailable
+        returned_count:
+          type: integer
+        total_found:
+          type: integer
+        truncated:
+          type: boolean
+        limit:
+          type: integer
+        include_subdomains:
+          type: boolean
+        include_expired:
+          type: boolean
+        unique_name_count:
+          type: integer
+        unique_subdomains:
+          type: integer
+        issuer_count:
+          type: integer
+        wildcard_cert_count:
+          type: integer
+        active_cert_count:
+          type: integer
+        expired_cert_count:
+          type: integer
+        expiring_within_30_days_count:
+          type: integer
+        earliest_cert:
+          type:
+          - string
+          - 'null'
+        latest_cert:
+          type:
+          - string
+          - 'null'
+        latest_expiry:
+          type:
+          - string
+          - 'null'
+        has_more:
+          type: boolean
+        next_cursor:
+          type:
+          - string
+          - 'null'
+        warning_code:
+          type:
+          - string
+          - 'null'
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    CertificatesResponse:
+      type: object
+      description: Certificate transparency search results
+      properties:
+        domain:
+          type: string
+        certificates:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              issuer:
+                type: object
+                additionalProperties: true
+              common_name:
+                type: string
+              san:
+                type: array
+                items:
+                  type: string
+              not_before:
+                type: string
+                format: date-time
+              not_after:
+                type: string
+                format: date-time
+              is_expired:
+                type: boolean
+              is_wildcard:
+                type: boolean
+              fingerprint_sha256:
+                type: string
+        summary:
+          type: object
+          properties:
+            total_found:
+              type: integer
+            returned:
+              type: integer
+            unique_subdomains:
+              type: integer
+            issuers:
+              type: array
+              items:
+                type: string
+            earliest_cert:
+              type:
+              - string
+              - 'null'
+            latest_cert:
+              type:
+              - string
+              - 'null'
+        pagination:
+          $ref: '#/components/schemas/CertificatePagination'
+        intelligence_summary:
+          $ref: '#/components/schemas/CertificateIntelligenceSummary'
+        meta:
+          type: object
+          additionalProperties: true
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

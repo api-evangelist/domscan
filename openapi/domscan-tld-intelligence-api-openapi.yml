@@ -1,0 +1,822 @@
+openapi: 3.2.0
+info:
+  title: DomScan TLD Intelligence API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: TLD Intelligence
+  description: TLD information, comparison, and coverage data
+paths:
+  /v1/tlds:
+    get:
+      tags:
+      - TLD Intelligence
+      summary: List TLDs
+      description: Get list of supported TLDs with metadata
+      operationId: getTlds
+      security: []
+      parameters:
+      - name: type
+        in: query
+        description: Filter by TLD type
+        schema:
+          type: string
+          enum:
+          - gtld
+          - cctld
+          - new-gtld
+          - idn
+      - name: trust_tier
+        in: query
+        description: Filter by trust tier.
+        schema:
+          type: string
+          enum:
+          - premium
+          - standard
+          - economy
+          - suspicious
+      - name: use_case
+        in: query
+        description: Return TLDs tagged for a use case such as startup, tech, or business.
+        schema:
+          type: string
+          example: startup
+      responses:
+        '200':
+          description: TLD list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TldsListResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/tlds/{tld}:
+    get:
+      tags:
+      - TLD Intelligence
+      summary: Get TLD details
+      description: Get detailed information about a specific TLD
+      operationId: getTldDetail
+      parameters:
+      - name: tld
+        description: TLD to describe, with or without the leading dot.
+        in: path
+        required: true
+        schema:
+          type: string
+          example: io
+      responses:
+        '200':
+          description: TLD details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TldDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          description: TLD not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/compare:
+    get:
+      tags:
+      - TLD Intelligence
+      summary: Compare domains
+      description: Compare multiple domains side-by-side across availability, valuation, brand score, and TLD quality. Use the `domains` parameter with a comma-separated list. The route also accepts `domain1` and `domain2` as a convenience alias.
+      operationId: compareDomains
+      parameters:
+      - name: domains
+        in: query
+        required: true
+        description: Comma-separated list of 2 to 10 domains to compare
+        schema:
+          type: string
+          example: startup.com,startup.io,startup.ai
+      responses:
+        '200':
+          description: Comparison results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompareDomainsResponse'
+              example:
+                domains:
+                - domain: startup.io
+                  tld: io
+                  available: true
+                  valuation:
+                    estimate_usd: 2500
+                    confidence: 0.7
+                    estimate:
+                      low: 1400
+                      mid: 2500
+                      high: 4100
+                      currency: USD
+                    analysis:
+                      scope: intrinsic_domain_value
+                      range_source: anchored
+                      range_width: moderate
+                      confidence_label: medium
+                      out_of_distribution: false
+                      out_of_distribution_reasons: []
+                      positive_factors:
+                      - Strong .IO aftermarket demand
+                      negative_factors:
+                      - Narrower buyer pool than .com
+                  score:
+                    overall: 85
+                    brandability: 90
+                  tld_info:
+                    type: ccTLD
+                    trust_tier: premium
+                    popularity_rank: 4
+                  recommendation_rank: 85
+                  recommendation_reason: available for registration, premium .io TLD, excellent brand score
+                recommendation:
+                  best_available: startup.io
+                  best_overall: startup.com
+                  best_value: startup.ai
+                  reasoning: 'startup.io is recommended: available for registration, premium .io TLD, excellent brand score'
+                decision_summary:
+                  compared_count: 3
+                  best_overall: startup.com
+                  best_available: startup.io
+                  runner_up: startup.io
+                  rank_margin: 4
+                  score_margin: 2
+                  value_margin_usd: 1500
+                  availability_used: true
+                  winning_factor: valuation
+                  tie_breaker: higher_valuation
+                meta:
+                  compared_count: 3
+                  available_count: 2
+                  total_ms: 84
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/coverage:
+    get:
+      tags:
+      - TLD Intelligence
+      summary: Get TLD coverage
+      description: List all supported TLDs with RDAP availability and health status. Useful for understanding API coverage.
+      operationId: getCoverage
+      parameters:
+      - name: live
+        in: query
+        description: Set to 1 to include live RDAP endpoint health checks.
+        schema:
+          type: string
+          enum:
+          - '1'
+      security: []
+      responses:
+        '200':
+          description: TLD coverage information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoverageResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+  schemas:
+    CompareDecisionSummary:
+      type: object
+      description: Additive domain comparison explanation for winner, runner-up, margin, and deciding factor.
+      properties:
+        compared_count:
+          type: integer
+        best_overall:
+          type:
+          - string
+          - 'null'
+        best_available:
+          type:
+          - string
+          - 'null'
+        runner_up:
+          type:
+          - string
+          - 'null'
+        rank_margin:
+          type:
+          - integer
+          - 'null'
+        score_margin:
+          type:
+          - integer
+          - 'null'
+        value_margin_usd:
+          type:
+          - number
+          - 'null'
+        availability_used:
+          type: boolean
+        winning_factor:
+          type:
+          - string
+          - 'null'
+          enum:
+          - availability
+          - brand_score
+          - valuation
+          - tld_trust
+          - overall_rank
+        tie_breaker:
+          type:
+          - string
+          - 'null'
+    CoverageResponse:
+      type: object
+      description: TLD coverage information
+      required:
+      - gtlds
+      - cctlds
+      - total_tlds
+      - all_tlds
+      - rdap_health
+      - bootstrap_source
+      - bootstrap_last_updated
+      - meta
+      properties:
+        gtlds:
+          type: array
+          items:
+            type: string
+          description: Generic TLDs supported
+        cctlds:
+          type: array
+          items:
+            type: string
+          description: Country-code TLDs supported
+        total_tlds:
+          type: integer
+          description: Total TLDs supported
+        all_tlds:
+          type: array
+          items:
+            type: string
+        rdap_health:
+          type: array
+          items:
+            type: object
+            required:
+            - tld
+            - endpoint
+            - ok
+            - p50_ms
+            - error_rate
+            properties:
+              tld:
+                type: string
+              endpoint:
+                type: string
+                format: uri
+              ok:
+                type: boolean
+              p50_ms:
+                type: number
+              error_rate:
+                type: number
+        bootstrap_source:
+          type: string
+          enum:
+          - iana
+          - fallback
+        bootstrap_last_updated:
+          type: string
+          format: date-time
+        meta:
+          type: object
+          required:
+          - served_by
+          - bootstrap_ttl_s
+          - live
+          properties:
+            served_by:
+              type: string
+            bootstrap_ttl_s:
+              type: integer
+            live:
+              type: boolean
+    TldDetailResponse:
+      type: object
+      description: Detailed TLD information
+      properties:
+        tld:
+          type: string
+        type:
+          type: string
+          enum:
+          - gTLD
+          - ccTLD
+          - newTLD
+          - idn
+        name:
+          type: string
+        description:
+          type: string
+        introduced:
+          type: integer
+        operator:
+          type:
+          - string
+          - 'null'
+        country:
+          type:
+          - string
+          - 'null'
+        restrictions:
+          type: string
+        rdap_supported:
+          type: boolean
+        rdap_endpoint:
+          type:
+          - string
+          - 'null'
+        idn_supported:
+          type: boolean
+        dnssec_supported:
+          type: boolean
+        pricing:
+          type: object
+          properties:
+            registration_usd:
+              type: number
+            renewal_usd:
+              type: number
+            transfer_usd:
+              type: number
+            currency:
+              type: string
+              enum:
+              - USD
+            source:
+              type: string
+              enum:
+              - estimate
+              - market_average
+        popularity:
+          type: object
+          properties:
+            rank:
+              type: integer
+            tier:
+              type: string
+              enum:
+              - top10
+              - top50
+              - top100
+              - other
+            use_cases:
+              type: array
+              items:
+                type: string
+        trust:
+          type: object
+          properties:
+            score:
+              type: number
+            tier:
+              type: string
+              enum:
+              - premium
+              - standard
+              - economy
+              - suspicious
+            notes:
+              type:
+              - string
+              - 'null'
+        meta:
+          type: object
+          additionalProperties: true
+    CompareDomainsResponse:
+      type: object
+      description: Domain comparison results
+      properties:
+        domains:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              tld:
+                type: string
+              available:
+                type: boolean
+              registered_at:
+                type:
+                - string
+                - 'null'
+              expires_at:
+                type:
+                - string
+                - 'null'
+              valuation:
+                type: object
+                properties:
+                  estimate_usd:
+                    type: number
+                  confidence:
+                    type: number
+                  estimate:
+                    type: object
+                    properties:
+                      low:
+                        type: number
+                      mid:
+                        type: number
+                      high:
+                        type: number
+                      currency:
+                        type: string
+                  analysis:
+                    type: object
+                    properties:
+                      scope:
+                        type: string
+                      range_source:
+                        type: string
+                      range_width:
+                        type: string
+                      confidence_label:
+                        type: string
+                      out_of_distribution:
+                        type: boolean
+                      out_of_distribution_reasons:
+                        type: array
+                        items:
+                          type: string
+                      positive_factors:
+                        type: array
+                        items:
+                          type: string
+                      negative_factors:
+                        type: array
+                        items:
+                          type: string
+              score:
+                type: object
+                properties:
+                  overall:
+                    type: number
+                  length:
+                    type: number
+                  pronounceability:
+                    type: number
+                  memorability:
+                    type: number
+                  brandability:
+                    type: number
+              tld_info:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  trust_tier:
+                    type: string
+                  popularity_rank:
+                    type:
+                    - integer
+                    - 'null'
+              recommendation_rank:
+                type:
+                - integer
+                - 'null'
+              recommendation_reason:
+                type:
+                - string
+                - 'null'
+        recommendation:
+          type: object
+          properties:
+            best_available:
+              type:
+              - string
+              - 'null'
+            best_overall:
+              type:
+              - string
+              - 'null'
+            best_value:
+              type:
+              - string
+              - 'null'
+            reasoning:
+              type: string
+        decision_summary:
+          $ref: '#/components/schemas/CompareDecisionSummary'
+        meta:
+          type: object
+          properties:
+            compared_count:
+              type: integer
+            available_count:
+              type: integer
+            total_ms:
+              type: integer
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    TldsListResponse:
+      type: object
+      description: List of supported TLDs
+      properties:
+        tlds:
+          type: array
+          items:
+            type: object
+            properties:
+              tld:
+                type: string
+                description: Effective public suffix used for comparison
+              type:
+                type: string
+                enum:
+                - gTLD
+                - ccTLD
+                - newTLD
+                - idn
+              name:
+                type: string
+              rdap_supported:
+                type: boolean
+              trust_tier:
+                type: string
+                enum:
+                - premium
+                - standard
+                - economy
+                - suspicious
+              popularity_rank:
+                type: integer
+              registration_usd:
+                type: number
+        total:
+          type: integer
+        by_type:
+          type: object
+          properties:
+            gTLD:
+              type: integer
+            ccTLD:
+              type: integer
+            newTLD:
+              type: integer
+            idn:
+              type: integer
+        by_trust_tier:
+          type: object
+          properties:
+            premium:
+              type: integer
+            standard:
+              type: integer
+            economy:
+              type: integer
+        use_case:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

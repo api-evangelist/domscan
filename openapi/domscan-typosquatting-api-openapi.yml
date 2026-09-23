@@ -1,0 +1,987 @@
+openapi: 3.2.0
+info:
+  title: DomScan Typosquatting API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Typosquatting
+  description: Detect typosquatting and brand impersonation risks
+paths:
+  /v1/typos:
+    get:
+      tags:
+      - Typosquatting
+      summary: Detect typosquatting threats
+      description: Generate typosquatting permutations using multiple techniques (character swap, missing char, extra char, homoglyphs, etc.) and optionally check which are registered. Includes risk scoring based on similarity to original domain.
+      operationId: getTyposquatting
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze for typosquatting risks
+        schema:
+          type: string
+          example: google.com
+      - name: check_registered
+        in: query
+        description: Check if generated typos are actually registered. Disabled by default and capped for faster responses.
+        schema:
+          type: boolean
+          default: false
+      - name: limit
+        in: query
+        description: Maximum permutations to generate and check
+        schema:
+          type: integer
+          default: 100
+          minimum: 10
+          maximum: 500
+      - name: include_tld_swap
+        in: query
+        description: Include TLD variation permutations (e.g., .co instead of .com)
+        schema:
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: Typosquatting analysis with risk summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TyposResponse'
+              example:
+                domain: google.com
+                name: google
+                tld: com
+                permutations_generated: 100
+                permutations_checked: 95
+                registered_typos:
+                - domain: gooogle.com
+                  type: extra_char
+                  risk: high
+                  registered: true
+                - domain: goggle.com
+                  type: char_swap
+                  risk: critical
+                  registered: true
+                available_typos: 50
+                risk_summary:
+                  critical: 2
+                  high: 5
+                  medium: 10
+                  low: 28
+                threat_level: high
+                checked_at: '2024-01-15T12:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+        variants:
+        - parameter: check_registered
+          equals: true
+          credits: 3
+        note: 2 credits by default; 3 credits when check_registered=true.
+  /v1/typos/threats:
+    get:
+      tags:
+      - Typosquatting
+      summary: Run a live typosquatting threat scan
+      description: Generate up to the requested number of typo variants, then check at most 75 supported variants for live registration and DNS activity. scan_summary reports the live-check limit and whether coverage was truncated.
+      operationId: analyzeTyposquattingThreats
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze
+        schema:
+          type: string
+          example: example.com
+      - name: limit
+        in: query
+        description: Maximum variants to generate. Live registration checks are capped at 75.
+        schema:
+          type: integer
+          minimum: 50
+          maximum: 500
+          default: 200
+      - name: include_tld_swap
+        in: query
+        description: Include alternate-TLD variants
+        schema:
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: Live typosquatting threat analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TyposThreatAnalysisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Threat analysis failed
+      x-domscan-credits:
+        model: per_request
+        default: 12
+  /v1/typos/report:
+    get:
+      tags:
+      - Typosquatting
+      summary: Generate a brand protection report
+      description: Generate up to 300 variants, live-check at most 60 supported variants, and return an executive summary, coverage metadata, defensive registration priorities, and monitoring recommendations.
+      operationId: generateTyposquattingReport
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: Brand protection report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandProtectionReportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Report generation failed
+      x-domscan-credits:
+        model: per_request
+        default: 18
+  /v1/typos/quick:
+    get:
+      tags:
+      - Typosquatting
+      summary: Find registered typo domains quickly
+      description: Check a smaller typo set and return only registered variants with their permutation type and risk level.
+      operationId: quickTyposquattingCheck
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze
+        schema:
+          type: string
+          example: example.com
+      - name: limit
+        in: query
+        description: Maximum variants to check
+        schema:
+          type: integer
+          minimum: 20
+          maximum: 200
+          default: 100
+      responses:
+        '200':
+          description: Registered typo domains
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickTyposResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Rate limit exceeded
+        '500':
+          description: Quick threat check failed
+      x-domscan-credits:
+        model: per_request
+        default: 6
+  /v1/typos/permutations:
+    get:
+      tags:
+      - Typosquatting
+      summary: Generate typo permutations
+      description: Generate typosquatting permutations without checking registration status. Faster endpoint for generating variations only, useful for proactive brand protection planning.
+      operationId: getTypoPermutations
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to generate permutations for
+        schema:
+          type: string
+          example: example.com
+      - name: limit
+        in: query
+        description: Maximum permutations to generate
+        schema:
+          type: integer
+          default: 200
+          minimum: 10
+          maximum: 1000
+      - name: include_tld_swap
+        in: query
+        description: Include TLD variation permutations
+        schema:
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: Generated permutations grouped by type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermutationsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/typos/score:
+    get:
+      tags:
+      - Typosquatting
+      summary: Calculate protection score
+      description: Calculate a typosquatting protection score for a domain. Shows how vulnerable the domain is based on name characteristics and optionally factors in registered typos.
+      operationId: getProtectionScore
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to score
+        schema:
+          type: string
+          example: example.com
+      - name: check_registered
+        in: query
+        description: Factor in registered typos when calculating score (slower)
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: Protection score analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProtectionScoreResponse'
+              example:
+                domain: example.com
+                name: example
+                tld: com
+                protection:
+                  score: 65
+                  grade: C
+                  factors:
+                    length_score: 70
+                    uniqueness_score: 60
+                    keyboard_proximity_score: 55
+                  recommendations:
+                  - Consider registering common typo variations
+                  - Monitor for homoglyph attacks
+                checked_at: '2024-01-15T12:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+components:
+  schemas:
+    TypoFamilySummary:
+      type: object
+      description: Additive typo family and risk rollup for generated, checked, available, and registered variants.
+      properties:
+        generated_by_type:
+          type: object
+          additionalProperties:
+            type: integer
+        generated_by_risk:
+          type: object
+          additionalProperties:
+            type: integer
+        registered_by_type:
+          type: object
+          additionalProperties:
+            type: integer
+        registered_by_risk:
+          type: object
+          additionalProperties:
+            type: integer
+        top_generated_family:
+          type:
+          - string
+          - 'null'
+        top_registered_family:
+          type:
+          - string
+          - 'null'
+        critical_or_high_generated_count:
+          type: integer
+        critical_or_high_registered_count:
+          type: integer
+        coverage_ratio:
+          type: number
+        checked_count:
+          type: integer
+        available_count:
+          type: integer
+        unknown_count:
+          type: integer
+        omitted_count:
+          type: integer
+        include_tld_swap:
+          type: boolean
+        requested_limit:
+          type: integer
+    QuickTyposResponse:
+      type: object
+      required:
+      - domain
+      - registered_typos
+      - count
+      - threat_level
+      - checked_at
+      properties:
+        domain:
+          type: string
+        registered_typos:
+          type: array
+          items:
+            type: object
+            required:
+            - domain
+            - type
+            - risk
+            - description
+            properties:
+              domain:
+                type: string
+              type:
+                type: string
+              risk:
+                type: string
+                enum:
+                - critical
+                - high
+                - medium
+                - low
+              description:
+                type: string
+        count:
+          type: integer
+        threat_level:
+          type: string
+          enum:
+          - none
+          - low
+          - medium
+          - high
+          - critical
+        coverage:
+          type: object
+          properties:
+            requested:
+              type: integer
+            definitive:
+              type: integer
+            unknown:
+              type: integer
+            omitted:
+              type: integer
+        checked_at:
+          type: string
+          format: date-time
+        scan_duration_ms:
+          type: integer
+        meta:
+          type: object
+    PermutationsResponse:
+      type: object
+      description: Typo permutations without registration check
+      properties:
+        domain:
+          type: string
+        name:
+          type: string
+        tld:
+          type: string
+        permutations_count:
+          type: integer
+        permutations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TypoPermutation'
+        by_type:
+          type: object
+          description: Permutations grouped by type
+        family_summary:
+          $ref: '#/components/schemas/TypoFamilySummary'
+        meta:
+          type: object
+          properties:
+            generation_ms:
+              type: integer
+    ProtectionGapSummary:
+      type: object
+      description: Additive protection-gap summary by variant family, risk, and defensive TLD focus.
+      properties:
+        tld_tier:
+          type: string
+          enum:
+          - high_value
+          - medium_value
+          - standard
+        priority_families:
+          type: array
+          items:
+            type: object
+            properties:
+              family:
+                type: string
+              generated_count:
+                type: integer
+              registered_count:
+                type: integer
+        critical_or_high_generated_count:
+          type: integer
+        vulnerability_count:
+          type: integer
+        defensive_tlds:
+          type: array
+          items:
+            type: string
+        recommendation_focus:
+          type: string
+    BrandProtectionReportResponse:
+      type: object
+      required:
+      - domain
+      - generated_at
+      - executive_summary
+      - threat_analysis
+      - estimated_risk_exposure
+      properties:
+        domain:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        executive_summary:
+          type: object
+          properties:
+            threat_level:
+              type: string
+            protection_grade:
+              type: string
+            active_threats:
+              type: integer
+            registered_typos:
+              type: integer
+            immediate_action_required:
+              type: boolean
+        threat_analysis:
+          $ref: '#/components/schemas/TyposThreatAnalysisResponse'
+        defensive_registration_priority:
+          type: object
+        monitoring_recommendations:
+          type: array
+          items:
+            type: string
+        estimated_risk_exposure:
+          type: string
+          enum:
+          - minimal
+          - low
+          - moderate
+          - high
+          - severe
+        meta:
+          type: object
+    TyposThreatAnalysisResponse:
+      type: object
+      description: Live registration and DNS analysis across generated typo variants.
+      required:
+      - domain
+      - scan_summary
+      - threat_level
+      - threats
+      - checked_at
+      properties:
+        domain:
+          type: string
+        name:
+          type: string
+        tld:
+          type: string
+        scan_summary:
+          type: object
+          required:
+          - permutations_generated
+          - permutations_checked
+          - registered_count
+          - active_threats
+          - available_for_defensive
+          properties:
+            permutations_generated:
+              type: integer
+            permutations_checked:
+              type: integer
+            permutations_submitted:
+              type: integer
+            definitive_results:
+              type: integer
+            unknown_results:
+              type: integer
+            omitted_results:
+              type: integer
+            registered_count:
+              type: integer
+            active_threats:
+              type: integer
+            available_for_defensive:
+              type: integer
+            check_limit:
+              type: integer
+            coverage_truncated:
+              type: boolean
+        threat_level:
+          type: string
+          enum:
+          - none
+          - low
+          - medium
+          - high
+          - critical
+        protection_score:
+          type: object
+        threats:
+          type: array
+          items:
+            $ref: '#/components/schemas/TyposThreatDomain'
+        defensive_opportunities:
+          type: array
+          items:
+            $ref: '#/components/schemas/TypoPermutation'
+        risk_breakdown:
+          type: object
+        recommendations:
+          type: array
+          items:
+            type: string
+        checked_at:
+          type: string
+          format: date-time
+        scan_duration_ms:
+          type: integer
+        meta:
+          type: object
+    TyposThreatDomain:
+      type: object
+      required:
+      - domain
+      - type
+      - risk
+      - dns_active
+      - has_website
+      - threat_indicators
+      - threat_score
+      properties:
+        domain:
+          type: string
+        type:
+          type: string
+        risk:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+        description:
+          type: string
+        dns_active:
+          type: boolean
+        has_website:
+          type: boolean
+        has_mx:
+          type: boolean
+        infrastructure:
+          type: object
+        threat_indicators:
+          type: array
+          items:
+            type: string
+        threat_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+    TypoPermutation:
+      type: object
+      properties:
+        domain:
+          type: string
+          description: Typo domain
+        type:
+          type: string
+          description: Permutation type (char_swap, extra_char, etc.)
+        risk:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+        registered:
+          type: boolean
+          description: Whether the typo is registered
+        checked_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    ProtectionScoreResponse:
+      type: object
+      description: Typosquatting protection score
+      properties:
+        domain:
+          type: string
+        name:
+          type: string
+        tld:
+          type: string
+        protection:
+          type: object
+          properties:
+            score:
+              type: integer
+              minimum: 0
+              maximum: 100
+            grade:
+              type: string
+              enum:
+              - A
+              - B
+              - C
+              - D
+              - F
+            factors:
+              type: object
+            recommendations:
+              type: array
+              items:
+                type: string
+        protection_gap_summary:
+          $ref: '#/components/schemas/ProtectionGapSummary'
+        registered_typos_checked:
+          type: integer
+        availability_coverage:
+          type: object
+          properties:
+            requested:
+              type: integer
+            definitive:
+              type: integer
+            unknown:
+              type: integer
+            omitted:
+              type: integer
+        checked_at:
+          type: string
+          format: date-time
+    TyposResponse:
+      type: object
+      description: Typosquatting detection results
+      properties:
+        domain:
+          type: string
+          description: Domain analyzed
+        name:
+          type: string
+          description: Domain name without TLD
+        tld:
+          type: string
+          description: TLD
+        permutations_generated:
+          type: integer
+          description: Number of permutations generated
+        permutations_checked:
+          type: integer
+          description: Number actually checked
+        registered_typos:
+          type: array
+          description: Registered typo domains found
+          items:
+            $ref: '#/components/schemas/TypoPermutation'
+        available_typos:
+          type: integer
+          description: Number of available typo domains
+        unknown_typos:
+          type: integer
+        risk_summary:
+          type: object
+          properties:
+            critical:
+              type: integer
+            high:
+              type: integer
+            medium:
+              type: integer
+            low:
+              type: integer
+        threat_level:
+          type: string
+          enum:
+          - none
+          - low
+          - medium
+          - high
+          - critical
+        family_summary:
+          $ref: '#/components/schemas/TypoFamilySummary'
+        checked_at:
+          type: string
+          format: date-time
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

@@ -1,0 +1,1146 @@
+openapi: 3.2.0
+info:
+  title: DomScan Social API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Social
+  description: Social media handle availability checking
+paths:
+  /v1/social:
+    get:
+      tags:
+      - Social
+      summary: Check social handle availability
+      description: Check if a username is available on supported platforms, or opt into a scoped resource check such as a repository, subreddit, invite, Substack profile, or federated account. Broad checks use a bounded server processing budget (12 seconds by default); unfinished live platform or resource checks return an explicit unknown timeout result instead of delaying the whole response.
+      operationId: checkSocialHandles
+      parameters:
+      - name: handle
+        description: Social handle to check, without a leading @.
+        in: query
+        required: true
+        schema:
+          type: string
+          example: myusername
+      - name: platforms
+        in: query
+        description: Comma-separated platforms to check. Defaults to all known social platforms. Aliases listed by GET /v1/social/info are accepted. An explicitly empty value is valid only when at least one scoped resource is requested.
+        schema:
+          type: string
+          example: github,gitlab,bitbucket,devto,huggingface,dribbble,soundcloud,gumroad,buymeacoffee,substack,itchio,hackernews,reddit,bluesky,patreon,snapchat,youtube
+      - name: resources
+        in: query
+        description: Optional comma-separated resource types. If platforms is omitted, the request checks only these resources. Aliases listed by GET /v1/social/info are accepted.
+        schema:
+          type: string
+          example: github:repository
+      responses:
+        '200':
+          description: Platform availability results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/social/bulk:
+    post:
+      tags:
+      - Social
+      summary: Check social handle availability in bulk
+      description: Check up to 10 handles in one request. Each valid handle costs the normal 2-credit rate, with no bulk discount. Invalid handles are returned as per-item errors and are not billed. Other per-handle failures do not prevent successful results from being returned.
+      operationId: bulkCheckSocialHandles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - handles
+              properties:
+                handles:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                  description: Social handles to check.
+                platforms:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional platforms to check for every handle. Defaults to all known platforms. Aliases listed by GET /v1/social/info are accepted. An empty array is valid only when at least one scoped resource is requested.
+                resources:
+                  type: array
+                  items:
+                    type: string
+                  description: Optional resource types to check for every identifier. If platforms is omitted, only these resources are checked.
+            example:
+              handles:
+              - mycompany
+              - myproduct
+              platforms:
+              - github
+              - reddit
+              - youtube
+      responses:
+        '200':
+          description: Bulk social handle availability results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialBulkResponse'
+              example:
+                results:
+                - handle: mycompany
+                  availability:
+                    github:
+                      available: false
+                      profile_url: https://github.com/mycompany
+                      checked: true
+                      requested: true
+                      method: official_api
+                      confidence: high
+                  resources: {}
+                  resource_summary:
+                    requested_count: 0
+                    checked_count: 0
+                    present_count: 0
+                    absent_count: 0
+                    unknown_count: 0
+                    cached_count: 0
+                    determinacy_rate: 0
+                  summary:
+                    available_count: 0
+                    unavailable_count: 1
+                    unknown_count: 0
+                  checked_at: '2026-07-09T20:45:00.000Z'
+                - handle: myproduct
+                  availability:
+                    github:
+                      available: true
+                      profile_url: null
+                      checked: true
+                      requested: true
+                      method: official_api
+                      confidence: high
+                  resources: {}
+                  resource_summary:
+                    requested_count: 0
+                    checked_count: 0
+                    present_count: 0
+                    absent_count: 0
+                    unknown_count: 0
+                    cached_count: 0
+                    determinacy_rate: 0
+                  summary:
+                    available_count: 1
+                    unavailable_count: 0
+                    unknown_count: 0
+                  checked_at: '2026-07-09T20:45:00.000Z'
+                summary:
+                  total: 2
+                  succeeded: 2
+                  failed: 0
+                beta_notice: Social handle checks are in beta; verify critical results directly.
+                meta:
+                  served_by: pop=MAD country=ES
+                  platforms:
+                  - github
+                  resources: []
+                  max_handles: 10
+                  credits_per_handle: 2
+                  credits_required: 4
+                  latency_ms: 420
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          description: Rate limit exceeded
+      x-domscan-credits:
+        model: per_item
+        default: 2
+  /v1/social/info:
+    get:
+      tags:
+      - Social
+      summary: Get social handle endpoint details
+      description: Returns supported platforms, parameters, and an example response for the social handle checker.
+      operationId: getSocialInfo
+      responses:
+        '200':
+          description: Social endpoint reference
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  endpoint:
+                    type: string
+                  description:
+                    type: string
+                  parameters:
+                    type: object
+                  bulk:
+                    type: object
+                    properties:
+                      endpoint:
+                        type: string
+                      method:
+                        type: string
+                        enum:
+                        - POST
+                      max_handles:
+                        type: integer
+                        example: 10
+                      credits_per_handle:
+                        type: integer
+                        example: 2
+                      pricing_formula:
+                        type: string
+                        example: valid_handle_count * credits_per_handle
+                      bulk_discount:
+                        type: boolean
+                        example: false
+                      invalid_handles_charged:
+                        type: boolean
+                        example: false
+                      partial_results:
+                        type: boolean
+                        example: true
+                      parameters:
+                        type: object
+                      example_request:
+                        type: object
+                    required:
+                    - endpoint
+                    - method
+                    - max_handles
+                    - credits_per_handle
+                    - pricing_formula
+                    - bulk_discount
+                    - invalid_handles_charged
+                    - partial_results
+                    - parameters
+                    - example_request
+                  platforms:
+                    type: object
+                    properties:
+                      supported:
+                        type: array
+                        items:
+                          type: string
+                      coming_soon:
+                        type: array
+                        items:
+                          type: string
+                      experimental:
+                        type: array
+                        items:
+                          type: string
+                      planned:
+                        type: array
+                        items:
+                          type: string
+                      blocked:
+                        type: array
+                        items:
+                          type: string
+                      details:
+                        type: array
+                        description: Platform metadata used by docs and tools. Includes live, experimental, planned, and blocked platforms.
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            display_name:
+                              type: string
+                            aliases:
+                              type: array
+                              items:
+                                type: string
+                            category:
+                              type: string
+                            tier:
+                              type: integer
+                              enum:
+                              - 0
+                              - 1
+                              - 2
+                            status:
+                              type: string
+                              enum:
+                              - live
+                              - experimental
+                              - planned
+                              - blocked
+                            method:
+                              type: string
+                              enum:
+                              - official_api
+                              - public_endpoint
+                              - public_profile
+                              - not_available
+                            confidence:
+                              type: string
+                              enum:
+                              - high
+                              - medium
+                              - low
+                              - none
+                            logo_key:
+                              type: string
+                            profile_url_template:
+                              type:
+                              - string
+                              - 'null'
+                            docs_anchor:
+                              type: string
+                            caveat_codes:
+                              type: array
+                              items:
+                                type: string
+                              description: Stable caveat codes for docs and localized UI rendering.
+                            cache_ttl_s:
+                              type: object
+                              description: Recommended cache TTL policy by result class.
+                              properties:
+                                available:
+                                  type: integer
+                                taken:
+                                  type: integer
+                                unknown:
+                                  type: integer
+                                rate_limited:
+                                  type: integer
+                            handle_rules:
+                              type: object
+                              properties:
+                                min_length:
+                                  type: integer
+                                max_length:
+                                  type: integer
+                                description:
+                                  type: string
+                  resource_types:
+                    type: object
+                    properties:
+                      supported:
+                        type: array
+                        items:
+                          type: string
+                      details:
+                        type: array
+                        items:
+                          type: object
+                  example_request:
+                    type: string
+                  resource_example_request:
+                    type: string
+                  example_response:
+                    type: object
+              example:
+                endpoint: /v1/social
+                description: Check if a username is available on supported social platforms.
+                parameters:
+                  handle:
+                    type: string
+                    required: true
+                    description: Username to check
+                  platforms:
+                    type: string
+                    required: false
+                    description: Comma-separated platform list
+                    example: github,gitlab,reddit
+                  resources:
+                    type: string
+                    required: false
+                    description: Comma-separated resource type list
+                    example: github:repository
+                bulk:
+                  endpoint: /v1/social/bulk
+                  method: POST
+                  max_handles: 10
+                  credits_per_handle: 2
+                  pricing_formula: valid_handle_count * credits_per_handle
+                  bulk_discount: false
+                  invalid_handles_charged: false
+                  partial_results: true
+                  parameters:
+                    handles:
+                      type: array
+                      required: true
+                      min_items: 1
+                      max_items: 10
+                    platforms:
+                      type: array
+                      required: false
+                    resources:
+                      type: array
+                      required: false
+                  example_request:
+                    handles:
+                    - mycompany
+                    - myproduct
+                    platforms:
+                    - github
+                    - reddit
+                    - youtube
+                platforms:
+                  supported:
+                  - github
+                  - gitlab
+                  - bitbucket
+                  - devto
+                  - huggingface
+                  - dribbble
+                  - soundcloud
+                  - gumroad
+                  - buymeacoffee
+                  - substack
+                  - itchio
+                  - behance
+                  - dockerhub
+                  - hashnode
+                  - rubygems
+                  - hackernews
+                  - reddit
+                  - bluesky
+                  - twitter
+                  - instagram
+                  - facebook
+                  - threads
+                  - pinterest
+                  - snapchat
+                  - telegram
+                  - twitch
+                  - patreon
+                  - tiktok
+                  - youtube
+                  - linkedin
+                  - steam
+                  - tumblr
+                  - vimeo
+                  - letterboxd
+                  - linktree
+                  coming_soon:
+                  - discord
+                  experimental: []
+                  planned: []
+                  blocked:
+                  - discord
+                  details:
+                  - id: github
+                    display_name: GitHub
+                    aliases:
+                    - github
+                    category: developer
+                    tier: 0
+                    status: live
+                    method: official_api
+                    confidence: high
+                    logo_key: github
+                    profile_url_template: https://github.com/{handle}
+                    docs_anchor: github
+                    caveat_codes: []
+                    cache_ttl_s:
+                      available: 300
+                      taken: 3600
+                      unknown: 60
+                      rate_limited: 60
+                    handle_rules:
+                      min_length: 1
+                      max_length: 39
+                      description: 1-39 chars, alphanumeric and hyphens, cannot start/end with hyphen
+                resource_types:
+                  supported:
+                  - reddit:subreddit
+                  - discord:invite
+                  - github:repository
+                  - gitlab:project
+                  - dockerhub:repository
+                  - activitypub:account
+                  - substack:profile
+                example_request: /v1/social?handle=myusername&platforms=github,gitlab,reddit
+                resource_example_request: /v1/social?handle=github/docs&resources=github:repository
+                example_response:
+                  handle: myusername
+                  checked_at: '2026-07-14T12:00:00Z'
+                  availability:
+                    github:
+                      available: true
+                      profile_url: null
+                      checked: true
+                      requested: true
+                    reddit:
+                      available: false
+                      profile_url: https://reddit.com/user/myusername
+                      checked: true
+                      requested: true
+                    gitlab:
+                      available: true
+                      profile_url: null
+                      checked: true
+                      requested: true
+                  resources: {}
+                  resource_summary:
+                    requested_count: 0
+                    checked_count: 0
+                    present_count: 0
+                    absent_count: 0
+                    unknown_count: 0
+                    cached_count: 0
+                    determinacy_rate: 0
+                  summary:
+                    available_count: 2
+                    unavailable_count: 1
+                    unknown_count: 0
+                  summary_v2:
+                    requested_count: 3
+                    checked_count: 3
+                    available_count: 2
+                    unavailable_count: 1
+                    unknown_count: 0
+                    not_supported_count: 0
+                    determinacy_rate: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  schemas:
+    SocialPlatformSummary:
+      type: object
+      description: Additive social checker rollup for requested platforms, confidence, cache, checker methods, and beta-limited outcomes.
+      properties:
+        requested_count:
+          type: integer
+        checked_count:
+          type: integer
+        available_count:
+          type: integer
+        unavailable_count:
+          type: integer
+        unknown_count:
+          type: integer
+        not_supported_count:
+          type: integer
+        cached_count:
+          type: integer
+        high_confidence_count:
+          type: integer
+        live_platform_count:
+          type: integer
+        experimental_count:
+          type: integer
+        blocked_count:
+          type: integer
+        beta_limited_count:
+          type: integer
+        determinacy_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        method_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        source_counts:
+          type: object
+          additionalProperties:
+            type: integer
+    SocialResponse:
+      type: object
+      description: Social handle availability check
+      properties:
+        handle:
+          type: string
+          description: Username checked
+        checked_at:
+          type: string
+          format: date-time
+        availability:
+          type: object
+          description: Per-platform availability results keyed by platform id
+          additionalProperties:
+            type: object
+            properties:
+              available:
+                type:
+                - boolean
+                - 'null'
+                description: true when available, false when taken, null when the platform could not be checked
+              profile_url:
+                type:
+                - string
+                - 'null'
+                description: Profile URL when the handle is taken and a canonical URL is known
+              checked:
+                type: boolean
+                description: Whether DomScan completed a deterministic check for this platform
+              requested:
+                type: boolean
+                description: Whether this platform was included in the caller request. False means the platform result is present only because the legacy response includes every known platform.
+              reason:
+                type: string
+                enum:
+                - rate_limited
+                - error
+                - not_supported
+                - timeout
+                - invalid_handle
+                - reserved
+                - not_requested
+                description: Reason metadata for a reserved name or why a deterministic availability result could not be returned
+              method:
+                type: string
+                enum:
+                - official_api
+                - public_endpoint
+                - public_profile
+                - not_available
+                description: Checker method associated with this platform result
+              confidence:
+                type: string
+                enum:
+                - high
+                - medium
+                - low
+                - none
+                description: Current confidence level for this checker method
+              latency_ms:
+                type: integer
+                description: Checker latency in milliseconds, request-budget wait for an unfinished check, or 0 for cached/skipped results
+              evidence:
+                type: object
+                description: Small evidence metadata for how this result was produced
+                properties:
+                  source:
+                    type: string
+                    enum:
+                    - cache
+                    - upstream
+                    - validation
+                    - not_supported
+                    - not_requested
+                    - circuit_breaker
+                    - concurrency_limiter
+                    - request_budget
+              cached:
+                type: boolean
+                description: Whether this result was served from cache
+              cache_age_s:
+                type: integer
+                description: Age of the cached result in seconds
+              entity_type:
+                type: string
+                description: Observed account or page type when the upstream exposes it
+              canonical_id:
+                type: string
+                description: Stable upstream identifier when publicly exposed
+              canonical_handle:
+                type: string
+                description: Canonical handle casing returned by the upstream
+              visibility:
+                type: string
+                enum:
+                - public
+                - private
+                - restricted
+                - unknown
+              verified:
+                type: boolean
+              metadata:
+                type: object
+                additionalProperties: true
+                description: Small, platform-specific public metadata when available
+        resources:
+          type: object
+          description: Opt-in scoped resource results keyed by resource type
+          additionalProperties:
+            $ref: '#/components/schemas/SocialResourceResult'
+        resource_summary:
+          $ref: '#/components/schemas/SocialResourceSummary'
+        summary:
+          type: object
+          description: Legacy summary across every known platform, including platforms that were not requested
+          properties:
+            available_count:
+              type: integer
+            unavailable_count:
+              type: integer
+            unknown_count:
+              type: integer
+        summary_v2:
+          type: object
+          description: Requested-platform summary. This is additive and avoids counting unrequested platforms as unknown.
+          properties:
+            requested_count:
+              type: integer
+            checked_count:
+              type: integer
+            available_count:
+              type: integer
+            unavailable_count:
+              type: integer
+            unknown_count:
+              type: integer
+            not_supported_count:
+              type: integer
+            determinacy_rate:
+              type: number
+              minimum: 0
+              maximum: 1
+              description: checked_count / requested_count rounded to four decimals
+        platform_summary:
+          $ref: '#/components/schemas/SocialPlatformSummary'
+        beta_notice:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
+          properties:
+            supported_platforms:
+              type: array
+              items:
+                type: string
+            supported_resources:
+              type: array
+              items:
+                type: string
+            unsupported_platforms:
+              type: array
+              items:
+                type: string
+            latency_ms:
+              type: integer
+    SocialResourceSummary:
+      type: object
+      properties:
+        requested_count:
+          type: integer
+        checked_count:
+          type: integer
+        present_count:
+          type: integer
+        absent_count:
+          type: integer
+        unknown_count:
+          type: integer
+        cached_count:
+          type: integer
+        determinacy_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+      required:
+      - requested_count
+      - checked_count
+      - present_count
+      - absent_count
+      - unknown_count
+      - cached_count
+      - determinacy_rate
+    SocialResourceResult:
+      type: object
+      description: A scoped platform resource observation. Exists describes public presence; claimability is separate because public absence does not always guarantee registration eligibility.
+      properties:
+        identifier:
+          type: string
+        network:
+          type: string
+        resource_type:
+          type: string
+        exists:
+          type:
+          - boolean
+          - 'null'
+        claimability:
+          type: string
+          enum:
+          - available
+          - taken
+          - unknown
+          - not_applicable
+        checked:
+          type: boolean
+        canonical_url:
+          type:
+          - string
+          - 'null'
+        canonical_id:
+          type: string
+        canonical_handle:
+          type: string
+        entity_type:
+          type: string
+        visibility:
+          type: string
+          enum:
+          - public
+          - unknown
+        reason:
+          type: string
+          enum:
+          - error
+          - invalid_identifier
+          - rate_limited
+          - timeout
+        method:
+          type: string
+          enum:
+          - official_api
+          - public_endpoint
+          - public_profile
+          - not_available
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          - none
+        latency_ms:
+          type: integer
+        evidence:
+          type: object
+          properties:
+            source:
+              type: string
+              enum:
+              - cache
+              - upstream
+              - validation
+              - request_budget
+        cached:
+          type: boolean
+        cache_age_s:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+      - identifier
+      - network
+      - resource_type
+      - exists
+      - claimability
+      - checked
+      - canonical_url
+      - method
+      - confidence
+      - latency_ms
+      - evidence
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    SocialBulkResponse:
+      type: object
+      description: Bulk social handle availability response for up to 10 handles. Results preserve request order and isolate per-handle failures.
+      properties:
+        results:
+          type: array
+          description: One result per requested handle, in request order. Invalid handles and isolated processing failures contain an error object.
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SocialResponse'
+            - type: object
+              properties:
+                handle:
+                  type:
+                  - string
+                  - 'null'
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      enum:
+                      - INVALID_HANDLE
+                      - INTERNAL
+                    message:
+                      type: string
+                  required:
+                  - code
+                  - message
+              required:
+              - handle
+              - error
+        summary:
+          type: object
+          description: Counts for all requested handles and their per-item outcomes.
+          properties:
+            total:
+              type: integer
+              description: Number of submitted handles.
+            succeeded:
+              type: integer
+              description: Handles with availability results.
+            failed:
+              type: integer
+              description: Handles returned with per-item errors.
+          required:
+          - total
+          - succeeded
+          - failed
+        beta_notice:
+          type: string
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            platforms:
+              type: array
+              items:
+                type: string
+            resources:
+              type: array
+              items:
+                type: string
+            max_handles:
+              type: integer
+              example: 10
+            credits_per_handle:
+              type: integer
+              example: 2
+            credits_required:
+              type: integer
+              description: Total credit cost for valid handles in this request. There is no bulk discount.
+              example: 4
+            latency_ms:
+              type: integer
+      required:
+      - results
+      - summary
+      - beta_notice
+      - meta
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

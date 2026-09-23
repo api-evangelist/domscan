@@ -1,0 +1,1007 @@
+openapi: 3.2.0
+info:
+  title: DomScan Recipes API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Recipes
+  description: Compound API endpoints bundling multiple services with credit savings
+paths:
+  /v1/recipes:
+    get:
+      tags:
+      - Recipes
+      summary: List all recipes
+      description: Get a list of all available compound API recipes with their descriptions, credit costs, and savings.
+      operationId: listRecipes
+      responses:
+        '200':
+          description: Recipe index
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: due-diligence
+                        name:
+                          type: string
+                          example: Domain Due Diligence
+                        description:
+                          type: string
+                        credits:
+                          type: integer
+                          example: 10
+                        savings:
+                          type: integer
+                          example: 8
+                        target_users:
+                          type: array
+                          items:
+                            type: string
+                        components:
+                          type: array
+                          items:
+                            type: string
+                        endpoint:
+                          type: string
+                          example: /v1/recipes/due-diligence
+                  total:
+                    type: integer
+                  total_savings:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/recipes/due-diligence:
+    get:
+      tags:
+      - Recipes
+      summary: Domain Due Diligence
+      description: Complete domain acquisition analysis combining availability, WHOIS, valuation, health, reputation, typosquatting, and pricing. Costs 12 credits (saves 6 vs individual calls).
+      operationId: recipeDueDiligence
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to analyze
+        example: example.com
+      - name: include_competitors
+        in: query
+        deprecated: true
+        schema:
+          type: boolean
+          default: false
+        description: Deprecated and ignored. The recipe never performed competitor analysis, so the response is identical with or without it.
+      responses:
+        '200':
+          description: Due diligence report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 12
+  /v1/recipes/brand-launch:
+    get:
+      tags:
+      - Recipes
+      summary: Brand Launch Readiness
+      description: Pre-launch checklist for brand domains including availability, DNS, SSL, email auth, reputation, and social. Costs 10 credits (saves 4).
+      operationId: recipeBrandLaunch
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to check
+        example: mybrand.com
+      - name: brand_name
+        in: query
+        schema:
+          type: string
+        description: Brand name for social checks
+      - name: platforms
+        in: query
+        schema:
+          type: string
+        description: Comma-separated social platforms
+      responses:
+        '200':
+          description: Brand launch readiness report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 10
+  /v1/recipes/threat-assessment:
+    get:
+      tags:
+      - Recipes
+      summary: Threat Assessment
+      description: Comprehensive typosquatting and brand threat analysis. Costs 18 credits (saves 22).
+      operationId: recipeThreatAssessment
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to assess
+      - name: analyze_threats
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Run the deep per-threat analysis. When disabled, registered variants are counted but threats is returned empty. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: max_threats
+        in: query
+        schema:
+          type: integer
+          default: 10
+          minimum: 1
+          maximum: 50
+        description: Registered threats to analyze in depth, from 1 to 50. The highest-risk domains are analyzed first.
+      - name: include_evidence
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Return ownership_evidence on each analyzed threat. When disabled, the field is omitted and only ownership_assessment is returned. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      responses:
+        '200':
+          description: Threat assessment report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 18
+  /v1/recipes/domain-finder:
+    get:
+      tags:
+      - Recipes
+      summary: Domain Finder
+      description: AI-powered domain discovery with availability checking, valuation, and pricing. Costs 12 credits (saves 13).
+      operationId: recipeDomainFinder
+      parameters:
+      - name: keywords
+        in: query
+        required: true
+        schema:
+          type: string
+          example: startup,brand
+        description: Comma-separated keywords
+      - name: tlds
+        in: query
+        schema:
+          type: string
+          example: com,io
+        description: Comma-separated TLDs to check
+      - name: style
+        in: query
+        schema:
+          type: string
+          enum:
+          - brandable
+          - keyword-rich
+          - short
+          example: brandable
+        description: Suggestion style
+      - name: max_length
+        in: query
+        schema:
+          type: integer
+          minimum: 2
+          maximum: 63
+          example: 15
+        description: Max domain length
+      - name: language
+        in: query
+        schema:
+          type: string
+          enum:
+          - en
+          - zh
+          - es
+          - ja
+          - de
+          - fr
+          - pt
+          - it
+          - ko
+          - ru
+          - ar
+          - hi
+          - bn
+          - id
+          - ms
+          - th
+          - vi
+          - tr
+          - pl
+          - nl
+          - sv
+          - da
+          - 'no'
+          - fi
+          - el
+          - cs
+          - hu
+          - ro
+          - uk
+          - he
+          default: en
+        description: Language used for language-aware name generation.
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+          example: 10
+        description: Max results
+      responses:
+        '200':
+          description: Domain finder results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 12
+  /v1/recipes/competitor-intel:
+    get:
+      tags:
+      - Recipes
+      summary: Competitor Intelligence
+      description: Competitor domain infrastructure analysis including tech stack, DNS, and certificates. Costs 15 credits (saves 5).
+      operationId: recipeCompetitorIntel
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Competitor domain
+      - name: discover_subdomains
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Discover subdomains
+      - name: analyze_infrastructure
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Look up IP details for the first five A records. When disabled, the ip component is omitted. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: analyze_email
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Analyze email infrastructure
+      responses:
+        '200':
+          description: Competitor intelligence report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 15
+  /v1/recipes/portfolio-audit:
+    get:
+      tags:
+      - Recipes
+      summary: Portfolio Audit (GET)
+      description: Audit domain portfolio for health, valuation, and optimization. Costs 25 credits (saves up to 275). Use POST for more than 10 domains.
+      operationId: recipePortfolioAudit
+      parameters:
+      - name: domains
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Comma-separated domains (max 50)
+      - name: include_valuation
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Run domain valuation. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: include_health
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Run the per-domain health check. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: include_pricing
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Look up renewal pricing for each distinct TLD in the portfolio. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: alert_expiring_days
+        in: query
+        schema:
+          type: integer
+          default: 90
+          minimum: 1
+          maximum: 365
+        description: Days ahead to flag an expiring domain, from 1 to 365. Alert severity bands are fixed at 30 and 60 days and do not follow this value.
+      responses:
+        '200':
+          description: Portfolio audit report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 25
+    post:
+      tags:
+      - Recipes
+      summary: Portfolio Audit (POST)
+      description: Audit domain portfolio for 25 credits (saves up to 275). Use POST for larger domain lists.
+      operationId: recipePortfolioAuditPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 50
+                include_valuation:
+                  type: boolean
+                  default: true
+                include_health:
+                  type: boolean
+                  default: true
+                include_pricing:
+                  type: boolean
+                  default: true
+                alert_expiring_days:
+                  type: integer
+                  default: 90
+                  minimum: 1
+                  maximum: 365
+      responses:
+        '200':
+          description: Portfolio audit report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 25
+  /v1/recipes/email-deliverability:
+    get:
+      tags:
+      - Recipes
+      summary: Email Deliverability Audit
+      description: Complete email authentication and deliverability analysis (SPF, DKIM, DMARC). Costs 10 credits (saves 5).
+      operationId: recipeEmailDeliverability
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to audit
+      - name: dkim_selectors
+        in: query
+        schema:
+          type: string
+        description: Comma-separated DKIM selectors
+      - name: check_blacklists
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Run the domain and MX-IP blacklist checks. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      responses:
+        '200':
+          description: Email deliverability report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 10
+  /v1/recipes/dns-migration:
+    get:
+      tags:
+      - Recipes
+      summary: DNS Migration Check
+      description: Pre-migration checklist and current DNS configuration snapshot. Costs 7 credits (saves 5).
+      operationId: recipeDnsMigration
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to check
+      - name: target_nameservers
+        in: query
+        schema:
+          type: string
+        description: Comma-separated target nameservers
+      - name: critical_records
+        in: query
+        schema:
+          type: string
+        description: Comma-separated critical record types
+      responses:
+        '200':
+          description: DNS migration report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 7
+  /v1/recipes/infrastructure-discovery:
+    get:
+      tags:
+      - Recipes
+      summary: Infrastructure Discovery
+      description: Complete infrastructure mapping and attack surface analysis. Costs 15 credits (saves 10).
+      operationId: recipeInfrastructureDiscovery
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to discover
+      - name: depth
+        in: query
+        schema:
+          type: string
+          enum:
+          - quick
+          - standard
+          - deep
+          default: standard
+        description: How far the discovery goes. quick returns up to 50 subdomains and 5 IP lookups, standard up to 200 and 20, and deep up to 500 and 50. Deeper scans take longer and are more likely to return partial component results.
+      - name: include_historical
+        in: query
+        deprecated: true
+        schema:
+          type: boolean
+          default: false
+        description: Deprecated and ignored. No historical data is collected, so the response is identical with or without it.
+      responses:
+        '200':
+          description: Infrastructure discovery report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 15
+  /v1/recipes/defensive-registration:
+    get:
+      tags:
+      - Recipes
+      summary: Defensive Registration
+      description: Brand protection through strategic domain acquisition recommendations. Costs 12 credits (saves 8).
+      operationId: recipeDefensiveRegistration
+      parameters:
+      - name: brand
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Brand name to protect
+      - name: owned_domains
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Comma-separated owned domains
+      - name: priority_tlds
+        in: query
+        schema:
+          type: string
+        description: Comma-separated priority TLDs
+      - name: include_typos
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Add up to 100 typo permutations to the defensive-registration candidates. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      - name: budget
+        in: query
+        schema:
+          type: number
+        description: Maximum budget in USD
+      responses:
+        '200':
+          description: Defensive registration recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 12
+  /v1/recipes/phishing-investigation:
+    get:
+      tags:
+      - Recipes
+      summary: Phishing Investigation
+      description: Evidence collection and analysis for suspected phishing domains. Costs 12 credits (saves 10).
+      operationId: recipePhishingInvestigation
+      parameters:
+      - name: suspicious_domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Suspected phishing domain
+      - name: legitimate_domain
+        in: query
+        schema:
+          type: string
+        description: Legitimate domain being impersonated
+      - name: collect_evidence
+        in: query
+        schema:
+          type: boolean
+          default: true
+        description: Collect the DNS and WHOIS evidence package. When disabled, evidence_package is omitted from the response. Accepts 1, true, yes, 0, false or no. Any other value returns 400.
+      responses:
+        '200':
+          description: Phishing investigation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 12
+components:
+  schemas:
+    RecipeResponse:
+      type: object
+      description: Standard recipe response format
+      properties:
+        success:
+          type: boolean
+          description: Whether the recipe executed successfully
+        data:
+          type: object
+          description: Recipe-specific data payload
+        meta:
+          type: object
+          description: Recipe execution metadata
+          properties:
+            recipe_name:
+              type: string
+              description: Name of the recipe
+              example: domain-due-diligence
+            credits_used:
+              type: integer
+              description: Credits actually billed for this recipe, net of any refund for components that did not deliver.
+              example: 10
+            credits_refunded:
+              type: integer
+              description: Credits returned because a component failed or timed out. The failed components' proportional share of the recipe cost is refunded automatically, so a partial result is never billed in full. Absent when every component delivered.
+              example: 4
+            credits_saved:
+              type: integer
+              description: Credits saved vs individual calls
+              example: 8
+            duration_ms:
+              type: integer
+              description: Total execution time in milliseconds
+            components_called:
+              type: array
+              items:
+                type: string
+              description: API components used
+            cached_components:
+              type: array
+              items:
+                type: string
+              description: Components served from cache
+            component_health:
+              type: object
+              description: Additive rollup of called, cached, degraded, and failed recipe components.
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - complete
+                  - degraded
+                  - failed
+                total_components:
+                  type: integer
+                successful_components:
+                  type: integer
+                degraded_components:
+                  type: integer
+                failed_components:
+                  type: integer
+                cached_components:
+                  type: integer
+                warnings:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      component:
+                        type: string
+                      code:
+                        type: string
+                      recoverable:
+                        type: boolean
+            executed_at:
+              type: string
+              format: date-time
+              description: Execution timestamp
+        errors:
+          type: array
+          description: Non-fatal errors from individual components
+          items:
+            type: object
+            properties:
+              component:
+                type: string
+                description: Component that failed
+              code:
+                type: string
+                description: Error code
+              message:
+                type: string
+                description: Error message
+              recoverable:
+                type: boolean
+                description: Whether the recipe continued
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

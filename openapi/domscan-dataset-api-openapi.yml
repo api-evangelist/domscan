@@ -1,0 +1,399 @@
+openapi: 3.2.0
+info:
+  title: DomScan Dataset API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Dataset
+  description: Reference datasets and coverage metadata
+paths:
+  /v1/email/blacklist:
+    get:
+      tags:
+      - Dataset
+      summary: Browse disposable email domain dataset
+      description: Browse a disposable and temporary email domain dataset assembled from multiple open-source lists. The validated dataset refreshes daily, and responses report when it was last updated plus source health counts for the latest successful refresh. Coverage changes as contributing lists evolve.
+      operationId: getEmailBlacklistInfo
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: 'Number of domains to return (default: 1000, max: 10000)'
+        schema:
+          type: integer
+          default: 1000
+          maximum: 10000
+      - name: offset
+        in: query
+        required: false
+        description: Starting offset for pagination
+        schema:
+          type: integer
+          default: 0
+      - name: format
+        in: query
+        required: false
+        description: Response format
+        schema:
+          type: string
+          enum:
+          - json
+          - txt
+          default: json
+      responses:
+        '200':
+          description: Paginated list of disposable domains
+          headers:
+            X-Data-Last-Updated:
+              description: Timestamp of the validated dataset snapshot
+              schema:
+                type: string
+                format: date-time
+            X-Data-Refresh-Status:
+              description: Current dataset freshness state
+              schema:
+                type: string
+                enum:
+                - fresh
+                - degraded
+                - stale
+                - static_fallback
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domains:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                    - 10minutemail.com
+                    - guerrillamail.com
+                  total:
+                    type: integer
+                    example: 198362
+                  offset:
+                    type: integer
+                    example: 0
+                  limit:
+                    type: integer
+                    example: 1000
+                  metadata:
+                    type: object
+                    properties:
+                      last_updated:
+                        type: string
+                        format: date-time
+                      total_domains:
+                        type: integer
+                      high_confidence_count:
+                        type: integer
+                      wildcard_count:
+                        type: integer
+                      sources:
+                        type: array
+                        items:
+                          type: string
+                      source_count:
+                        type: integer
+                        description: Number of scheduled open-source inputs in the snapshot
+                      successful_source_count:
+                        type: integer
+                        description: Inputs that returned usable data for the snapshot
+                      failed_source_count:
+                        type: integer
+                        description: Inputs that failed or returned no usable data
+                      refresh_cadence_hours:
+                        type: integer
+                        example: 24
+                      refresh_status:
+                        type: string
+                        enum:
+                        - fresh
+                        - degraded
+                        - stale
+                        - static_fallback
+                      next_refresh_due:
+                        type: string
+                        format: date-time
+                      dataset_status:
+                        type: string
+                        enum:
+                        - complete
+                        - degraded
+                        - unknown
+                      quality_policy_version:
+                        type:
+                        - integer
+                        - 'null'
+                      quarantined_domain_count:
+                        type: integer
+                        description: Valid candidates withheld because only one upstream feed reported them
+                      rejected_domain_count:
+                        type: integer
+                        description: Malformed, unsafe namespace, or allowlisted source entries rejected during refresh
+            text/plain:
+              schema:
+                type: string
+                example: '10minutemail.com
+
+                  guerrillamail.com
+
+                  ...'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/email/blacklist/download:
+    get:
+      tags:
+      - Dataset
+      summary: Download disposable email domain dataset
+      description: Download the complete disposable email domain dataset as a file.
+      operationId: downloadEmailBlacklist
+      parameters:
+      - name: format
+        in: query
+        required: false
+        description: File format
+        schema:
+          type: string
+          enum:
+          - json
+          - txt
+          default: json
+      responses:
+        '200':
+          description: Downloadable blacklist file
+          headers:
+            X-Data-Last-Updated:
+              description: Timestamp of the validated dataset snapshot
+              schema:
+                type: string
+                format: date-time
+            X-Data-Refresh-Status:
+              description: Current dataset freshness state
+              schema:
+                type: string
+                enum:
+                - fresh
+                - degraded
+                - stale
+                - static_fallback
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domains:
+                    type: array
+                    items:
+                      type: string
+                  wildcards:
+                    type: array
+                    items:
+                      type: string
+                  metadata:
+                    type: object
+            text/plain:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

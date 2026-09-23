@@ -1,0 +1,2330 @@
+openapi: 3.2.0
+info:
+  title: DomScan DNS API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: DNS
+  description: DNS record lookup, security analysis, and propagation checking
+paths:
+  /v1/dns:
+    get:
+      tags:
+      - DNS
+      summary: DNS record lookup
+      description: Query specific DNS record types for a domain. Returns records with TTL, DNSSEC validation status, semantic TXT classification, additive warnings, and query timing.
+      operationId: getDnsRecords
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to query DNS records for
+        schema:
+          type: string
+          example: example.com
+      - name: type
+        in: query
+        description: DNS record type to query
+        schema:
+          type: string
+          enum:
+          - A
+          - AAAA
+          - MX
+          - NS
+          - TXT
+          - SOA
+          - CNAME
+          - CAA
+          - PTR
+          - SRV
+          default: A
+      responses:
+        '200':
+          description: DNS records for the specified type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsResponse'
+              example:
+                domain: google.com
+                record_type: TXT
+                records:
+                - type: TXT
+                  name: google.com
+                  data: v=spf1 include:_spf.google.com ~all
+                  ttl: 300
+                  classification: spf
+                - type: TXT
+                  name: google.com
+                  data: google-site-verification=abc123
+                  ttl: 300
+                  classification: verification
+                status: success
+                dnssec_validated: false
+                query_time_ms: 37
+                checked_at: '2026-04-18T21:00:00Z'
+                warnings:
+                - code: TXT_MULTIPLE_RESPONSES
+                  message: Domain publishes multiple TXT records; use classification to isolate the security ones.
+                  severity: info
+                meta:
+                  served_by: pop=unknown country=unknown
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/dns/bulk:
+    post:
+      tags:
+      - DNS
+      summary: Bulk DNS record lookup
+      description: 'Query one DNS record type across multiple domains in a single request.
+
+
+        **Credits:** 1 credit per domain. Max 25 domains per request.'
+      operationId: bulkDnsLookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 25
+                  description: Array of domains to query
+                  example:
+                  - example.com
+                  - cloudflare.com
+                type:
+                  type: string
+                  enum:
+                  - A
+                  - AAAA
+                  - NS
+                  - MX
+                  - TXT
+                  - CAA
+                  - SOA
+                  - CNAME
+                  - PTR
+                  - SRV
+                  - HTTPS
+                  - SVCB
+                  default: A
+                  description: DNS record type to query for every domain
+      responses:
+        '200':
+          description: Bulk DNS lookup results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkDnsResponse'
+              example:
+                results:
+                - domain: example.com
+                  record_type: A
+                  records:
+                  - type: A
+                    name: example.com
+                    data: 93.184.216.34
+                    ttl: 300
+                  status: success
+                  dnssec_validated: true
+                  query_time_ms: 22
+                  checked_at: '2024-01-15T12:00:00Z'
+                - domain: missing.invalid
+                  record_type: A
+                  records: []
+                  status: error
+                  dnssec_validated: false
+                  query_time_ms: 0
+                  checked_at: '2024-01-15T12:00:00Z'
+                  error:
+                    code: INVALID_DOMAIN
+                    message: Invalid domain format
+                summary:
+                  total: 2
+                  successful: 1
+                  nxdomain: 0
+                  errors: 1
+                  query_time_ms: 31
+                meta:
+                  served_by: pop=MAD country=ES
+                  record_type: A
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 1
+  /v1/dns/all:
+    get:
+      tags:
+      - DNS
+      summary: Get all DNS records
+      description: Query all common DNS record types (A, AAAA, NS, MX, TXT, CAA, SOA, HTTPS, SVCB) in parallel. Returns a comprehensive view of domain DNS configuration plus optional additive signals (IPv6 parity, MX priority sanity, private-IP leaks, TXT classification, wildcard probe).
+      operationId: getAllDnsRecords
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to query
+        schema:
+          type: string
+          example: example.com
+      - name: wildcard_probe
+        in: query
+        required: false
+        description: When set to 1, perform a random-label probe to detect wildcard DNS. Adds one extra DoH lookup.
+        schema:
+          type: string
+          enum:
+          - '1'
+      responses:
+        '200':
+          description: All DNS records grouped by type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsAllResponse'
+              example:
+                domain: openai.com
+                records:
+                  A:
+                  - type: A
+                    name: openai.com
+                    data: 104.18.33.45
+                    ttl: 300
+                  AAAA:
+                  - type: AAAA
+                    name: openai.com
+                    data: 2606:4700::6812:212d
+                    ttl: 300
+                  MX:
+                  - type: MX
+                    name: openai.com
+                    data: aspmx.l.google.com
+                    ttl: 300
+                    priority: 1
+                  NS:
+                  - type: NS
+                    name: openai.com
+                    data: ns1-02.azure-dns.com
+                    ttl: 172800
+                  - type: NS
+                    name: openai.com
+                    data: ns2-02.azure-dns.net
+                    ttl: 172800
+                  TXT:
+                  - type: TXT
+                    name: openai.com
+                    data: v=spf1 include:_spf.google.com ~all
+                    ttl: 300
+                    classification: spf
+                  - type: TXT
+                    name: openai.com
+                    data: v=TLSRPTv1; rua=mailto:tlsrpt@openai.com
+                    ttl: 300
+                    classification: tls_rpt
+                summary:
+                  has_a: true
+                  has_aaaa: true
+                  has_ns: true
+                  has_mx: true
+                  has_txt: true
+                  has_https: false
+                  has_svcb: false
+                  ipv6_parity: full
+                warnings:
+                - code: MX_PRIORITY_SHARED
+                  message: Multiple MX hosts share the same priority.
+                  severity: info
+                wildcard:
+                  suspected: false
+                  probe_label: _domscan-probe-4f6a2c.openai.com
+                query_time_ms: 82
+                checked_at: '2026-04-18T21:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/dns/security:
+    get:
+      tags:
+      - DNS
+      summary: DNS security analysis
+      description: Comprehensive DNS security analysis including DNSSEC validation, CAA, SPF/DKIM/DMARC, MTA-STS and TLS-RPT policy inspection, cross-resolver latency, and AXFR exposure checks.
+      operationId: getDnsSecurity
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: DNS security analysis results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsSecurityResponse'
+              example:
+                domain: google.com
+                security_score: 97
+                security_grade: A+
+                spf:
+                  exists: true
+                  record: v=spf1 include:_spf.google.com ~all
+                  valid: true
+                  policy: softfail
+                  includes:
+                  - _spf.google.com
+                  dns_lookup_count: 1
+                  dns_lookup_limit_exceeded: false
+                  include_tree:
+                  - domain: _spf.google.com
+                    lookups: 1
+                  lookup_walk_count: 1
+                  macros_present: false
+                  macro_references: []
+                  walk:
+                  - domain: google.com
+                    depth: 0
+                    record: v=spf1 include:_spf.google.com ~all
+                    mechanisms:
+                    - include:_spf.google.com
+                    - ~all
+                    includes:
+                    - _spf.google.com
+                    redirect: null
+                    direct_lookup_count: 1
+                    total_lookup_count: 1
+                    macros_present: false
+                    macro_references: []
+                    multiple_records: 1
+                  walk_errors: []
+                  issues: []
+                dkim:
+                  exists: true
+                  selectors_checked:
+                  - google
+                  - selector1
+                  - selector2
+                  selectors_found:
+                  - google
+                  valid: true
+                dmarc:
+                  exists: true
+                  record: v=DMARC1; p=reject; rua=mailto:mailauth-reports@google.com
+                  valid: true
+                  policy: reject
+                  subdomain_policy: reject
+                  percentage: 100
+                  rua:
+                  - mailto:mailauth-reports@google.com
+                  ruf: []
+                  issues: []
+                bimi:
+                  exists: true
+                  record: v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem
+                  logo_url: https://example.com/logo.svg
+                  authority_url: https://example.com/vmc.pem
+                  valid: true
+                  logo_fetch_ok: true
+                  logo_http_status: 200
+                  logo_content_type: image/svg+xml
+                  logo_bytes: 2048
+                  logo_svg_detected: true
+                  vmc_present: true
+                  vmc_fetched: true
+                  vmc_http_status: 200
+                  vmc_content_type: application/x-pem-file
+                  vmc_certificate_valid: true
+                  vmc_subject: /CN=Example Inc VMC
+                  vmc_issuer: /CN=Example Issuer
+                  vmc_not_before: '2026-01-01T00:00:00Z'
+                  vmc_not_after: '2027-01-01T00:00:00Z'
+                  vmc_days_to_expiry: 258
+                  vmc_fingerprint_sha256: AA:BB:CC:DD
+                  vmc_san_domains:
+                  - google.com
+                  errors: []
+                dnssec:
+                  enabled: true
+                  valid: true
+                  algorithm: ECDSAP256SHA256
+                  key_tag: 12345
+                  validation_status: secure
+                  validated_by_proxy: true
+                  validation_reason: chain validated via delv
+                  ds_records:
+                  - 12345 13 2 1a2b3c4d5e6f
+                  dnskey_records:
+                  - 256 3 13 AbCdEfGhIjKlMnOp
+                  rrsig_present: true
+                  resolver: 127.0.0.1
+                  mismatch_detail:
+                    checked: true
+                    mismatch_detected: false
+                    reason: chain validated via delv
+                    ds_record_count: 1
+                    dnskey_record_count: 1
+                    rrsig_present: true
+                    validation_status: secure
+                    resolver: 127.0.0.1
+                caa:
+                  exists: true
+                  records:
+                  - flags: 0
+                    tag: issue
+                    value: pki.goog
+                  issuers:
+                  - pki.goog
+                  issue_wild: []
+                  iodef: mailto:security@google.com
+                issuance_readiness:
+                  caa:
+                    exists: true
+                    records:
+                    - flags: 0
+                      tag: issue
+                      value: pki.goog
+                    - flags: 0
+                      tag: iodef
+                      value: mailto:security@google.com
+                    issue_issuers:
+                    - pki.goog
+                    issuewild_issuers: []
+                    iodef: mailto:security@google.com
+                    letsencrypt_allowed: false
+                    google_trust_services_allowed: true
+                  http01:
+                    challenge_path: /.well-known/acme-challenge/domscan-probe-1713474000
+                    reachable: true
+                    ready: true
+                    status_code: 404
+                    final_url: http://google.com/.well-known/acme-challenge/domscan-probe-1713474000
+                    redirects: 0
+                    error: null
+                  checked_at: '2026-04-18T21:00:00Z'
+                authoritative_consistency:
+                  record_type: SOA
+                  all_authoritative: true
+                  answer_sets_match: true
+                  inconsistent_nameservers: []
+                  consistent_serial: true
+                  serials:
+                  - host: ns1.google.com
+                    udp_soa_serial: '2026041801'
+                    tcp_soa_serial: '2026041801'
+                  reference_answers:
+                  - google.com. 60 IN SOA ns1.google.com. dns-admin.google.com. 2026041801 900 900 1800 60
+                delegation_health:
+                  nameservers:
+                  - host: ns1.google.com
+                    addresses:
+                    - 216.239.32.10
+                    in_bailiwick: false
+                    glue_required: false
+                    udp:
+                      authoritative: true
+                      status: NOERROR
+                      query_ms: 14
+                      answer_count: 1
+                      answers:
+                      - google.com. 60 IN SOA ns1.google.com. dns-admin.google.com. 2026041801 900 900 1800 60
+                      soa_serial: '2026041801'
+                      truncated: false
+                      error: null
+                    tcp:
+                      authoritative: true
+                      status: NOERROR
+                      query_ms: 18
+                      answer_count: 1
+                      answers:
+                      - google.com. 60 IN SOA ns1.google.com. dns-admin.google.com. 2026041801 900 900 1800 60
+                      soa_serial: '2026041801'
+                      truncated: false
+                      error: null
+                    lame: false
+                    issues: []
+                  in_bailiwick_nameservers: []
+                  glue_required_count: 0
+                  all_in_bailiwick_resolve: true
+                  missing_addresses: []
+                  lame_nameservers: []
+                dns_transport:
+                  udp_working: true
+                  tcp_working: true
+                  tcp_supported_nameservers:
+                  - ns1.google.com
+                  tcp_failed_nameservers: []
+                  truncation_tested: true
+                  truncation_nameserver: ns1.google.com
+                  truncation_record_type: DNSKEY
+                  truncation_observed: false
+                  tcp_fallback_ready: null
+                nameserver_drift:
+                  checked: true
+                  drift_detected: false
+                  public_nameservers:
+                  - ns1.google.com
+                  authoritative_nameservers:
+                  - ns1.google.com
+                  missing_from_authority: []
+                  extra_at_authority: []
+                  inconsistent_nameservers: []
+                  serial_mismatch_detected: false
+                mta_sts:
+                  exists: true
+                  record: v=STSv1; id=2024010101Z
+                  valid: true
+                  policy_id: 2024010101Z
+                  policy_fetch_ok: true
+                  policy_http_status: 200
+                  mode: enforce
+                  max_age: 86400
+                  mx_hosts:
+                  - '*.google.com'
+                  mx_records:
+                  - aspmx.l.google.com
+                  - alt1.aspmx.l.google.com
+                  policy_matches_mx: true
+                  uncovered_mx: []
+                  errors: []
+                tls_rpt:
+                  exists: true
+                  record: v=TLSRPTv1; rua=mailto:sts-reports@google.com
+                  valid: true
+                  rua:
+                  - mailto:sts-reports@google.com
+                  errors: []
+                resolver_latency:
+                  record_type: MX
+                  resolvers:
+                  - resolver: 1.1.1.1
+                    label: Cloudflare
+                    query_ms: 22
+                    status: NOERROR
+                    answer_count: 5
+                    answers:
+                    - aspmx.l.google.com
+                    server: 1.1.1.1#53
+                    error: null
+                  - resolver: 8.8.8.8
+                    label: Google Public DNS
+                    query_ms: 3
+                    status: NOERROR
+                    answer_count: 5
+                    answers:
+                    - aspmx.l.google.com
+                    server: 8.8.8.8#53
+                    error: null
+                  min_ms: 3
+                  max_ms: 22
+                  avg_ms: 12.5
+                zone_transfer:
+                  exposed: false
+                  nameservers:
+                  - host: ns1.google.com
+                    exposed: false
+                    query_ms: 18
+                    records_returned: 0
+                    soa_seen: false
+                    reason: transfer failed
+                    sample_records: []
+                blacklist:
+                  domain: google.com
+                  listed: false
+                  threat_level: none
+                  check_type: domain
+                  checked_at: '2026-04-18T21:00:00Z'
+                edge_summary:
+                  relay_configured: true
+                  evidence_sources:
+                  - dnssec_validate
+                  - axfr_check
+                  - dns_authority_health
+                  - dns_latency
+                  - issuance_readiness
+                  - mail_policies
+                  - bimi_audit
+                  - spf_walk
+                  secure_dns_chain: true
+                  zone_transfer_exposed: false
+                  authoritative_consistency_ok: true
+                  nameserver_drift_detected: false
+                  lame_nameserver_count: 0
+                  tcp_fallback_ready: null
+                  avg_resolver_latency_ms: 12.5
+                  fastest_resolver: Google Public DNS
+                  slowest_resolver: Cloudflare
+                  issuance_http01_ready: true
+                  caa_restricts_issuers: true
+                  bimi_vmc_valid: true
+                  mta_sts_enforced: true
+                  tls_rpt_configured: true
+                  spf_lookup_limit_exceeded: false
+                recommendations: []
+                checked_at: '2026-04-18T21:00:00Z'
+                check_duration_ms: 312
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/dns/propagation:
+    get:
+      tags:
+      - DNS
+      summary: Compare public recursive resolver answers
+      description: Compare answers from DomScan's configured public recursive resolvers. Without expected, propagation_percentage is the share represented by the largest identical-answer cohort. With expected, it is the share whose answer matches the expected value. This is not a geographic or worldwide propagation measurement.
+      operationId: getDnsPropagation
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain whose recursive-resolver answers should be compared
+        schema:
+          type: string
+          example: example.com
+      - name: type
+        in: query
+        description: DNS record type to check
+        schema:
+          type: string
+          enum:
+          - A
+          - AAAA
+          - CNAME
+          - MX
+          - TXT
+          - NS
+          - SOA
+          default: A
+      - name: expected
+        in: query
+        description: Optional exact value to match after DNS-type normalization. When supplied, propagation_percentage measures expected-value matches instead of resolver convergence.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Comparison across the configured public recursive resolvers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsPropagationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/dns/propagation/bulk:
+    post:
+      operationId: bulkDnsPropagation
+      summary: Compare resolver answers for multiple domains
+      description: Compare one DNS record type across the configured public recursive resolvers for multiple domains. This is not a worldwide geographic propagation measurement. Accepts up to 10 items, preserves input order, and uses bounded concurrency. The outer response is HTTP 200 when the batch is accepted, so inspect each result for data or an error. Billing is 2 credits per validated item with no bulk discount, including items that return a per-item lookup error.
+      tags:
+      - DNS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: hostname
+                type:
+                  type: string
+                  enum:
+                  - A
+                  - AAAA
+                  - CNAME
+                  - MX
+                  - TXT
+                  - NS
+                  - SOA
+                  default: A
+                expected:
+                  type: string
+            example:
+              domains:
+              - example.com
+              - cloudflare.com
+              type: A
+      responses:
+        '200':
+          description: Batch accepted. Each ordered result contains either data or a per-item error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkLookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 2
+  /v1/dns/servers:
+    get:
+      tags:
+      - DNS
+      summary: List configured recursive resolvers
+      description: List the public recursive DoH providers used for resolver comparison. These are global anycast services, not geographic probes.
+      operationId: getDnsServers
+      responses:
+        '200':
+          description: List of DNS servers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DnsServersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  schemas:
+    SpfLookupTree:
+      type: object
+      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
+      properties:
+        root_domain:
+          type: string
+        node_count:
+          type: integer
+        max_depth:
+          type: integer
+        cycles_detected:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              depth:
+                type: integer
+              status:
+                type: string
+                enum:
+                - present
+                - missing
+                - cycle
+                - error
+                - limit_exceeded
+              direct_lookup_count:
+                type: integer
+              total_lookup_count:
+                type: integer
+              includes:
+                type: array
+                items:
+                  type: string
+              redirect:
+                type:
+                - string
+                - 'null'
+              mechanisms:
+                type: array
+                items:
+                  type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              type:
+                type: string
+                enum:
+                - include
+                - redirect
+    DnsServersResponse:
+      type: object
+      description: Configured public recursive DoH providers. These are global anycast services, not geographic probes.
+      properties:
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        geographic_vantage:
+          type: boolean
+          enum:
+          - false
+        servers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              location:
+                type: string
+              country:
+                type: string
+              ip:
+                type: string
+              provider:
+                type: string
+              scope:
+                type: string
+                enum:
+                - global-anycast
+              doh_endpoint:
+                type: string
+                format: uri
+              documentation_url:
+                type: string
+                format: uri
+              format:
+                type: string
+                enum:
+                - dns-json
+        total:
+          type: integer
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    NameserverDriftSummary:
+      type: object
+      description: Compares public NS records against observed authoritative nameservers and serial consistency.
+      properties:
+        checked:
+          type: boolean
+        drift_detected:
+          type:
+          - boolean
+          - 'null'
+        public_nameservers:
+          type: array
+          items:
+            type: string
+        authoritative_nameservers:
+          type: array
+          items:
+            type: string
+        missing_from_authority:
+          type: array
+          items:
+            type: string
+        extra_at_authority:
+          type: array
+          items:
+            type: string
+        inconsistent_nameservers:
+          type: array
+          items:
+            type: string
+        serial_mismatch_detected:
+          type:
+          - boolean
+          - 'null'
+    PropagationSummary:
+      type: object
+      description: Additive rollup for configured recursive-resolver convergence or expected-value matching. It is not a geographic propagation summary.
+      properties:
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        percentage_basis:
+          type: string
+          enum:
+          - expected_value_match
+          - resolver_convergence
+        resolver_count:
+          type: integer
+        successful_count:
+          type: integer
+        failed_count:
+          type: integer
+        propagation_percentage:
+          type: number
+          description: Uses the percentage_basis reported in the response.
+        fully_propagated:
+          type: boolean
+          description: True only when all configured resolvers match expected_value, or all converge when no expected value is supplied.
+        consistent:
+          type: boolean
+          description: Whether all configured resolvers succeeded with one normalized answer set.
+        unique_value_count:
+          type: integer
+        matching_expected_count:
+          type: integer
+        expected_value_present:
+          type:
+          - boolean
+          - 'null'
+        countries_checked:
+          type: integer
+          description: Count of country metadata labels. GLOBAL is one label and does not represent a geographic vantage point.
+        providers_checked:
+          type: integer
+        locations_checked:
+          type: integer
+          description: Count of resolver scope labels. Global anycast does not represent a geographic vantage point.
+        slowest_resolver:
+          type:
+          - string
+          - 'null'
+        slowest_response_ms:
+          type:
+          - integer
+          - 'null'
+        fastest_response_ms:
+          type:
+          - integer
+          - 'null'
+        disagreement_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          description: Confidence within the configured recursive-resolver sample only. It does not imply geographic or worldwide confidence.
+    DnssecMismatchDetail:
+      type: object
+      description: DNSSEC DS/DNSKEY mismatch and validation-state details from resolver and authoritative evidence.
+      properties:
+        checked:
+          type: boolean
+        mismatch_detected:
+          type: boolean
+        reason:
+          type:
+          - string
+          - 'null'
+        ds_record_count:
+          type: integer
+        dnskey_record_count:
+          type: integer
+        rrsig_present:
+          type:
+          - boolean
+          - 'null'
+        validation_status:
+          type:
+          - string
+          - 'null'
+          enum:
+          - secure
+          - insecure
+          - bogus
+          - indeterminate
+        resolver:
+          type:
+          - string
+          - 'null'
+    DnsRecord:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Record type (A, AAAA, MX, etc.)
+        name:
+          type: string
+          description: Record name
+        data:
+          type: string
+          description: Record data/value
+        ttl:
+          type: integer
+          description: Time to live in seconds
+        priority:
+          type: integer
+          description: Priority for MX/SRV records
+        classification:
+          type: string
+          enum:
+          - spf
+          - dkim
+          - dmarc
+          - verification
+          - dnssec
+          - mta_sts
+          - tls_rpt
+          - other
+          description: Semantic classification of a TXT record. Only present for type=TXT records.
+    DnsAllResponse:
+      type: object
+      description: All DNS records response
+      properties:
+        domain:
+          type: string
+        records:
+          type: object
+          description: Records grouped by type
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DnsRecord'
+        summary:
+          type: object
+          properties:
+            has_a:
+              type: boolean
+            has_aaaa:
+              type: boolean
+            has_ns:
+              type: boolean
+            has_mx:
+              type: boolean
+            has_txt:
+              type: boolean
+            has_https:
+              type: boolean
+            has_svcb:
+              type: boolean
+            ipv6_parity:
+              type: string
+              enum:
+              - full
+              - partial
+              - none
+              description: IPv6 parity hint derived from A/AAAA availability.
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+        wildcard:
+          type: object
+          description: Result of the optional wildcard-DNS probe. Only present when ?wildcard_probe=1 and a probe was performed.
+          properties:
+            suspected:
+              type: boolean
+            probe_label:
+              type: string
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+    DnsPropagationResponse:
+      type: object
+      description: Answer comparison across configured public recursive resolvers. It does not represent geographic or worldwide DNS propagation.
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+          enum:
+          - A
+          - AAAA
+          - CNAME
+          - MX
+          - TXT
+          - NS
+          - SOA
+        expected_value:
+          type:
+          - string
+          - 'null'
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        percentage_basis:
+          type: string
+          enum:
+          - expected_value_match
+          - resolver_convergence
+        propagation_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: When expected_value is supplied, the percentage of all configured resolvers whose answer matches it. Otherwise, the percentage represented by the largest identical-answer cohort. Resolver failures remain in the denominator.
+        fully_propagated:
+          type: boolean
+          description: With expected_value, true only when every configured resolver returns that value. Without expected_value, true only when every configured resolver succeeds with the same answer set.
+        consistent:
+          type: boolean
+          description: True only when every configured resolver succeeds and returns the same normalized answer set. This is independent of expected_value matching.
+        unique_values:
+          type: array
+          items:
+            type: string
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              server:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  ip:
+                    type: string
+                  provider:
+                    type: string
+                  location:
+                    type: string
+                    enum:
+                    - Global anycast
+                  country:
+                    type: string
+                    enum:
+                    - GLOBAL
+                  scope:
+                    type: string
+                    enum:
+                    - global-anycast
+                  doh_endpoint:
+                    type: string
+                    format: uri
+                  documentation_url:
+                    type: string
+                    format: uri
+                  format:
+                    type: string
+                    enum:
+                    - dns-json
+              success:
+                type: boolean
+              records:
+                type: array
+                items:
+                  type: string
+              ttl:
+                type:
+                - integer
+                - 'null'
+              response_time_ms:
+                type: integer
+              error:
+                type:
+                - string
+                - 'null'
+        checked_at:
+          type: string
+          format: date-time
+        total_duration_ms:
+          type: integer
+        summary:
+          type: object
+          properties:
+            total_servers:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            matching_expected:
+              type: integer
+        propagation_summary:
+          $ref: '#/components/schemas/PropagationSummary'
+    DnsWarning:
+      type: object
+      description: Non-fatal signal about the DNS response (e.g. duplicate MX priority, private IP leak).
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum:
+          - info
+          - warning
+    BulkDnsResponse:
+      type: object
+      description: Bulk DNS lookup response
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkDnsResult'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            nxdomain:
+              type: integer
+            errors:
+              type: integer
+            query_time_ms:
+              type: integer
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            record_type:
+              type: string
+    DnsResponse:
+      type: object
+      description: DNS record lookup response
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsRecord'
+        status:
+          type: string
+          enum:
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+          description: Whether DNSSEC validation passed
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+    DnsSecurityResponse:
+      type: object
+      description: DNS security analysis
+      properties:
+        domain:
+          type: string
+        security_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        security_grade:
+          type: string
+          enum:
+          - A+
+          - A
+          - B
+          - C
+          - D
+          - F
+        spf:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            record:
+              type: string
+            valid:
+              type: boolean
+            policy:
+              type: string
+              enum:
+              - pass
+              - softfail
+              - fail
+              - neutral
+            includes:
+              type: array
+              items:
+                type: string
+            dns_lookup_count:
+              type: integer
+            dns_lookup_limit_exceeded:
+              type: boolean
+            include_tree:
+              type: array
+              items:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  lookups:
+                    type: integer
+            lookup_walk_count:
+              type: integer
+            macros_present:
+              type: boolean
+            macro_references:
+              type: array
+              items:
+                type: string
+            walk:
+              type: array
+              description: Extended recursive SPF analysis with per-hop lookup accounting.
+              items:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  depth:
+                    type: integer
+                  record:
+                    type: string
+                  mechanisms:
+                    type: array
+                    items:
+                      type: string
+                  includes:
+                    type: array
+                    items:
+                      type: string
+                  redirect:
+                    type:
+                    - string
+                    - 'null'
+                  direct_lookup_count:
+                    type: integer
+                  total_lookup_count:
+                    type: integer
+                  macros_present:
+                    type: boolean
+                  macro_references:
+                    type: array
+                    items:
+                      type: string
+                  multiple_records:
+                    type: integer
+            walk_errors:
+              type: array
+              items:
+                type: string
+            lookup_tree:
+              $ref: '#/components/schemas/SpfLookupTree'
+            issues:
+              type: array
+              items:
+                type: string
+        dkim:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            selectors_checked:
+              type: array
+              items:
+                type: string
+            selectors_found:
+              type: array
+              items:
+                type: string
+            valid:
+              type: boolean
+        dmarc:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            record:
+              type: string
+            valid:
+              type: boolean
+            policy:
+              type: string
+              enum:
+              - none
+              - quarantine
+              - reject
+            subdomain_policy:
+              type: string
+              enum:
+              - none
+              - quarantine
+              - reject
+            percentage:
+              type: integer
+            rua:
+              type: array
+              items:
+                type: string
+            ruf:
+              type: array
+              items:
+                type: string
+            issues:
+              type: array
+              items:
+                type: string
+        bimi:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            record:
+              type: string
+            logo_url:
+              type: string
+            authority_url:
+              type: string
+            valid:
+              type: boolean
+            logo_fetch_ok:
+              type:
+              - boolean
+              - 'null'
+            logo_http_status:
+              type:
+              - integer
+              - 'null'
+            logo_content_type:
+              type:
+              - string
+              - 'null'
+            logo_bytes:
+              type:
+              - integer
+              - 'null'
+            logo_svg_detected:
+              type:
+              - boolean
+              - 'null'
+            vmc_present:
+              type: boolean
+            vmc_fetched:
+              type:
+              - boolean
+              - 'null'
+            vmc_http_status:
+              type:
+              - integer
+              - 'null'
+            vmc_content_type:
+              type:
+              - string
+              - 'null'
+            vmc_certificate_valid:
+              type:
+              - boolean
+              - 'null'
+            vmc_subject:
+              type:
+              - string
+              - 'null'
+            vmc_issuer:
+              type:
+              - string
+              - 'null'
+            vmc_not_before:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            vmc_not_after:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            vmc_days_to_expiry:
+              type:
+              - integer
+              - 'null'
+            vmc_fingerprint_sha256:
+              type:
+              - string
+              - 'null'
+            vmc_san_domains:
+              type: array
+              items:
+                type: string
+            errors:
+              type: array
+              items:
+                type: string
+        dnssec:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            valid:
+              type: boolean
+            algorithm:
+              type: string
+            key_tag:
+              type: integer
+            validation_status:
+              type: string
+              enum:
+              - secure
+              - insecure
+              - bogus
+              - indeterminate
+            validated_by_proxy:
+              type: boolean
+            validation_reason:
+              type:
+              - string
+              - 'null'
+            ds_records:
+              type: array
+              items:
+                type: string
+            dnskey_records:
+              type: array
+              items:
+                type: string
+            rrsig_present:
+              type: boolean
+            resolver:
+              type: string
+            mismatch_detail:
+              $ref: '#/components/schemas/DnssecMismatchDetail'
+        caa:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            records:
+              type: array
+              items:
+                type: object
+                properties:
+                  flags:
+                    type: integer
+                  tag:
+                    type: string
+                  value:
+                    type: string
+            issuers:
+              type: array
+              items:
+                type: string
+            issue_wild:
+              type: array
+              items:
+                type: string
+            iodef:
+              type: string
+        issuance_readiness:
+          type: object
+          description: Extended ACME / CAA issuance-readiness check.
+          properties:
+            caa:
+              type: object
+              properties:
+                exists:
+                  type: boolean
+                records:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      flags:
+                        type: integer
+                      tag:
+                        type: string
+                      value:
+                        type: string
+                issue_issuers:
+                  type: array
+                  items:
+                    type: string
+                issuewild_issuers:
+                  type: array
+                  items:
+                    type: string
+                iodef:
+                  type:
+                  - string
+                  - 'null'
+                letsencrypt_allowed:
+                  type: boolean
+                google_trust_services_allowed:
+                  type: boolean
+            http01:
+              type: object
+              properties:
+                challenge_path:
+                  type: string
+                reachable:
+                  type: boolean
+                ready:
+                  type: boolean
+                status_code:
+                  type:
+                  - integer
+                  - 'null'
+                final_url:
+                  type:
+                  - string
+                  - 'null'
+                redirects:
+                  type:
+                  - integer
+                  - 'null'
+                error:
+                  type:
+                  - string
+                  - 'null'
+            checked_at:
+              type: string
+              format: date-time
+        authoritative_consistency:
+          type: object
+          description: Extended authoritative nameserver consistency check.
+          properties:
+            record_type:
+              type: string
+            all_authoritative:
+              type: boolean
+            answer_sets_match:
+              type: boolean
+            inconsistent_nameservers:
+              type: array
+              items:
+                type: string
+            consistent_serial:
+              type: boolean
+            serials:
+              type: array
+              items:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  udp_soa_serial:
+                    type:
+                    - string
+                    - 'null'
+                  tcp_soa_serial:
+                    type:
+                    - string
+                    - 'null'
+            reference_answers:
+              type: array
+              items:
+                type: string
+        delegation_health:
+          type: object
+          description: Extended delegation health signals including in-bailiwick NS reachability and lame delegation checks.
+          properties:
+            nameservers:
+              type: array
+              items:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  addresses:
+                    type: array
+                    items:
+                      type: string
+                  in_bailiwick:
+                    type: boolean
+                  glue_required:
+                    type: boolean
+                  udp:
+                    type: object
+                    properties:
+                      authoritative:
+                        type: boolean
+                      status:
+                        type: string
+                      query_ms:
+                        type:
+                        - integer
+                        - 'null'
+                      answer_count:
+                        type: integer
+                      answers:
+                        type: array
+                        items:
+                          type: string
+                      soa_serial:
+                        type:
+                        - string
+                        - 'null'
+                      truncated:
+                        type: boolean
+                      error:
+                        type:
+                        - string
+                        - 'null'
+                  tcp:
+                    type: object
+                    properties:
+                      authoritative:
+                        type: boolean
+                      status:
+                        type: string
+                      query_ms:
+                        type:
+                        - integer
+                        - 'null'
+                      answer_count:
+                        type: integer
+                      answers:
+                        type: array
+                        items:
+                          type: string
+                      soa_serial:
+                        type:
+                        - string
+                        - 'null'
+                      truncated:
+                        type: boolean
+                      error:
+                        type:
+                        - string
+                        - 'null'
+                  lame:
+                    type: boolean
+                  issues:
+                    type: array
+                    items:
+                      type: string
+            in_bailiwick_nameservers:
+              type: array
+              items:
+                type: string
+            glue_required_count:
+              type: integer
+            all_in_bailiwick_resolve:
+              type: boolean
+            missing_addresses:
+              type: array
+              items:
+                type: string
+            lame_nameservers:
+              type: array
+              items:
+                type: string
+        dns_transport:
+          type: object
+          description: Extended UDP/TCP authoritative DNS transport and truncation checks.
+          properties:
+            udp_working:
+              type: boolean
+            tcp_working:
+              type: boolean
+            tcp_supported_nameservers:
+              type: array
+              items:
+                type: string
+            tcp_failed_nameservers:
+              type: array
+              items:
+                type: string
+            truncation_tested:
+              type: boolean
+            truncation_nameserver:
+              type: string
+            truncation_record_type:
+              type: string
+            truncation_observed:
+              type:
+              - boolean
+              - 'null'
+            tcp_fallback_ready:
+              type:
+              - boolean
+              - 'null'
+        nameserver_drift:
+          $ref: '#/components/schemas/NameserverDriftSummary'
+        mta_sts:
+          type: object
+          properties:
+            exists:
+              type: boolean
+            record:
+              type: string
+            valid:
+              type: boolean
+            policy_id:
+              type: string
+            policy_fetch_ok:
+              type: boolean
+            policy_http_status:
+              type:
+              - integer
+              - 'null'
+            mode:
+              type: string
+              enum:
+              - enforce
+              - testing
+              - none
+            max_age:
+              type: integer
+            mx_hosts:
+              type: array
+              items:
+                type: string
+            mx_records:
+              type: array
+              items:
+                type: string
+            policy_matches_mx:
+              type:
+              - boolean
+              - 'null'
+            uncovered_mx:
+              type: array
+              items:
+                type: string
+            errors:
+              type: array
+              items:
+                type: string
+        tls_rpt:
+          type: object
+          description: Extended TLS reporting policy parsed from `_smtp._tls.<domain>`.
+          properties:
+            exists:
+              type: boolean
+            record:
+              type: string
+            valid:
+              type: boolean
+            rua:
+              type: array
+              items:
+                type: string
+            errors:
+              type: array
+              items:
+                type: string
+        resolver_latency:
+          type: object
+          description: Extended DNS timing across a fixed public resolver set.
+          properties:
+            record_type:
+              type: string
+            resolvers:
+              type: array
+              items:
+                type: object
+                properties:
+                  resolver:
+                    type: string
+                  label:
+                    type: string
+                  query_ms:
+                    type:
+                    - integer
+                    - 'null'
+                  status:
+                    type: string
+                  answer_count:
+                    type: integer
+                  answers:
+                    type: array
+                    items:
+                      type: string
+                  server:
+                    type:
+                    - string
+                    - 'null'
+                  error:
+                    type:
+                    - string
+                    - 'null'
+            min_ms:
+              type:
+              - integer
+              - 'null'
+            max_ms:
+              type:
+              - integer
+              - 'null'
+            avg_ms:
+              type:
+              - number
+              - 'null'
+        zone_transfer:
+          type: object
+          description: Extended AXFR exposure check across the live authoritative nameservers.
+          properties:
+            exposed:
+              type: boolean
+            nameservers:
+              type: array
+              items:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  exposed:
+                    type: boolean
+                  query_ms:
+                    type: integer
+                  records_returned:
+                    type: integer
+                  soa_seen:
+                    type: boolean
+                  reason:
+                    type:
+                    - string
+                    - 'null'
+                  sample_records:
+                    type: array
+                    items:
+                      type: string
+        blacklist:
+          type: object
+          properties:
+            domain:
+              type: string
+            listed:
+              type: boolean
+            threat_level:
+              type: string
+            check_type:
+              type: string
+            checked_at:
+              type: string
+              format: date-time
+        edge_summary:
+          type: object
+          description: Compact supplemental probe summary for DNSSEC, delegation, AXFR, latency, and mail-policy triage.
+          properties:
+            relay_configured:
+              type: boolean
+            evidence_sources:
+              type: array
+              items:
+                type: string
+            secure_dns_chain:
+              type: boolean
+            zone_transfer_exposed:
+              type:
+              - boolean
+              - 'null'
+            authoritative_consistency_ok:
+              type:
+              - boolean
+              - 'null'
+            nameserver_drift_detected:
+              type:
+              - boolean
+              - 'null'
+            lame_nameserver_count:
+              type:
+              - integer
+              - 'null'
+            tcp_fallback_ready:
+              type:
+              - boolean
+              - 'null'
+            avg_resolver_latency_ms:
+              type:
+              - number
+              - 'null'
+            fastest_resolver:
+              type:
+              - string
+              - 'null'
+            slowest_resolver:
+              type:
+              - string
+              - 'null'
+            issuance_http01_ready:
+              type:
+              - boolean
+              - 'null'
+            caa_restricts_issuers:
+              type: boolean
+            bimi_vmc_valid:
+              type:
+              - boolean
+              - 'null'
+            mta_sts_enforced:
+              type: boolean
+            tls_rpt_configured:
+              type: boolean
+            spf_lookup_limit_exceeded:
+              type: boolean
+        recommendations:
+          type: array
+          items:
+            type: string
+        checked_at:
+          type: string
+          format: date-time
+        check_duration_ms:
+          type: integer
+    BulkDnsResult:
+      type: object
+      description: Single result inside a bulk DNS lookup response
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsRecord'
+        status:
+          type: string
+          enum:
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
+  responses:
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

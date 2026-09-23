@@ -1,0 +1,1576 @@
+openapi: 3.2.0
+info:
+  title: DomScan WHOIS/RDAP API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: WHOIS/RDAP
+  description: Domain registration data lookup via RDAP and WHOIS
+paths:
+  /v1/profile/bulk:
+    post:
+      operationId: bulkGetDomainProfile
+      summary: Get registration profiles for multiple domains
+      description: Get normalized RDAP registration profiles for multiple domains with bounded concurrency and ordered per-domain results. Accepts up to 10 items, preserves input order, and uses bounded concurrency. The outer response is HTTP 200 when the batch is accepted, so inspect each result for data or an error. Billing is 3 credits per validated item with no bulk discount, including items that return a per-item lookup error.
+      tags:
+      - WHOIS/RDAP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: hostname
+            example:
+              domains:
+              - example.com
+              - cloudflare.com
+      responses:
+        '200':
+          description: Batch accepted. Each ordered result contains either data or a per-item error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkLookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 3
+  /v1/whois:
+    get:
+      tags:
+      - WHOIS/RDAP
+      summary: WHOIS lookup
+      description: Get WHOIS registration data for a domain. Returns parsed and normalized data including registrar, dates, nameservers, status codes, source confidence, and fallback evidence.
+      operationId: getWhois
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to look up
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: WHOIS registration data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhoisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v2/whois:
+    get:
+      tags:
+      - WHOIS/RDAP
+      summary: Enhanced WHOIS lookup
+      description: Fetch RDAP and traditional WHOIS in parallel, then merge available abuse contacts, registrar WHOIS server details, glue addresses, and raw WHOIS evidence into the normalized response.
+      operationId: getWhoisV2
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to look up
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: Merged RDAP and traditional WHOIS registration data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhoisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/whois/bulk:
+    post:
+      tags:
+      - WHOIS/RDAP
+      summary: Bulk WHOIS lookup
+      description: 'Get WHOIS data for multiple domains at once. Returns parsed registration data for each domain.
+
+
+        **Credits:** 3 credits per domain. Example: 10 domains = 30 credits.'
+      operationId: bulkWhois
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 20
+                  description: Array of domains to look up (max 20)
+                  example:
+                  - example.com
+                  - google.com
+      responses:
+        '200':
+          description: Bulk WHOIS results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkWhoisResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 3
+  /v1/whois/history:
+    get:
+      tags:
+      - WHOIS/RDAP
+      summary: Query recorded WHOIS observations
+      description: Query the DomScan WHOIS observation log. A qualifying fresh, successful RDAP-backed GET /v1/whois or /v2/whois lookup can record at most one normalized snapshot per domain per UTC day. Cached responses, bulk lookups, history reads, and traditional WHOIS-only fallbacks do not add snapshots. This is not a global historical WHOIS archive, does not store registrant identity or contact history, and does not prove ownership or transfer.
+      operationId: getWhoisHistory
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain whose DomScan observation log to query
+        schema:
+          type: string
+          example: example.com
+      - name: limit
+        in: query
+        required: false
+        description: Maximum recent snapshots to return. Summary, first_seen, last_seen, and total_snapshots describe only this returned window.
+        schema:
+          type: integer
+          default: 50
+          minimum: 1
+          maximum: 100
+          example: 50
+      responses:
+        '200':
+          description: Limit-scoped WHOIS observation window with snapshots and detected changes
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - domain
+                - total_snapshots
+                - first_seen
+                - last_seen
+                - snapshots
+                - summary
+                - lifecycle_drift_summary
+                properties:
+                  domain:
+                    type: string
+                    description: Normalized domain queried in the DomScan observation log.
+                    example: example.com
+                  total_snapshots:
+                    type: integer
+                    description: Number of snapshots in this response, not the lifetime count outside the requested limit.
+                    example: 1
+                  first_seen:
+                    type:
+                    - string
+                    - 'null'
+                    format: date
+                    description: Earliest snapshot_date in the returned limit-scoped window.
+                    example: '2026-07-09'
+                  last_seen:
+                    type:
+                    - string
+                    - 'null'
+                    format: date
+                    description: Latest snapshot_date in the returned limit-scoped window.
+                    example: '2026-07-09'
+                  snapshots:
+                    type: array
+                    description: Most recent normalized observations, ordered newest first. At most one snapshot can be stored per domain per UTC day.
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - domain
+                      - registrar
+                      - registrar_iana_id
+                      - created_date
+                      - expiry_date
+                      - updated_date
+                      - status
+                      - nameservers
+                      - dnssec
+                      - transfer_locked
+                      - privacy_protected
+                      - snapshot_date
+                      - changes_from_previous
+                      - created_at
+                      properties:
+                        id:
+                          type: integer
+                          description: Internal identifier for this stored observation.
+                          example: 42
+                        domain:
+                          type: string
+                          description: Normalized domain stored with this observation.
+                          example: example.com
+                        registrar:
+                          type:
+                          - string
+                          - 'null'
+                          description: Normalized registrar name observed in RDAP.
+                          example: Example Registrar, Inc.
+                        registrar_iana_id:
+                          type:
+                          - string
+                          - 'null'
+                          description: IANA registrar identifier observed in RDAP, when available.
+                          example: '9999'
+                        created_date:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                          description: Domain registration event time observed in RDAP.
+                          example: '1995-08-14T04:00:00Z'
+                        expiry_date:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                          description: Domain expiration event time observed in RDAP.
+                          example: '2027-08-13T04:00:00Z'
+                        updated_date:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                          description: Latest update event time observed in RDAP.
+                          example: '2026-06-01T12:00:00Z'
+                        status:
+                          type: array
+                          description: Normalized RDAP status values observed for the domain.
+                          items:
+                            type: string
+                          example:
+                          - client transfer prohibited
+                        nameservers:
+                          type: array
+                          description: Normalized nameserver hostnames observed in RDAP.
+                          items:
+                            type: string
+                          example:
+                          - a.iana-servers.net
+                          - b.iana-servers.net
+                        dnssec:
+                          type: boolean
+                          description: Whether the RDAP observation indicated DNSSEC.
+                          example: true
+                        transfer_locked:
+                          type: boolean
+                          description: Whether observed RDAP status values indicated a transfer lock.
+                          example: true
+                        privacy_protected:
+                          type: boolean
+                          description: Whether privacy or redaction indicators were detected in the RDAP observation. This is detection, not registrant identity history.
+                          example: true
+                        snapshot_date:
+                          type: string
+                          format: date
+                          description: UTC calendar date assigned to the observation.
+                          example: '2026-07-09'
+                        changes_from_previous:
+                          type:
+                          - array
+                          - 'null'
+                          description: Detected changes from the preceding stored observation. Comparisons cover registrar name, expiry value, nameservers, status, DNSSEC, transfer lock, and privacy or redaction detection.
+                          items:
+                            type: object
+                            required:
+                            - field
+                            - old_value
+                            - new_value
+                            properties:
+                              field:
+                                type: string
+                                description: Normalized field whose value changed.
+                                enum:
+                                - registrar
+                                - expiry_date
+                                - nameservers
+                                - status
+                                - dnssec
+                                - transfer_locked
+                                - privacy_protected
+                                example: nameservers
+                              old_value:
+                                type:
+                                - string
+                                - 'null'
+                                description: Previous normalized value serialized as text.
+                                example: ns1.example.net, ns2.example.net
+                              new_value:
+                                type:
+                                - string
+                                - 'null'
+                                description: Current normalized value serialized as text.
+                                example: a.iana-servers.net, b.iana-servers.net
+                        created_at:
+                          type: string
+                          format: date-time
+                          description: Database creation time for the stored observation.
+                          example: '2026-07-09T10:15:30Z'
+                  summary:
+                    type: object
+                    description: Compatibility summary counted only across snapshots returned in this response. DNSSEC and transfer lock changes remain available in changes_from_previous and lifecycle_drift_summary.
+                    required:
+                    - registrar_changes
+                    - nameserver_changes
+                    - expiry_extensions
+                    - privacy_toggles
+                    - status_changes
+                    properties:
+                      registrar_changes:
+                        type: integer
+                        description: Count of detected changes to the normalized registrar name.
+                      nameserver_changes:
+                        type: integer
+                        description: Count of detected changes to the normalized nameserver set.
+                      expiry_extensions:
+                        type: integer
+                        description: Compatibility field that counts every detected expiry_date value change, including shortening and null transitions. It is not limited to extensions.
+                      privacy_toggles:
+                        type: integer
+                        description: Compatibility field that counts changes in privacy or redaction detection. It does not identify a privacy service or registrant.
+                      status_changes:
+                        type: integer
+                        description: Count of detected changes to the normalized RDAP status set.
+                  lifecycle_drift_summary:
+                    type: object
+                    description: Derived comparison summary across the returned limit-scoped window for registrar name, nameservers, expiry value, status, DNSSEC, transfer lock, and privacy or redaction detection.
+                    properties:
+                      drift_detected:
+                        type: boolean
+                      change_event_count:
+                        type: integer
+                      latest_change_date:
+                        type:
+                        - string
+                        - 'null'
+                      registrar_changed:
+                        type: boolean
+                      nameservers_changed:
+                        type: boolean
+                      expiry_extended:
+                        type: boolean
+                      status_changed:
+                        type: boolean
+                      privacy_changed:
+                        type: boolean
+                      transfer_lock_changed:
+                        type: boolean
+                      dnssec_changed:
+                        type: boolean
+                      expiry_extension_days_total:
+                        type: integer
+                      latest_changes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            field:
+                              type: string
+                            old_value:
+                              type:
+                              - string
+                              - 'null'
+                            new_value:
+                              type:
+                              - string
+                              - 'null'
+                      current_snapshot:
+                        type:
+                        - object
+                        - 'null'
+                        description: Selected fields from the newest snapshot in the returned window.
+                        properties:
+                          registrar:
+                            type:
+                            - string
+                            - 'null'
+                          expiry_date:
+                            type:
+                            - string
+                            - 'null'
+                            format: date-time
+                          nameservers:
+                            type: array
+                            items:
+                              type: string
+                          status:
+                            type: array
+                            items:
+                              type: string
+                          privacy_protected:
+                            type: boolean
+                      previous_snapshot:
+                        type:
+                        - object
+                        - 'null'
+                        description: Selected fields from the next newest snapshot in the returned window.
+                        properties:
+                          registrar:
+                            type:
+                            - string
+                            - 'null'
+                          expiry_date:
+                            type:
+                            - string
+                            - 'null'
+                            format: date-time
+                          nameservers:
+                            type: array
+                            items:
+                              type: string
+                          status:
+                            type: array
+                            items:
+                              type: string
+                          privacy_protected:
+                            type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/rdap:
+    get:
+      tags:
+      - WHOIS/RDAP
+      summary: RDAP lookup
+      description: Get raw RDAP registration data for a domain, IP address, or autonomous system number. Domains remain the default query type; use type=ip or type=autnum for non-domain lookups. Responses include a lookup summary with source and fallback evidence.
+      operationId: getRdap
+      parameters:
+      - name: query
+        in: query
+        required: false
+        description: Lookup value. Defaults to a domain unless type is provided.
+        schema:
+          type: string
+          example: example.com
+        examples:
+          domain:
+            summary: Domain lookup
+            value: example.com
+          ipv4:
+            summary: IPv4 lookup
+            value: 8.8.8.8
+          ipv6Cidr:
+            summary: IPv6 CIDR lookup
+            value: 2001:4860:4860::8888/128
+          autnum:
+            summary: Autnum lookup
+            value: AS174
+      - name: type
+        in: query
+        required: false
+        description: 'Optional RDAP query type. Supported values: domain, ip, autnum.'
+        schema:
+          type: string
+          enum:
+          - domain
+          - ip
+          - autnum
+          example: domain
+        examples:
+          domain:
+            summary: Domain lookup
+            value: domain
+          ip:
+            summary: IP lookup
+            value: ip
+          autnum:
+            summary: Autnum lookup
+            value: autnum
+      - name: domain
+        in: query
+        required: false
+        deprecated: true
+        description: Alias for query parameter on domain lookups
+        schema:
+          type: string
+      responses:
+        '200':
+          description: RDAP registration data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RdapResponse'
+              examples:
+                domain:
+                  summary: Registered domain
+                  value:
+                    query: example.com
+                    type: domain
+                    status: registered
+                    rdap:
+                      objectClassName: domain
+                      ldhName: example.com
+                      handle: 2336799_DOMAIN_COM-VRSN
+                    entity_summary:
+                      roles_present:
+                      - abuse
+                      - registrar
+                      abuse_contact:
+                        handle: ABUSE-1
+                        name: null
+                        email: abuse@example.test
+                        roles:
+                        - abuse
+                        public_field_count: 1
+                      registrar:
+                        handle: REG-1
+                        name: Example Registrar
+                        email: null
+                        roles:
+                        - registrar
+                        public_field_count: 1
+                      registrant: null
+                      admin: null
+                      tech: null
+                      entity_count: 2
+                      redacted_role_count: 1
+                    lookup_summary:
+                      relay_configured: true
+                      query_type: domain
+                      status: registered
+                      data_source: rdap
+                      relay_whois_used: false
+                      dns_fallback_used: false
+                      rdap_object_class: domain
+                      event_count: null
+                      entity_count: null
+                      nameserver_count: null
+                      port43_available: false
+                domainDnsFallback:
+                  summary: Domain RDAP temporarily unavailable
+                  value:
+                    query: 3irene.shop
+                    type: domain
+                    status: available
+                    rdap: null
+                    dns_status:
+                      checked: true
+                      has_nameservers: false
+                      resolvable: false
+                    lookup_summary:
+                      relay_configured: true
+                      query_type: domain
+                      status: available
+                      data_source: dns_fallback
+                      relay_whois_used: false
+                      dns_fallback_used: true
+                      rdap_object_class: null
+                      event_count: null
+                      entity_count: null
+                      nameserver_count: null
+                      port43_available: null
+                    meta:
+                      source: dns_fallback
+                      warning_code: RDAP_UNAVAILABLE_DNS_FALLBACK
+                      reason: 403 from RDAP via proxy
+                ip:
+                  summary: IP network
+                  value:
+                    query: 8.8.8.8
+                    type: ip
+                    status: found
+                    rdap:
+                      objectClassName: ip network
+                      handle: NET-8-8-8-0-2
+                      startAddress: 8.8.8.0
+                      endAddress: 8.8.8.255
+                autnum:
+                  summary: Autonomous system
+                  value:
+                    query: '174'
+                    type: autnum
+                    status: found
+                    rdap:
+                      objectClassName: autnum
+                      handle: AS174
+                      name: COGENT-174
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/profile:
+    get:
+      tags:
+      - WHOIS/RDAP
+      summary: Domain profile
+      description: Get a normalized domain registration profile combining RDAP data into a clean, consistent format. Includes registration dates, registrar info, nameservers, and status.
+      operationId: getDomainProfile
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to profile
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: Domain profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainProfileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+components:
+  schemas:
+    WhoisContact:
+      type:
+      - object
+      - 'null'
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        organization:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        fax:
+          type:
+          - string
+          - 'null'
+        address:
+          type: object
+          properties:
+            street:
+              type:
+              - string
+              - 'null'
+            city:
+              type:
+              - string
+              - 'null'
+            state:
+              type:
+              - string
+              - 'null'
+            postal_code:
+              type:
+              - string
+              - 'null'
+            country:
+              type:
+              - string
+              - 'null'
+        role:
+          type: string
+    BulkWhoisResponse:
+      type: object
+      description: Bulk WHOIS lookup response
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhoisResponse'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            duration_ms:
+              type: integer
+    RdapEntityContact:
+      type:
+      - object
+      - 'null'
+      properties:
+        handle:
+          type:
+          - string
+          - 'null'
+        name:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        roles:
+          type: array
+          items:
+            type: string
+        public_field_count:
+          type: integer
+    RdapLookupSummary:
+      type: object
+      description: Compact source and fallback summary for RDAP responses, including WHOIS and DNS fallback evidence.
+      properties:
+        relay_configured:
+          type: boolean
+        query_type:
+          type: string
+          enum:
+          - domain
+          - ip
+          - autnum
+        status:
+          type: string
+        data_source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns_fallback
+        relay_whois_used:
+          type: boolean
+        dns_fallback_used:
+          type: boolean
+        rdap_object_class:
+          type:
+          - string
+          - 'null'
+        event_count:
+          type:
+          - integer
+          - 'null'
+        entity_count:
+          type:
+          - integer
+          - 'null'
+        nameserver_count:
+          type:
+          - integer
+          - 'null'
+        port43_available:
+          type:
+          - boolean
+          - 'null'
+    DomainProfileSourceSummary:
+      type: object
+      description: Additive profile provenance summary showing RDAP, WHOIS fallback, or cache source coverage.
+      properties:
+        source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns
+          - cache
+          - unknown
+        authoritative_source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns
+          - unknown
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        fallback_used:
+          type: boolean
+        relay_configured:
+          type: boolean
+        registered:
+          type:
+          - boolean
+          - 'null'
+        status_count:
+          type: integer
+        nameserver_count:
+          type: integer
+        event_count:
+          type: integer
+        date_fields_present:
+          type: array
+          items:
+            type: string
+        contact_field_count:
+          type: integer
+        privacy_detected:
+          type: boolean
+    WhoisResponse:
+      type: object
+      description: WHOIS lookup response
+      properties:
+        domain:
+          type: string
+        registered:
+          type:
+          - boolean
+          - 'null'
+        available:
+          type:
+          - boolean
+          - 'null'
+        registrar:
+          type:
+          - string
+          - 'null'
+        registrar_url:
+          type:
+          - string
+          - 'null'
+        registrar_iana_id:
+          type:
+          - string
+          - 'null'
+        created_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expiry_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        domain_age_days:
+          type:
+          - integer
+          - 'null'
+        domain_age_years:
+          type:
+          - integer
+          - 'null'
+        is_newly_registered:
+          type: boolean
+        days_until_expiry:
+          type:
+          - integer
+          - 'null'
+        transfer_locked:
+          type: boolean
+        nameservers:
+          type: array
+          items:
+            type: string
+        status:
+          type: array
+          items:
+            type: string
+        dnssec:
+          type: boolean
+        contacts:
+          type: object
+          properties:
+            registrant:
+              $ref: '#/components/schemas/WhoisContact'
+            admin:
+              $ref: '#/components/schemas/WhoisContact'
+            tech:
+              $ref: '#/components/schemas/WhoisContact'
+            billing:
+              $ref: '#/components/schemas/WhoisContact'
+        privacy:
+          $ref: '#/components/schemas/WhoisPrivacyInfo'
+        raw_rdap_link:
+          type:
+          - string
+          - 'null'
+        raw_whois:
+          type:
+          - string
+          - 'null'
+          description: Raw WHOIS output when available
+        abuse_contact:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        registry_domain_id:
+          type:
+          - string
+          - 'null'
+        registrar_whois_server:
+          type:
+          - string
+          - 'null'
+        traditional_contacts:
+          type: object
+          additionalProperties: true
+        nameserver_ips:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              ipv4:
+                type:
+                - string
+                - 'null'
+              ipv6:
+                type:
+                - string
+                - 'null'
+        checked_at:
+          type: string
+          format: date-time
+        query_time_ms:
+          type: integer
+        summary:
+          type: object
+          additionalProperties: true
+        edge_summary:
+          $ref: '#/components/schemas/WhoisEdgeSummary'
+        meta:
+          type: object
+          additionalProperties: true
+    RdapEntitySummary:
+      type:
+      - object
+      - 'null'
+      description: Typed extraction of public RDAP entities by role, including abuse, registrar, registrant, admin, and technical contacts when present.
+      properties:
+        roles_present:
+          type: array
+          items:
+            type: string
+        abuse_contact:
+          $ref: '#/components/schemas/RdapEntityContact'
+        registrar:
+          $ref: '#/components/schemas/RdapEntityContact'
+        registrant:
+          $ref: '#/components/schemas/RdapEntityContact'
+        admin:
+          $ref: '#/components/schemas/RdapEntityContact'
+        tech:
+          $ref: '#/components/schemas/RdapEntityContact'
+        entity_count:
+          type: integer
+        redacted_role_count:
+          type: integer
+    DomainProfileResponse:
+      type: object
+      description: Normalized domain profile
+      properties:
+        domain:
+          type: string
+        registered:
+          type:
+          - boolean
+          - 'null'
+        registrar:
+          type:
+          - string
+          - 'null'
+        registrar_url:
+          type:
+          - string
+          - 'null'
+        registrar_iana_id:
+          type:
+          - string
+          - 'null'
+        created_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        expiry_date:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        age_days:
+          type: integer
+        days_until_expiry:
+          type: integer
+        nameservers:
+          type: array
+          items:
+            type: string
+        status:
+          type: array
+          items:
+            type: string
+        dnssec:
+          type: boolean
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              action:
+                type: string
+              date:
+                type: string
+                format: date-time
+        contacts:
+          type: object
+          properties:
+            registrant_name:
+              type:
+              - string
+              - 'null'
+            registrant_org:
+              type:
+              - string
+              - 'null'
+            registrant_country:
+              type:
+              - string
+              - 'null'
+            admin_email:
+              type:
+              - string
+              - 'null'
+            tech_email:
+              type:
+              - string
+              - 'null'
+        privacy:
+          type: object
+          properties:
+            is_private:
+              type: boolean
+            privacy_service:
+              type:
+              - string
+              - 'null'
+        raw_rdap_link:
+          type:
+          - string
+          - 'null'
+        source_summary:
+          $ref: '#/components/schemas/DomainProfileSourceSummary'
+        checked_at:
+          type: string
+          format: date-time
+        query_time_ms:
+          type: integer
+        meta:
+          type: object
+          additionalProperties: true
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
+    WhoisPrivacyInfo:
+      type: object
+      properties:
+        is_private:
+          type: boolean
+        privacy_service:
+          type:
+          - string
+          - 'null'
+        detected_patterns:
+          type: array
+          items:
+            type: string
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    WhoisEdgeSummary:
+      type: object
+      description: Compact source and confidence summary for WHOIS responses, including fallback evidence.
+      properties:
+        relay_configured:
+          type: boolean
+        data_sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - rdap
+            - whois
+            - dns
+            - cache
+        authoritative_source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns
+          - cache
+          - unknown
+        relay_whois_used:
+          type: boolean
+        raw_whois_available:
+          type: boolean
+        parse_error_count:
+          type:
+          - integer
+          - 'null'
+        registered:
+          type:
+          - boolean
+          - 'null'
+        available:
+          type:
+          - boolean
+          - 'null'
+        registration_age_days:
+          type:
+          - integer
+          - 'null'
+        days_until_expiry:
+          type:
+          - integer
+          - 'null'
+        expires_within_30_days:
+          type:
+          - boolean
+          - 'null'
+        transfer_locked:
+          type:
+          - boolean
+          - 'null'
+        privacy_protected:
+          type:
+          - boolean
+          - 'null'
+        dnssec:
+          type:
+          - boolean
+          - 'null'
+        nameserver_count:
+          type: integer
+        contact_roles_available:
+          type: array
+          items:
+            type: string
+        abuse_contact_available:
+          type: boolean
+        registrar_whois_server:
+          type:
+          - string
+          - 'null'
+    RdapResponse:
+      type: object
+      description: RDAP lookup response wrapper
+      properties:
+        query:
+          type: string
+        type:
+          type: string
+          enum:
+          - domain
+          - ip
+          - autnum
+        status:
+          type: string
+          enum:
+          - registered
+          - available
+          - found
+          - not_found
+        rdap:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        entity_summary:
+          $ref: '#/components/schemas/RdapEntitySummary'
+        dns_status:
+          type: object
+          description: DNS evidence used when domain RDAP is temporarily unavailable and a best-effort fallback response is returned.
+          properties:
+            checked:
+              type: boolean
+            has_nameservers:
+              type: boolean
+            resolvable:
+              type: boolean
+            error:
+              type: string
+        lookup_summary:
+          $ref: '#/components/schemas/RdapLookupSummary'
+        meta:
+          type: object
+          description: Response metadata and fallback warnings.
+          additionalProperties: true
+  responses:
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

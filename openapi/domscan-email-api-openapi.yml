@@ -1,0 +1,1604 @@
+openapi: 3.2.0
+info:
+  title: DomScan Email API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Email
+  description: Email blacklist checking, disposable domain detection, and email validation
+paths:
+  /v1/email-auth/bulk:
+    post:
+      operationId: bulkGetEmailAuth
+      summary: Audit email authentication for multiple domains
+      description: Check SPF, DKIM, DMARC, MTA-STS, TLS-RPT, and recursive SPF behavior for multiple domains with an optional shared DKIM selector list. Accepts up to 10 items, preserves input order, and uses bounded concurrency. The outer response is HTTP 200 when the batch is accepted, so inspect each result for data or an error. Billing is 3 credits per validated item with no bulk discount, including items that return a per-item lookup error.
+      tags:
+      - Email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+                    format: hostname
+                selectors:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: string
+            example:
+              domains:
+              - example.com
+              - cloudflare.com
+              selectors:
+              - selector1
+              - selector2
+      responses:
+        '200':
+          description: Batch accepted. Each ordered result contains either data or a per-item error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkLookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 3
+  /v1/email/compliance:
+    get:
+      tags:
+      - Email
+      summary: Email compliance readiness
+      description: Provider-oriented sender readiness report for Google/Gmail and Microsoft Outlook.com high-volume requirements. Combines SPF, DKIM, DMARC, recursive SPF analysis, DKIM audit, MTA-STS, TLS-RPT, BIMI/VMC, DNSSEC, CAA, AXFR, authority health, and blacklist signals. DNS-visible checks are separated from live message-level requirements such as alignment, spam rate, TLS sessions, and unsubscribe headers.
+      operationId: getEmailCompliance
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to audit for sender compliance readiness
+        schema:
+          type: string
+          example: example.com
+      - name: selectors
+        in: query
+        required: false
+        description: Optional comma-separated DKIM selectors to check in addition to common selectors. At most 50 valid DNS selector names are accepted.
+        schema:
+          type: string
+          example: google,selector1,sendgrid
+      - name: providers
+        in: query
+        required: false
+        description: 'Optional comma-separated provider readiness profiles. Supported: google,microsoft.'
+        schema:
+          type: string
+          example: google,microsoft
+      responses:
+        '200':
+          description: Email compliance readiness report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailComplianceResponse'
+              example:
+                domain: example.com
+                status: warn
+                score: 82
+                grade: B
+                provider_readiness:
+                  google:
+                    provider: google
+                    display_name: Google/Gmail bulk sender readiness
+                    status: pass
+                    dns_visible_status: pass
+                    requirements:
+                    - id: google_spf
+                      label: SPF must be configured for bulk senders
+                      status: pass
+                      severity: critical
+                      category: dns
+                      evidence: 'SPF policy: softfail'
+                      recommendation: Publish one valid SPF record that covers every approved sending platform.
+                    - id: google_alignment
+                      label: From domain must align with either SPF or DKIM on live messages
+                      status: unknown
+                      severity: high
+                      category: message
+                      evidence: Alignment requires Authentication-Results from a real sent message
+                      recommendation: Send a test message and verify SPF or DKIM alignment.
+                    verification_required:
+                    - From domain must align with either SPF or DKIM on live messages
+                    - Outbound mail must be transmitted over TLS
+                    notes:
+                    - Status is based on DNS-visible controls. Live sending requirements still need message-header and sender-platform verification.
+                  microsoft:
+                    provider: microsoft
+                    display_name: Microsoft Outlook.com high-volume sender readiness
+                    status: pass
+                    dns_visible_status: pass
+                    requirements: []
+                    verification_required:
+                    - DMARC must align with either SPF or DKIM
+                    notes:
+                    - Status is based on DNS-visible controls. Live sending requirements still need message-header and sender-platform verification.
+                summary:
+                  authentication:
+                    spf:
+                      status: pass
+                      record: v=spf1 include:_spf.example.com ~all
+                      policy: softfail
+                      lookup_count: 3
+                      lookup_limit_exceeded: false
+                    dkim:
+                      status: pass
+                      selectors_checked:
+                      - google
+                      - selector1
+                      - sendgrid
+                      selectors_found:
+                      - google
+                      valid_selector_count: 1
+                      weak_selector_count: 0
+                      revoked_selector_count: 0
+                      providers_detected:
+                      - Google Workspace
+                    dmarc:
+                      status: warn
+                      record: v=DMARC1; p=none; rua=mailto:dmarc@example.com
+                      policy: none
+                      subdomain_policy: null
+                      percentage: 100
+                      rua:
+                      - mailto:dmarc@example.com
+                      alignment_mode:
+                        spf: null
+                        dkim: null
+                  transport:
+                    mta_sts:
+                      status: pass
+                      mode: enforce
+                      policy_fetch_ok: true
+                      policy_matches_mx: true
+                    tls_rpt:
+                      status: pass
+                      rua:
+                      - mailto:tls@example.com
+                    mx_records:
+                    - aspmx.l.google.com
+                    client_access_secure_services: 1
+                  dns_security:
+                    dnssec: pass
+                    caa: pass
+                    zone_transfer: pass
+                    authoritative_consistency: pass
+                    blacklist: pass
+                  brand_trust:
+                    bimi: unknown
+                    vmc: unknown
+                action_items:
+                - priority: medium
+                  category: authentication
+                  title: Move DMARC beyond monitoring mode
+                  detail: DMARC is valid but still uses p=none.
+                  fix: After reviewing aggregate reports, move to p=quarantine or p=reject.
+                evidence:
+                  email_auth:
+                    spf:
+                      record: v=spf1 include:_spf.example.com ~all
+                    dmarc:
+                      record: v=DMARC1; p=none; rua=mailto:dmarc@example.com
+                  dns_security:
+                    security_score: 86
+                    security_grade: B
+                proxy:
+                  configured: true
+                  enriched: true
+                  checks:
+                  - spf_walk
+                  - mail_policies
+                  - dkim_audit
+                  - bimi_audit
+                limitations:
+                - DNS-visible checks cannot prove live message-level SPF, DKIM, DMARC alignment, RFC 5322 formatting, spam rate, or one-click unsubscribe behavior.
+                checked_at: '2026-04-26T12:00:00Z'
+                check_duration_ms: 642
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 6
+  /v1/email/check:
+    get:
+      tags:
+      - Email
+      summary: Check email address
+      description: 'Check an email address for disposable domains, role-based addresses, free providers, MX record validation, and DNS blacklist status.
+
+
+        **Checks performed:**
+
+        - **disposable**: Match against 186k+ disposable/temporary email domains from 5 aggregated sources
+
+        - **role**: Detect role-based addresses (admin@, support@, info@, etc.)
+
+        - **free**: Identify free email providers (gmail, yahoo, outlook, etc.)
+
+        - **mx**: Validate domain has valid MX records
+
+        - **dnsbl**: Check domain against Spamhaus DBL, SURBL, URIBL
+
+
+        **Risk scoring:**
+
+        - Disposable domain: +80 points
+
+        - No MX records: +50 points
+
+        - DNSBL listed (high): +60 points
+
+        - Role-based address: +20 points
+
+        - Free provider: +10 points
+
+
+        Risk levels: low (0-39), medium (40-69), high (70-100)'
+      operationId: checkEmailBlacklist
+      parameters:
+      - name: email
+        in: query
+        required: true
+        description: Email address to check
+        schema:
+          type: string
+          example: user@example.com
+      - name: checks
+        in: query
+        required: false
+        description: 'Comma-separated list of checks to run (default: all)'
+        schema:
+          type: string
+          example: disposable,role,free,mx,dnsbl
+      responses:
+        '200':
+          description: Email check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    example: user@tempmail.org
+                  domain:
+                    type: string
+                    example: tempmail.org
+                  local_part:
+                    type: string
+                    example: user
+                  valid_syntax:
+                    type: boolean
+                    example: true
+                  checks:
+                    type: object
+                    properties:
+                      disposable:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          is_disposable:
+                            type: boolean
+                            example: true
+                          confidence:
+                            type:
+                            - string
+                            - 'null'
+                            enum:
+                            - high
+                            - medium
+                            - low
+                            example: high
+                      role:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          is_role:
+                            type: boolean
+                            example: false
+                          role_type:
+                            type:
+                            - string
+                            - 'null'
+                      free:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          is_free:
+                            type: boolean
+                            example: false
+                          provider:
+                            type:
+                            - string
+                            - 'null'
+                      mx:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          has_mx:
+                            type: boolean
+                            example: true
+                          records:
+                            type: array
+                            items:
+                              type: string
+                            example:
+                            - mx1.tempmail.org
+                      dnsbl:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          listed:
+                            type: boolean
+                            example: false
+                          threat_level:
+                            type: string
+                            enum:
+                            - none
+                            - low
+                            - medium
+                            - high
+                            example: none
+                  risk_score:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                    example: 80
+                  risk_level:
+                    type: string
+                    enum:
+                    - low
+                    - medium
+                    - high
+                    example: high
+                  flags:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                    - DISPOSABLE_DOMAIN
+                  checked_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid email format
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/email/check/bulk:
+    post:
+      tags:
+      - Email
+      summary: Bulk check email addresses
+      description: 'Check multiple email addresses in a single request (max 100).
+
+
+        **Credits:** 1 credit per email. Example: 10 emails = 10 credits.'
+      operationId: bulkEmailCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - emails
+              properties:
+                emails:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 100
+                  example:
+                  - user1@example.com
+                  - user2@tempmail.org
+                checks:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                    - disposable
+                    - role
+                    - free
+                    - mx
+                    - dnsbl
+                  example:
+                  - disposable
+                  - role
+                  - free
+      responses:
+        '200':
+          description: Bulk check results with summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 10
+                      disposable:
+                        type: integer
+                        example: 3
+                      role_based:
+                        type: integer
+                        example: 1
+                      free_provider:
+                        type: integer
+                        example: 2
+                      no_mx:
+                        type: integer
+                        example: 0
+                      dnsbl_listed:
+                        type: integer
+                        example: 0
+                      high_risk:
+                        type: integer
+                        example: 3
+                      medium_risk:
+                        type: integer
+                        example: 1
+                      low_risk:
+                        type: integer
+                        example: 6
+                  checked_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid request body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 1
+  /v1/email/verify:
+    get:
+      tags:
+      - Email
+      summary: Verify email address
+      description: 'Verify if an email address is deliverable with basic verification.
+
+
+        **Basic Verification (2 credits):**
+
+        - Syntax validation
+
+        - MX record lookup
+
+        - Disposable domain detection (186k+ domains)
+
+        - Role-based address detection (admin@, support@, etc.)
+
+        - Free provider identification (Gmail, Yahoo, etc.)
+
+        - DNS blacklist reputation check (Spamhaus, SURBL, URIBL)
+
+        - Common provider typo suggestions
+
+        - Random-looking local-part detection
+
+        - Reserved/test domain and domain-literal detection
+
+        - Domain profile signals for punycode, deep subdomains, numeric-heavy labels, long labels, and hyphen clusters
+
+        - Local-part profile signals for plus addressing, no-reply mailboxes, trap-like names, long/random/numeric-heavy inputs, and separator abuse
+
+        - MX redundancy analysis
+
+        - SPF, DMARC, MTA-STS, and TLS-RPT domain authentication evidence
+
+        - Toxic/do-not-mail/gibberish summary signals
+
+        - Industry-style deliverability summary with safe-to-send decisioning
+
+        - Provider fingerprinting from MX records
+
+        - Null MX detection
+
+
+        **Deprecated full SMTP verification:**
+
+        The `full` parameter is deprecated and ignored. Mailbox-level SMTP probing is not charged or performed because it requires recipient MX probing on port 25, which this service does not provide.
+
+
+        **Quality Score:**
+
+        - A (90-100): Excellent deliverability
+
+        - B (75-89): Good deliverability
+
+        - C (60-74): Moderate risk
+
+        - D (40-59): High risk
+
+        - F (0-39): Very high risk / invalid
+
+
+        **Result categories:**
+
+        - `valid`: Email appears deliverable based on syntax, DNS, provider, reputation, and risk signals
+
+        - `invalid`: Email not deliverable (no MX, null MX, syntax error, or reserved/test domain)
+
+        - `risky`: Use with caution (disposable, role-based, suspicious, or reputation issues)
+
+        - `unknown`: Could not determine (timeout or temporary error)
+
+        - `pending`: Legacy status; no longer emitted for deprecated full checks'
+      operationId: verifyEmail
+      parameters:
+      - name: email
+        in: query
+        required: true
+        description: Email address to verify
+        schema:
+          type: string
+          example: user@company.com
+      - name: full
+        in: query
+        required: false
+        deprecated: true
+        description: Deprecated and ignored. Mailbox-level SMTP verification is not charged or performed.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: Email verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    example: user@company.com
+                  normalized_email:
+                    type: string
+                    example: user@company.com
+                  result:
+                    type: string
+                    enum:
+                    - valid
+                    - invalid
+                    - risky
+                    - unknown
+                    - pending
+                    example: valid
+                  result_detail:
+                    type: string
+                    example: mx_verified
+                    description: Detailed reason for the result
+                  message:
+                    type:
+                    - string
+                    - 'null'
+                    description: Additional message for exceptional states.
+                  risk:
+                    type: string
+                    enum:
+                    - low
+                    - medium
+                    - high
+                    - unknown
+                    example: low
+                    description: Risk level for using this address.
+                  confidence:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    example: 0.93
+                    description: Confidence in the final classification, from 0 to 1.
+                  confidence_level:
+                    type: string
+                    enum:
+                    - high
+                    - medium
+                    - low
+                    - none
+                    example: high
+                  decision:
+                    type: string
+                    enum:
+                    - accept
+                    - accept_with_caution
+                    - reject
+                    - unknown
+                    example: accept
+                  reasons:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                    - mx_found
+                    - not_disposable
+                    - mailbox_not_checked
+                  verification:
+                    type: object
+                    properties:
+                      syntax_valid:
+                        type: boolean
+                        example: true
+                      mx_found:
+                        type: boolean
+                        example: true
+                      null_mx:
+                        type: boolean
+                        example: false
+                      mx_records:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - aspmx.l.google.com
+                      smtp_verified:
+                        type:
+                        - boolean
+                        - 'null'
+                        example: null
+                      mailbox_exists:
+                        type:
+                        - boolean
+                        - 'null'
+                        example: null
+                      catch_all:
+                        type:
+                        - boolean
+                        - 'null'
+                        example: null
+                      full_inbox:
+                        type:
+                        - boolean
+                        - 'null'
+                        example: null
+                      smtp_provider:
+                        type:
+                        - string
+                        - 'null'
+                        example: null
+                  classification:
+                    type: object
+                    properties:
+                      disposable:
+                        type: boolean
+                        example: false
+                      disposable_confidence:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - high
+                        - medium
+                        - low
+                      role_based:
+                        type: boolean
+                        example: false
+                      role_type:
+                        type:
+                        - string
+                        - 'null'
+                      free_provider:
+                        type: boolean
+                        example: true
+                      provider:
+                        type:
+                        - string
+                        - 'null'
+                        example: gmail.com
+                  reputation:
+                    type: object
+                    properties:
+                      dnsbl_listed:
+                        type: boolean
+                        example: false
+                      threat_level:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - high
+                        - medium
+                        - low
+                        - none
+                  quality:
+                    type: object
+                    properties:
+                      score:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                        example: 95
+                      grade:
+                        type: string
+                        enum:
+                        - A
+                        - B
+                        - C
+                        - D
+                        - F
+                        example: A
+                      flags:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - FREE_PROVIDER
+                  signals:
+                    type: object
+                    description: Per-signal evidence with status, confidence, reason, and optional details. Includes syntax, dns, mailbox, catch_all, disposable, role, free_provider, reputation, typo, random_input, reserved_domain, domain_profile, local_part, subaddressing, mx_redundancy, domain_authentication, toxicity, provider_profile, and smtp_server.
+                    additionalProperties:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                          enum:
+                          - pass
+                          - warn
+                          - fail
+                          - unknown
+                          - not_checked
+                        confidence:
+                          type: number
+                          minimum: 0
+                          maximum: 1
+                        reason:
+                          type: string
+                        details:
+                          type: object
+                          additionalProperties: true
+                  evidence:
+                    type: object
+                    properties:
+                      mx_records:
+                        type: array
+                        items:
+                          type: string
+                      provider:
+                        type:
+                        - string
+                        - 'null'
+                        example: google_workspace
+                      checked_via:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                        - worker
+                      normalized_parts:
+                        type: object
+                        properties:
+                          local_part:
+                            type: string
+                            example: user
+                          domain:
+                            type: string
+                            example: company.com
+                          base_local_part:
+                            type: string
+                            example: user
+                          tag:
+                            type:
+                            - string
+                            - 'null'
+                            example: null
+                      domain_profile:
+                        type: object
+                        properties:
+                          tld:
+                            type:
+                            - string
+                            - 'null'
+                            example: com
+                          label_count:
+                            type: integer
+                            example: 2
+                          reserved:
+                            type: boolean
+                            example: false
+                          domain_literal:
+                            type: boolean
+                            example: false
+                          punycode:
+                            type: boolean
+                            example: false
+                          suspicious_reasons:
+                            type: array
+                            items:
+                              type: string
+                            example: []
+                      domain_authentication:
+                        type:
+                        - object
+                        - 'null'
+                        properties:
+                          checked:
+                            type: boolean
+                            example: true
+                          status:
+                            type: string
+                            enum:
+                            - strong
+                            - partial
+                            - weak
+                            - missing
+                            - not_checked
+                            example: strong
+                          spf:
+                            type: object
+                            properties:
+                              exists:
+                                type: boolean
+                                example: true
+                              policy:
+                                type: string
+                                enum:
+                                - pass
+                                - softfail
+                                - fail
+                                - neutral
+                                - unknown
+                                example: fail
+                              record:
+                                type:
+                                - string
+                                - 'null'
+                                example: v=spf1 include:_spf.company.com -all
+                          dmarc:
+                            type: object
+                            properties:
+                              exists:
+                                type: boolean
+                                example: true
+                              policy:
+                                type: string
+                                enum:
+                                - none
+                                - quarantine
+                                - reject
+                                - unknown
+                                example: reject
+                              record:
+                                type:
+                                - string
+                                - 'null'
+                                example: v=DMARC1; p=reject; pct=100
+                              percentage:
+                                type:
+                                - integer
+                                - 'null'
+                                example: 100
+                          mta_sts:
+                            type: object
+                            properties:
+                              exists:
+                                type: boolean
+                                example: true
+                              record:
+                                type:
+                                - string
+                                - 'null'
+                                example: v=STSv1; id=20260506
+                          tls_rpt:
+                            type: object
+                            properties:
+                              exists:
+                                type: boolean
+                                example: true
+                              record:
+                                type:
+                                - string
+                                - 'null'
+                                example: v=TLSRPTv1; rua=mailto:tlsrpt@company.com
+                          issues:
+                            type: array
+                            items:
+                              type: string
+                            example: []
+                  recommendation:
+                    type: object
+                    properties:
+                      signup:
+                        type: string
+                        enum:
+                        - allow
+                        - block
+                        - review
+                      marketing:
+                        type: string
+                        enum:
+                        - send
+                        - suppress
+                        - send_carefully
+                      cold_outreach:
+                        type: string
+                        enum:
+                        - send
+                        - suppress
+                        - send_carefully
+                  deliverability:
+                    type: object
+                    description: Industry-style summary for go/no-go decisions.
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                        - deliverable
+                        - undeliverable
+                        - risky
+                        - unknown
+                        example: deliverable
+                      sub_status:
+                        type: string
+                        example: mx_verified
+                      safe_to_send:
+                        type: boolean
+                        example: true
+                      mailbox_checked:
+                        type: boolean
+                        example: false
+                      smtp_confirmed:
+                        type: boolean
+                        example: false
+                      domain_accepts_mail:
+                        type: boolean
+                        example: true
+                      accepts_all:
+                        type:
+                        - boolean
+                        - 'null'
+                        example: null
+                      is_role:
+                        type: boolean
+                        example: false
+                      is_free_provider:
+                        type: boolean
+                        example: false
+                      is_disposable:
+                        type: boolean
+                        example: false
+                      is_toxic:
+                        type: boolean
+                        example: false
+                      is_no_reply:
+                        type: boolean
+                        example: false
+                      is_gibberish:
+                        type: boolean
+                        example: false
+                  suggestions:
+                    type: object
+                    properties:
+                      did_you_mean:
+                        type:
+                        - string
+                        - 'null'
+                        example: user@gmail.com
+                  limitations:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                    - basic_tier_does_not_confirm_mailbox_existence
+                  tier:
+                    type: string
+                    enum:
+                    - basic
+                    - full
+                    - full_pending
+                    description: '`full` and `full_pending` are legacy values. New requests return `basic`.'
+                    example: basic
+                  credits_used:
+                    type: integer
+                    example: 2
+                  verified_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid email format
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/email/verify/bulk:
+    post:
+      tags:
+      - Email
+      summary: Bulk verify email addresses
+      description: 'Verify multiple email addresses in a single request (max 100).
+
+
+        Each email is verified using the same basic verification system as the single verification endpoint.
+
+        The deprecated `full` field is ignored and does not add SMTP mailbox probing or extra charges.
+
+
+        **Credits:** 2 credits per email for basic verification. Example: 10 emails = 20 credits.'
+      operationId: verifyEmailBulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - emails
+              properties:
+                emails:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 100
+                  example:
+                  - user1@example.com
+                  - user2@company.com
+                  - admin@tempmail.org
+                full:
+                  type: boolean
+                  default: false
+                  deprecated: true
+                  description: Deprecated and ignored. Mailbox-level SMTP verification is not charged or performed.
+      responses:
+        '200':
+          description: Bulk verification results with summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                    description: Individual verification results for each email
+                  summary:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 3
+                      valid:
+                        type: integer
+                        example: 2
+                      invalid:
+                        type: integer
+                        example: 0
+                      risky:
+                        type: integer
+                        example: 1
+                      unknown:
+                        type: integer
+                        example: 0
+                      pending:
+                        type: integer
+                        example: 0
+                  credits_used:
+                    type: integer
+                    example: 6
+        '400':
+          description: Invalid request body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 2
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    EmailComplianceActionItem:
+      type: object
+      properties:
+        priority:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          - info
+        category:
+          type: string
+          enum:
+          - authentication
+          - transport
+          - dns
+          - brand
+          - reputation
+        title:
+          type: string
+        detail:
+          type: string
+        fix:
+          type: string
+    EmailComplianceResponse:
+      type: object
+      description: Provider-oriented email sender compliance readiness report with DNS-visible status separated from live message-level verification.
+      properties:
+        domain:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+          enum:
+          - A+
+          - A
+          - B
+          - C
+          - D
+          - F
+        provider_readiness:
+          type: object
+          properties:
+            google:
+              $ref: '#/components/schemas/EmailProviderReadiness'
+            microsoft:
+              $ref: '#/components/schemas/EmailProviderReadiness'
+        summary:
+          type: object
+          properties:
+            authentication:
+              type: object
+            transport:
+              type: object
+            dns_security:
+              type: object
+            brand_trust:
+              type: object
+        action_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailComplianceActionItem'
+        evidence:
+          type: object
+          properties:
+            email_auth:
+              type: object
+            dns_security:
+              type: object
+        proxy:
+          type: object
+          properties:
+            configured:
+              type: boolean
+            enriched:
+              type: boolean
+            checks:
+              type: array
+              items:
+                type: string
+        limitations:
+          type: array
+          items:
+            type: string
+        checked_at:
+          type: string
+          format: date-time
+        check_duration_ms:
+          type: integer
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
+    EmailProviderReadiness:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+          - google
+          - microsoft
+        display_name:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+        dns_visible_status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailComplianceRequirement'
+        verification_required:
+          type: array
+          items:
+            type: string
+        notes:
+          type: array
+          items:
+            type: string
+    EmailComplianceRequirement:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+        severity:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          - info
+        category:
+          type: string
+          enum:
+          - dns
+          - message
+          - transport
+          - reputation
+          - content
+        evidence:
+          type: string
+        recommendation:
+          type: string
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

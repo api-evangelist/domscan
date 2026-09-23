@@ -1,22 +1,29 @@
-generated: '2026-09-03'
+generated: '2026-09-19'
 method: probed
 source: live probes of domscan.net and www.domscan.net
-note: 'domscan.net serves three real well-known documents: an RFC 8414 OAuth authorization server metadata doc, an RFC 9728 OAuth protected resource
-  doc for the MCP endpoint, and an RFC 9727 api-catalog linkset (application/linkset+json) pointing at the OpenAPI, docs, and MCP endpoint. security.txt,
-  openid-configuration, ai-plugin.json, and A2A agent-card.json/agent.json all 404. www.domscan.net 301-redirects every well-known path to the
-  apex.'
+note: 'domscan.net serves three real well-known documents: an RFC 8414 OAuth authorization server metadata
+  doc, an RFC 9728 OAuth protected resource doc for the MCP endpoint, and an RFC 9727 api-catalog linkset
+  (application/linkset+json) pointing at the OpenAPI, docs, and MCP endpoint. security.txt, openid-configuration,
+  ai-plugin.json, and A2A agent-card.json/agent.json all 404. www.domscan.net 301-redirects every well-known
+  path to the apex.
+
+
+  MCP-host OAuth discovery added 2026-09-19 (roadmap#321/#337): the harvest visits a provider''s primary
+  hosts, and RFC 9728 protected-resource metadata lives on the MCP host, so these documents existed and
+  were invisible to the scorer. Fetched live and validated on `resource`/`issuer`; one negative control
+  per host.'
 hosts:
 - host: domscan.net
   documents:
   - path: /.well-known/oauth-authorization-server
     status: 200
-    file: well-known/domscan-oauth-authorization-server.json
+    file: domscan-oauth-authorization-server.json
   - path: /.well-known/oauth-protected-resource
     status: 200
-    file: well-known/domscan-oauth-protected-resource.json
+    file: domscan-oauth-protected-resource.json
   - path: /.well-known/api-catalog
     status: 200
-    file: well-known/domscan-api-catalog.json
+    file: domscan-api-catalog.json
     content_type: application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"
   - path: /.well-known/security.txt
     status: 404
@@ -30,8 +37,29 @@ hosts:
     status: 404
   - path: /.well-known/mcp.json
     status: 404
+  - path: /.well-known/oauth-protected-resource
+    status: 200
+    file: domscan-domscan-oauth-protected-resource.json
+    bytes: 223
+  - path: /.well-known/oauth-authorization-server
+    status: 200
+    file: domscan-domscan-oauth-authorization-server.json
+    bytes: 526
+  path_echo_control: passed
 - host: www.domscan.net
   documents:
   - path: /.well-known/security.txt
     status: 301
     note: 301 to apex domscan.net for every well-known path
+x-mcp-probe:
+  probed: '2026-09-19'
+  issue: roadmap#321, roadmap#337
+  documents:
+  - host: https://domscan.net
+    path: /.well-known/oauth-protected-resource
+    file: domscan-domscan-oauth-protected-resource.json
+  - host: https://domscan.net
+    path: /.well-known/oauth-authorization-server
+    file: domscan-domscan-oauth-authorization-server.json
+  validated_on: resource (RFC 9728) / issuer (RFC 8414, OIDC)
+  negative_control: one per host; a 2xx JSON object at an impossible path discards the host

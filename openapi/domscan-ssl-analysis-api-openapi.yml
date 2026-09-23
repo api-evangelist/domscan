@@ -1,0 +1,3211 @@
+openapi: 3.2.0
+info:
+  title: DomScan SSL Analysis API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: SSL Analysis
+  description: SSL certificate grading, chain analysis, and expiry monitoring
+paths:
+  /v1/ssl/audit:
+    get:
+      tags:
+      - SSL Analysis
+      summary: Comprehensive SSL audit
+      description: Run a comprehensive live SSL/TLS audit for a domain, combining certificate, chain, revocation, HSTS, HTTP version, and TLS posture details.
+      operationId: getSslAudit
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to audit
+      responses:
+        '200':
+          description: Aggregated SSL/TLS audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  audit_completeness:
+                    type: string
+                    enum:
+                    - full
+                    - partial
+                  probe_coverage:
+                    type: object
+                    properties:
+                      tls_inspect:
+                        type: boolean
+                      tls_audit:
+                        type: boolean
+                      tls_posture:
+                        type: boolean
+                      revocation:
+                        type: boolean
+                      hsts:
+                        type: boolean
+                      http_versions:
+                        type: boolean
+                  certificate:
+                    type: object
+                    properties:
+                      subject:
+                        type: string
+                      issuer:
+                        type: string
+                      issuer_org:
+                        type: string
+                      valid_from:
+                        type: string
+                        format: date-time
+                      valid_until:
+                        type: string
+                        format: date-time
+                      days_remaining:
+                        type: integer
+                      expired:
+                        type: boolean
+                      san:
+                        type: array
+                        items:
+                          type: string
+                      key_type:
+                        type: string
+                      key_size:
+                        type: integer
+                      signature_algorithm:
+                        type: string
+                      serial_number:
+                        type: string
+                      fingerprint_sha256:
+                        type: string
+                      hostname_match:
+                        type:
+                        - boolean
+                        - 'null'
+                  chain:
+                    type: object
+                    properties:
+                      length:
+                        type: integer
+                      valid:
+                        type: boolean
+                      certificates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            subject:
+                              type: string
+                            issuer:
+                              type: string
+                            type:
+                              type: string
+                              enum:
+                              - leaf
+                              - intermediate
+                              - root
+                            valid_from:
+                              type:
+                              - string
+                              - 'null'
+                            valid_until:
+                              type:
+                              - string
+                              - 'null'
+                      issues:
+                        type: array
+                        items:
+                          type: string
+                  protocols:
+                    type: object
+                    properties:
+                      tls_1_3:
+                        type: boolean
+                      tls_1_2:
+                        type: boolean
+                      tls_1_1:
+                        type: boolean
+                      tls_1_0:
+                        type: boolean
+                      ssl_3:
+                        type: boolean
+                      preferred_protocol:
+                        type: string
+                      detection_method:
+                        type: string
+                        enum:
+                        - inferred
+                        - active
+                      deprecated_protocols_enabled:
+                        type: boolean
+                  connection:
+                    type: object
+                    properties:
+                      preferred_protocol:
+                        type:
+                        - string
+                        - 'null'
+                      preferred_cipher:
+                        type:
+                        - string
+                        - 'null'
+                      alpn_negotiated:
+                        type:
+                        - string
+                        - 'null'
+                      forward_secrecy:
+                        type: boolean
+                      forward_secrecy_cipher:
+                        type:
+                        - string
+                        - 'null'
+                      secure_renegotiation_supported:
+                        type:
+                        - boolean
+                        - 'null'
+                      server_temp_key:
+                        type:
+                        - string
+                        - 'null'
+                      peer_signing_digest:
+                        type:
+                        - string
+                        - 'null'
+                      peer_signature_type:
+                        type:
+                        - string
+                        - 'null'
+                      server_public_key_bits:
+                        type:
+                        - integer
+                        - 'null'
+                      compression:
+                        type:
+                        - string
+                        - 'null'
+                      expansion:
+                        type:
+                        - string
+                        - 'null'
+                      client_certificate_requested:
+                        type:
+                        - boolean
+                        - 'null'
+                  certificate_delivery:
+                    type: object
+                    properties:
+                      must_staple:
+                        type: boolean
+                      sct_embedded:
+                        type: boolean
+                      sct_count:
+                        type: integer
+                      ocsp_stapling_present:
+                        type: boolean
+                      ocsp_stapling_fresh:
+                        type:
+                        - boolean
+                        - 'null'
+                      ocsp_stapling_status:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_this_update:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_next_update:
+                        type:
+                        - string
+                        - 'null'
+                  handshake_size:
+                    type: object
+                    description: Estimated certificate-chain and TLS handshake weight for mobile/API client risk triage.
+                    properties:
+                      chain_certificate_count:
+                        type: integer
+                      estimated_certificate_bytes:
+                        type: integer
+                      estimated_handshake_bytes:
+                        type: integer
+                      risk:
+                        type: string
+                        enum:
+                        - low
+                        - medium
+                        - high
+                      mobile_client_warning:
+                        type: boolean
+                  alpn_summary:
+                    type: object
+                    description: ALPN and HTTP protocol-readiness summary from supplemental TLS and HTTP version probes.
+                    properties:
+                      negotiated_protocol:
+                        type:
+                        - string
+                        - 'null'
+                      http2_ready:
+                        type:
+                        - boolean
+                        - 'null'
+                      http3_advertised:
+                        type:
+                        - boolean
+                        - 'null'
+                      fallback_protocols:
+                        type: array
+                        items:
+                          type: string
+                      evidence_sources:
+                        type: array
+                        items:
+                          type: string
+                  transport:
+                    type: object
+                    properties:
+                      hsts:
+                        type: object
+                        properties:
+                          reachable:
+                            type: boolean
+                          final_url:
+                            type:
+                            - string
+                            - 'null'
+                          status_code:
+                            type:
+                            - integer
+                            - 'null'
+                          header_present:
+                            type: boolean
+                          hsts_header:
+                            type:
+                            - string
+                            - 'null'
+                          max_age:
+                            type:
+                            - integer
+                            - 'null'
+                          include_subdomains:
+                            type:
+                            - boolean
+                            - 'null'
+                          preload_directive:
+                            type:
+                            - boolean
+                            - 'null'
+                          preload_eligible:
+                            type: boolean
+                          preload_status:
+                            type:
+                            - string
+                            - 'null'
+                          preloaded_domain:
+                            type:
+                            - string
+                            - 'null'
+                          issues:
+                            type: array
+                            items:
+                              type: string
+                          errors:
+                            type: array
+                            items:
+                              type: string
+                      http_versions:
+                        type: object
+                        properties:
+                          http1_1:
+                            type: boolean
+                          http2:
+                            type: boolean
+                          http3:
+                            type: boolean
+                          alt_svc:
+                            type:
+                            - string
+                            - 'null'
+                          http3_advertised:
+                            type: boolean
+                          alt_svc_protocols:
+                            type: array
+                            items:
+                              type: string
+                          curl_http3_supported:
+                            type: boolean
+                  revocation:
+                    type: object
+                    properties:
+                      ocsp:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          status:
+                            type:
+                            - string
+                            - 'null'
+                            enum:
+                            - good
+                            - revoked
+                            - unknown
+                          verify_ok:
+                            type: boolean
+                          this_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                      crl:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          fetched:
+                            type: boolean
+                          http_status:
+                            type:
+                            - integer
+                            - 'null'
+                          revoked:
+                            type:
+                            - boolean
+                            - 'null'
+                          last_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          revoked_serial_count:
+                            type:
+                            - integer
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                  tls_extensions:
+                    type: array
+                    items:
+                      type: string
+                  edge_summary:
+                    type: object
+                    description: Compact supplemental probe summary for SSL Labs / Hardenize-style triage.
+                    properties:
+                      relay_configured:
+                        type: boolean
+                      evidence_sources:
+                        type: array
+                        items:
+                          type: string
+                      probe_success_count:
+                        type: integer
+                      probe_attempt_count:
+                        type: integer
+                      live_handshake_ms:
+                        type:
+                        - integer
+                        - 'null'
+                      strongest_protocol:
+                        type:
+                        - string
+                        - 'null'
+                      weakest_supported_protocol:
+                        type:
+                        - string
+                        - 'null'
+                      deprecated_protocol_count:
+                        type: integer
+                      http3_ready:
+                        type: boolean
+                      hsts_preload_ready:
+                        type: boolean
+                      revocation_checked:
+                        type: boolean
+                      revocation_good:
+                        type:
+                        - boolean
+                        - 'null'
+                      certificate_transparency_ready:
+                        type: boolean
+                      client_auth_requested:
+                        type:
+                        - boolean
+                        - 'null'
+                      weak_transport_detected:
+                        type: boolean
+                  issues:
+                    type: array
+                    items:
+                      type: string
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+                  checked_at:
+                    type: string
+                    format: date-time
+                  check_duration_ms:
+                    type: integer
+              example:
+                domain: cloudflare.com
+                audit_completeness: full
+                probe_coverage:
+                  tls_inspect: true
+                  tls_audit: true
+                  tls_posture: true
+                  revocation: true
+                  hsts: true
+                  http_versions: true
+                certificate:
+                  subject: cloudflare.com
+                  issuer: Google Trust Services
+                  valid_from: '2026-03-01T00:00:00Z'
+                  valid_until: '2026-05-30T23:59:59Z'
+                  days_remaining: 42
+                  expired: false
+                  san:
+                  - cloudflare.com
+                  - '*.cloudflare.com'
+                  key_type: ECDSA
+                  key_size: 256
+                  signature_algorithm: ecdsaWithSHA256
+                  serial_number: 539933F4CFE7E8CF13F5E60D139675A1
+                  fingerprint_sha256: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
+                  hostname_match: true
+                chain:
+                  length: 3
+                  valid: true
+                  certificates:
+                  - subject: cloudflare.com
+                    issuer: Google Trust Services
+                    type: leaf
+                  - subject: Google Trust Services
+                    issuer: GlobalSign
+                    type: intermediate
+                  - subject: GlobalSign
+                    issuer: GlobalSign
+                    type: root
+                  issues: []
+                protocols:
+                  tls_1_3: true
+                  tls_1_2: true
+                  tls_1_1: false
+                  tls_1_0: false
+                  ssl_3: false
+                  preferred_protocol: TLSv1.3
+                  detection_method: active
+                  deprecated_protocols_enabled: false
+                connection:
+                  preferred_protocol: TLSv1.3
+                  preferred_cipher: TLS_AES_256_GCM_SHA384
+                  alpn_negotiated: h2
+                  forward_secrecy: true
+                  forward_secrecy_cipher: TLS_AES_256_GCM_SHA384
+                  secure_renegotiation_supported: false
+                  server_temp_key: X25519, 253 bits
+                  peer_signing_digest: SHA256
+                  peer_signature_type: ECDSA
+                  server_public_key_bits: 256
+                  compression: NONE
+                  expansion: NONE
+                  client_certificate_requested: false
+                certificate_delivery:
+                  must_staple: false
+                  sct_embedded: true
+                  sct_count: 2
+                  ocsp_stapling_present: true
+                  ocsp_stapling_fresh: true
+                  ocsp_stapling_status: successful (0x0)
+                  ocsp_this_update: '2026-04-15T02:35:16Z'
+                  ocsp_next_update: '2026-04-22T01:35:15Z'
+                handshake_size:
+                  chain_certificate_count: 3
+                  estimated_certificate_bytes: 3200
+                  estimated_handshake_bytes: 4600
+                  risk: low
+                  mobile_client_warning: false
+                alpn_summary:
+                  negotiated_protocol: h2
+                  http2_ready: true
+                  http3_advertised: true
+                  fallback_protocols:
+                  - TLSv1.3
+                  - TLSv1.2
+                  - http/1.1
+                  evidence_sources:
+                  - tls_audit
+                  - http_versions
+                transport:
+                  hsts:
+                    reachable: true
+                    final_url: https://cloudflare.com/
+                    status_code: 200
+                    header_present: true
+                    hsts_header: max-age=31536000; includeSubDomains
+                    max_age: 31536000
+                    include_subdomains: true
+                    preload_directive: false
+                    preload_eligible: true
+                    preload_status: preloaded
+                    preloaded_domain: cloudflare.com
+                    issues:
+                    - missing preload directive
+                    errors: []
+                  http_versions:
+                    http1_1: true
+                    http2: true
+                    http3: true
+                    alt_svc: h3=":443"; ma=86400
+                    http3_advertised: true
+                    alt_svc_protocols:
+                    - h3
+                    curl_http3_supported: true
+                revocation:
+                  ocsp:
+                    present: true
+                    uris:
+                    - http://o.pki.goog/wr2
+                    checked_uri: http://o.pki.goog/wr2
+                    status: good
+                    verify_ok: true
+                    this_update: '2026-04-18T20:30:00Z'
+                    next_update: '2026-04-19T20:30:00Z'
+                    error: null
+                  crl:
+                    present: true
+                    uris:
+                    - http://c.pki.goog/wr2.crl
+                    checked_uri: http://c.pki.goog/wr2.crl
+                    fetched: true
+                    http_status: 200
+                    revoked: false
+                    last_update: '2026-04-17T00:00:00Z'
+                    next_update: '2026-04-24T00:00:00Z'
+                    revoked_serial_count: 0
+                    error: null
+                tls_extensions:
+                - key share
+                - supported versions
+                - server name
+                edge_summary:
+                  relay_configured: true
+                  evidence_sources:
+                  - tls_inspect
+                  - tls_audit
+                  - tls_posture
+                  - revocation
+                  - hsts
+                  - http_versions
+                  probe_success_count: 6
+                  probe_attempt_count: 6
+                  live_handshake_ms: 51
+                  strongest_protocol: TLSv1.3
+                  weakest_supported_protocol: TLSv1.2
+                  deprecated_protocol_count: 0
+                  http3_ready: true
+                  hsts_preload_ready: true
+                  revocation_checked: true
+                  revocation_good: true
+                  certificate_transparency_ready: true
+                  client_auth_requested: false
+                  weak_transport_detected: false
+                issues: []
+                recommendations:
+                - Add the preload directive if you want HSTS preload-list eligibility.
+                checked_at: '2026-04-18T21:00:00Z'
+                check_duration_ms: 512
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 5
+  /v1/ssl/deep-scan:
+    get:
+      tags:
+      - SSL Analysis
+      summary: Start or fetch a premium SSL deep scan
+      description: Run a premium cached deep SSL/TLS scan for a domain. Returns a fresh cached result immediately when available, or starts a long-running background scan and returns a signed polling token.
+      operationId: getSslDeepScan
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+          example: openai.com
+        description: Domain to scan deeply
+      - name: refresh
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Ignore a fresh cached result and start a new deep scan
+      - name: profile
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - standard
+          - full
+          default: standard
+        description: Deep scan profile. Use standard for faster testssl coverage or full for the slower, richer scan.
+      responses:
+        '200':
+          description: Fresh cached deep scan result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - ready
+                    - error
+                  domain:
+                    type: string
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                  profile:
+                    type: string
+                    enum:
+                    - standard
+                    - full
+                  scan_token:
+                    type: string
+                  message:
+                    type: string
+                  poll_after_ms:
+                    type: integer
+                  cache:
+                    type: object
+                    properties:
+                      hit:
+                        type: boolean
+                      fresh:
+                        type: boolean
+                      started_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      completed_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      expires_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      engine:
+                        type:
+                        - string
+                        - 'null'
+                      profile:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - standard
+                        - full
+                  result:
+                    type: object
+                    properties:
+                      domain:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      engine:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          mode:
+                            type: string
+                            enum:
+                            - testssl
+                            - builtin
+                          version:
+                            type:
+                            - string
+                            - 'null'
+                          profile:
+                            type: string
+                            enum:
+                            - standard
+                            - full
+                      target:
+                        type: object
+                        properties:
+                          ip:
+                            type:
+                            - string
+                            - 'null'
+                          service:
+                            type:
+                            - string
+                            - 'null'
+                          rdns:
+                            type:
+                            - string
+                            - 'null'
+                      summary:
+                        type: object
+                        properties:
+                          severity_counts:
+                            type: object
+                            properties:
+                              critical:
+                                type: integer
+                              high:
+                                type: integer
+                              medium:
+                                type: integer
+                              low:
+                                type: integer
+                              warn:
+                                type: integer
+                              info:
+                                type: integer
+                              ok:
+                                type: integer
+                          actionable_findings:
+                            type: integer
+                          protocols_offered:
+                            type: array
+                            items:
+                              type: string
+                          deprecated_protocols:
+                            type: array
+                            items:
+                              type: string
+                          supports_tls_1_3:
+                            type: boolean
+                          supports_http2:
+                            type:
+                            - boolean
+                            - 'null'
+                          supports_http3:
+                            type:
+                            - boolean
+                            - 'null'
+                      sections:
+                        type: object
+                        properties:
+                          pretest:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          protocols:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_defaults:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_preferences:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          cipher_categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          forward_secrecy:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          vulnerabilities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          browser_simulations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          rating:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                      findings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            section:
+                              type: string
+                            id:
+                              type: string
+                            severity:
+                              type: string
+                            finding:
+                              type: string
+                            cve:
+                              type: string
+                            cwe:
+                              type: string
+                      checked_at:
+                        type: string
+                        format: date-time
+                      scan_duration_ms:
+                        type: integer
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+              example:
+                status: ready
+                domain: openai.com
+                host: openai.com
+                port: 443
+                profile: full
+                scan_token: eyJrIjoidGxzLWRlZXAtc2NhbiIsImkiOiJleGFtcGxlIiwiaCI6Im9wZW5haS5jb20ifQ
+                cache:
+                  hit: true
+                  fresh: true
+                  completed_at: '2026-04-18T22:10:00Z'
+                  expires_at: '2026-04-19T22:10:00Z'
+                  engine: testssl.sh
+                  profile: full
+                result:
+                  domain: openai.com
+                  host: openai.com
+                  port: 443
+                  engine:
+                    name: testssl.sh
+                    mode: testssl
+                    version: 3.3dev
+                    profile: full
+                  target:
+                    ip: 172.64.154.211
+                    service: HTTP
+                    rdns: --
+                  summary:
+                    severity_counts:
+                      critical: 0
+                      high: 1
+                      medium: 1
+                      low: 0
+                      warn: 1
+                      info: 6
+                      ok: 4
+                    actionable_findings: 3
+                    protocols_offered:
+                    - TLS1_2
+                    - TLS1_3
+                    deprecated_protocols: []
+                    supports_tls_1_3: true
+                    supports_http2: true
+                    supports_http3: null
+                  sections:
+                    pretest: []
+                    protocols:
+                    - id: TLS1_2
+                      severity: OK
+                      finding: offered
+                    - id: TLS1_3
+                      severity: OK
+                      finding: offered with final
+                    - id: QUIC
+                      severity: WARN
+                      finding: not tested due to lack of local OpenSSL support
+                    server_defaults:
+                    - id: early_data
+                      severity: HIGH
+                      finding: supported
+                    server_preferences: []
+                    cipher_categories: []
+                    forward_secrecy: []
+                    vulnerabilities:
+                    - id: BREACH
+                      severity: MEDIUM
+                      finding: potentially VULNERABLE, br gzip HTTP compression detected
+                      cve: CVE-2013-3587
+                      cwe: CWE-310
+                    browser_simulations: []
+                    rating: []
+                  findings:
+                  - section: protocols
+                    id: QUIC
+                    severity: WARN
+                    finding: not tested due to lack of local OpenSSL support
+                  - section: server_defaults
+                    id: early_data
+                    severity: HIGH
+                    finding: supported
+                  - section: vulnerabilities
+                    id: BREACH
+                    severity: MEDIUM
+                    finding: potentially VULNERABLE, br gzip HTTP compression detected
+                    cve: CVE-2013-3587
+                    cwe: CWE-310
+                  checked_at: '2026-04-18T22:10:00Z'
+                  scan_duration_ms: 53880
+                  notes: []
+        '202':
+          description: Deep scan started or already in progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - ready
+                    - error
+                  domain:
+                    type: string
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                  profile:
+                    type: string
+                    enum:
+                    - standard
+                    - full
+                  scan_token:
+                    type: string
+                  message:
+                    type: string
+                  poll_after_ms:
+                    type: integer
+                  cache:
+                    type: object
+                    properties:
+                      hit:
+                        type: boolean
+                      fresh:
+                        type: boolean
+                      started_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      completed_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      expires_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      engine:
+                        type:
+                        - string
+                        - 'null'
+                      profile:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - standard
+                        - full
+                  result:
+                    type: object
+                    properties:
+                      domain:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      engine:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          mode:
+                            type: string
+                            enum:
+                            - testssl
+                            - builtin
+                          version:
+                            type:
+                            - string
+                            - 'null'
+                          profile:
+                            type: string
+                            enum:
+                            - standard
+                            - full
+                      target:
+                        type: object
+                        properties:
+                          ip:
+                            type:
+                            - string
+                            - 'null'
+                          service:
+                            type:
+                            - string
+                            - 'null'
+                          rdns:
+                            type:
+                            - string
+                            - 'null'
+                      summary:
+                        type: object
+                        properties:
+                          severity_counts:
+                            type: object
+                            properties:
+                              critical:
+                                type: integer
+                              high:
+                                type: integer
+                              medium:
+                                type: integer
+                              low:
+                                type: integer
+                              warn:
+                                type: integer
+                              info:
+                                type: integer
+                              ok:
+                                type: integer
+                          actionable_findings:
+                            type: integer
+                          protocols_offered:
+                            type: array
+                            items:
+                              type: string
+                          deprecated_protocols:
+                            type: array
+                            items:
+                              type: string
+                          supports_tls_1_3:
+                            type: boolean
+                          supports_http2:
+                            type:
+                            - boolean
+                            - 'null'
+                          supports_http3:
+                            type:
+                            - boolean
+                            - 'null'
+                      sections:
+                        type: object
+                        properties:
+                          pretest:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          protocols:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_defaults:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_preferences:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          cipher_categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          forward_secrecy:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          vulnerabilities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          browser_simulations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          rating:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                      findings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            section:
+                              type: string
+                            id:
+                              type: string
+                            severity:
+                              type: string
+                            finding:
+                              type: string
+                            cve:
+                              type: string
+                            cwe:
+                              type: string
+                      checked_at:
+                        type: string
+                        format: date-time
+                      scan_duration_ms:
+                        type: integer
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+              example:
+                status: pending
+                domain: openai.com
+                host: openai.com
+                port: 443
+                profile: standard
+                scan_token: eyJrIjoidGxzLWRlZXAtc2NhbiIsImkiOiJleGFtcGxlIiwiaCI6Im9wZW5haS5jb20ifQ
+                message: Scan started
+                poll_after_ms: 5000
+                cache:
+                  hit: false
+                  fresh: false
+                  started_at: '2026-04-18T22:12:00Z'
+                  profile: standard
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '424':
+          $ref: '#/components/responses/InternalError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 10
+  /v1/ssl/deep-scan/status:
+    get:
+      tags:
+      - SSL Analysis
+      summary: Poll a premium SSL deep scan
+      description: Poll a premium SSL/TLS deep scan using the signed scan token returned by /v1/ssl/deep-scan. This helper endpoint does not consume credits.
+      operationId: getSslDeepScanStatus
+      parameters:
+      - name: scan_token
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Signed scan token returned by /v1/ssl/deep-scan
+      responses:
+        '200':
+          description: Deep scan status or completed result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - ready
+                    - error
+                  domain:
+                    type: string
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                  profile:
+                    type: string
+                    enum:
+                    - standard
+                    - full
+                  scan_token:
+                    type: string
+                  message:
+                    type: string
+                  poll_after_ms:
+                    type: integer
+                  cache:
+                    type: object
+                    properties:
+                      hit:
+                        type: boolean
+                      fresh:
+                        type: boolean
+                      started_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      completed_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      expires_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      engine:
+                        type:
+                        - string
+                        - 'null'
+                      profile:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - standard
+                        - full
+                  result:
+                    type: object
+                    properties:
+                      domain:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      engine:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          mode:
+                            type: string
+                            enum:
+                            - testssl
+                            - builtin
+                          version:
+                            type:
+                            - string
+                            - 'null'
+                          profile:
+                            type: string
+                            enum:
+                            - standard
+                            - full
+                      target:
+                        type: object
+                        properties:
+                          ip:
+                            type:
+                            - string
+                            - 'null'
+                          service:
+                            type:
+                            - string
+                            - 'null'
+                          rdns:
+                            type:
+                            - string
+                            - 'null'
+                      summary:
+                        type: object
+                        properties:
+                          severity_counts:
+                            type: object
+                            properties:
+                              critical:
+                                type: integer
+                              high:
+                                type: integer
+                              medium:
+                                type: integer
+                              low:
+                                type: integer
+                              warn:
+                                type: integer
+                              info:
+                                type: integer
+                              ok:
+                                type: integer
+                          actionable_findings:
+                            type: integer
+                          protocols_offered:
+                            type: array
+                            items:
+                              type: string
+                          deprecated_protocols:
+                            type: array
+                            items:
+                              type: string
+                          supports_tls_1_3:
+                            type: boolean
+                          supports_http2:
+                            type:
+                            - boolean
+                            - 'null'
+                          supports_http3:
+                            type:
+                            - boolean
+                            - 'null'
+                      sections:
+                        type: object
+                        properties:
+                          pretest:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          protocols:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_defaults:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_preferences:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          cipher_categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          forward_secrecy:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          vulnerabilities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          browser_simulations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          rating:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                      findings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            section:
+                              type: string
+                            id:
+                              type: string
+                            severity:
+                              type: string
+                            finding:
+                              type: string
+                            cve:
+                              type: string
+                            cwe:
+                              type: string
+                      checked_at:
+                        type: string
+                        format: date-time
+                      scan_duration_ms:
+                        type: integer
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+              example:
+                status: ready
+                domain: openai.com
+                host: openai.com
+                port: 443
+                profile: full
+                scan_token: eyJrIjoidGxzLWRlZXAtc2NhbiIsImkiOiJleGFtcGxlIiwiaCI6Im9wZW5haS5jb20ifQ
+                cache:
+                  hit: true
+                  fresh: true
+                  completed_at: '2026-04-18T22:10:00Z'
+                  expires_at: '2026-04-19T22:10:00Z'
+                  engine: testssl.sh
+                  profile: full
+                result:
+                  domain: openai.com
+                  host: openai.com
+                  port: 443
+                  engine:
+                    name: testssl.sh
+                    mode: testssl
+                    version: 3.3dev
+                    profile: full
+                  target:
+                    ip: 172.64.154.211
+                    service: HTTP
+                    rdns: --
+                  summary:
+                    severity_counts:
+                      critical: 0
+                      high: 1
+                      medium: 1
+                      low: 0
+                      warn: 1
+                      info: 6
+                      ok: 4
+                    actionable_findings: 3
+                    protocols_offered:
+                    - TLS1_2
+                    - TLS1_3
+                    deprecated_protocols: []
+                    supports_tls_1_3: true
+                    supports_http2: true
+                    supports_http3: null
+                  sections:
+                    pretest: []
+                    protocols:
+                    - id: TLS1_2
+                      severity: OK
+                      finding: offered
+                    - id: TLS1_3
+                      severity: OK
+                      finding: offered with final
+                    - id: QUIC
+                      severity: WARN
+                      finding: not tested due to lack of local OpenSSL support
+                    server_defaults:
+                    - id: early_data
+                      severity: HIGH
+                      finding: supported
+                    server_preferences: []
+                    cipher_categories: []
+                    forward_secrecy: []
+                    vulnerabilities:
+                    - id: BREACH
+                      severity: MEDIUM
+                      finding: potentially VULNERABLE, br gzip HTTP compression detected
+                      cve: CVE-2013-3587
+                      cwe: CWE-310
+                    browser_simulations: []
+                    rating: []
+                  findings:
+                  - section: protocols
+                    id: QUIC
+                    severity: WARN
+                    finding: not tested due to lack of local OpenSSL support
+                  - section: server_defaults
+                    id: early_data
+                    severity: HIGH
+                    finding: supported
+                  - section: vulnerabilities
+                    id: BREACH
+                    severity: MEDIUM
+                    finding: potentially VULNERABLE, br gzip HTTP compression detected
+                    cve: CVE-2013-3587
+                    cwe: CWE-310
+                  checked_at: '2026-04-18T22:10:00Z'
+                  scan_duration_ms: 53880
+                  notes: []
+        '202':
+          description: Deep scan still running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - ready
+                    - error
+                  domain:
+                    type: string
+                  host:
+                    type: string
+                  port:
+                    type: integer
+                  profile:
+                    type: string
+                    enum:
+                    - standard
+                    - full
+                  scan_token:
+                    type: string
+                  message:
+                    type: string
+                  poll_after_ms:
+                    type: integer
+                  cache:
+                    type: object
+                    properties:
+                      hit:
+                        type: boolean
+                      fresh:
+                        type: boolean
+                      started_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      completed_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      expires_at:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      engine:
+                        type:
+                        - string
+                        - 'null'
+                      profile:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - standard
+                        - full
+                  result:
+                    type: object
+                    properties:
+                      domain:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      engine:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          mode:
+                            type: string
+                            enum:
+                            - testssl
+                            - builtin
+                          version:
+                            type:
+                            - string
+                            - 'null'
+                          profile:
+                            type: string
+                            enum:
+                            - standard
+                            - full
+                      target:
+                        type: object
+                        properties:
+                          ip:
+                            type:
+                            - string
+                            - 'null'
+                          service:
+                            type:
+                            - string
+                            - 'null'
+                          rdns:
+                            type:
+                            - string
+                            - 'null'
+                      summary:
+                        type: object
+                        properties:
+                          severity_counts:
+                            type: object
+                            properties:
+                              critical:
+                                type: integer
+                              high:
+                                type: integer
+                              medium:
+                                type: integer
+                              low:
+                                type: integer
+                              warn:
+                                type: integer
+                              info:
+                                type: integer
+                              ok:
+                                type: integer
+                          actionable_findings:
+                            type: integer
+                          protocols_offered:
+                            type: array
+                            items:
+                              type: string
+                          deprecated_protocols:
+                            type: array
+                            items:
+                              type: string
+                          supports_tls_1_3:
+                            type: boolean
+                          supports_http2:
+                            type:
+                            - boolean
+                            - 'null'
+                          supports_http3:
+                            type:
+                            - boolean
+                            - 'null'
+                      sections:
+                        type: object
+                        properties:
+                          pretest:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          protocols:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_defaults:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          server_preferences:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          cipher_categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          forward_secrecy:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          vulnerabilities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          browser_simulations:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                          rating:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                severity:
+                                  type: string
+                                finding:
+                                  type: string
+                                cve:
+                                  type: string
+                                cwe:
+                                  type: string
+                      findings:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            section:
+                              type: string
+                            id:
+                              type: string
+                            severity:
+                              type: string
+                            finding:
+                              type: string
+                            cve:
+                              type: string
+                            cwe:
+                              type: string
+                      checked_at:
+                        type: string
+                        format: date-time
+                      scan_duration_ms:
+                        type: integer
+                      notes:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      retryable:
+                        type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '424':
+          $ref: '#/components/responses/InternalError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/ssl/grade:
+    get:
+      tags:
+      - SSL Analysis
+      summary: SSL certificate grade
+      description: Get an SSL/TLS security grade for a domain, analyzing certificate validity, chain, HSTS, and security headers
+      operationId: getSslGrade
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to analyze
+      responses:
+        '200':
+          description: SSL grade analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  grade:
+                    type: string
+                    enum:
+                    - A+
+                    - A
+                    - B
+                    - C
+                    - D
+                    - F
+                  score:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  protocol_support:
+                    type: object
+                    properties:
+                      tls_1_3:
+                        type: boolean
+                      tls_1_2:
+                        type: boolean
+                      tls_1_1:
+                        type: boolean
+                      tls_1_0:
+                        type: boolean
+                      ssl_3:
+                        type: boolean
+                      preferred_protocol:
+                        type: string
+                      detection_method:
+                        type: string
+                        enum:
+                        - inferred
+                        - active
+                  certificate:
+                    type: object
+                    properties:
+                      subject:
+                        type: string
+                      issuer:
+                        type: string
+                      valid_from:
+                        type: string
+                        format: date-time
+                      valid_until:
+                        type: string
+                        format: date-time
+                      days_remaining:
+                        type: integer
+                      expired:
+                        type: boolean
+                      san:
+                        type: array
+                        items:
+                          type: string
+                      key_type:
+                        type: string
+                      key_size:
+                        type: integer
+                      signature_algorithm:
+                        type: string
+                      fingerprint_sha256:
+                        type: string
+                  chain:
+                    type: object
+                    properties:
+                      length:
+                        type: integer
+                      valid:
+                        type: boolean
+                      certificates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            subject:
+                              type: string
+                            issuer:
+                              type: string
+                            type:
+                              type: string
+                              enum:
+                              - leaf
+                              - intermediate
+                              - root
+                      issues:
+                        type: array
+                        items:
+                          type: string
+                  security:
+                    type: object
+                    properties:
+                      forward_secrecy:
+                        type: boolean
+                      forward_secrecy_cipher:
+                        type: string
+                      hsts_enabled:
+                        type: boolean
+                      hsts_max_age:
+                        type: integer
+                      hsts_include_subdomains:
+                        type: boolean
+                      hsts_preload:
+                        type: boolean
+                      hsts_header:
+                        type: string
+                      hsts_preload_status:
+                        type: string
+                      hsts_preloaded_domain:
+                        type: string
+                      hsts_preload_eligible:
+                        type: boolean
+                      hsts_final_url:
+                        type: string
+                      hsts_errors:
+                        type: array
+                        items:
+                          type: string
+                      alpn_negotiated:
+                        type: string
+                      ocsp_stapling:
+                        type: boolean
+                      ocsp_stapling_fresh:
+                        type: boolean
+                      ocsp_stapling_status:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_stapling_this_update:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_stapling_next_update:
+                        type:
+                        - string
+                        - 'null'
+                      sct_embedded:
+                        type: boolean
+                      sct_count:
+                        type: integer
+                      ct_compliance:
+                        type: boolean
+                      must_staple:
+                        type: boolean
+                      secure_renegotiation:
+                        type: boolean
+                  revocation:
+                    type: object
+                    properties:
+                      ocsp:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          status:
+                            type:
+                            - string
+                            - 'null'
+                            enum:
+                            - good
+                            - revoked
+                            - unknown
+                          verify_ok:
+                            type: boolean
+                          this_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                      crl:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          fetched:
+                            type: boolean
+                          http_status:
+                            type:
+                            - integer
+                            - 'null'
+                          revoked:
+                            type:
+                            - boolean
+                            - 'null'
+                          last_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          revoked_serial_count:
+                            type:
+                            - integer
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                  grade_delta:
+                    type: object
+                    description: Top blockers and points needed to reach the next SSL grade.
+                    properties:
+                      current_grade:
+                        type: string
+                        enum:
+                        - A+
+                        - A
+                        - B
+                        - C
+                        - D
+                        - F
+                      score:
+                        type: integer
+                      next_grade:
+                        type:
+                        - string
+                        - 'null'
+                        enum:
+                        - A+
+                        - A
+                        - B
+                        - C
+                        - D
+                        - F
+                      points_to_next_grade:
+                        type:
+                        - integer
+                        - 'null'
+                      top_blockers:
+                        type: array
+                        items:
+                          type: string
+                  issues:
+                    type: array
+                    items:
+                      type: string
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+                  checked_at:
+                    type: string
+                    format: date-time
+                  check_duration_ms:
+                    type: integer
+              example:
+                domain: cloudflare.com
+                grade: A+
+                score: 98
+                protocol_support:
+                  tls_1_3: true
+                  tls_1_2: true
+                  tls_1_1: false
+                  tls_1_0: false
+                  ssl_3: false
+                  preferred_protocol: TLSv1.3
+                  detection_method: active
+                certificate:
+                  subject: cloudflare.com
+                  issuer: Google Trust Services
+                  valid_from: '2026-03-01T00:00:00Z'
+                  valid_until: '2026-05-30T23:59:59Z'
+                  days_remaining: 42
+                  expired: false
+                  san:
+                  - cloudflare.com
+                  - '*.cloudflare.com'
+                  key_type: ECDSA
+                  key_size: 256
+                  signature_algorithm: ecdsaWithSHA256
+                  fingerprint_sha256: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
+                chain:
+                  length: 3
+                  valid: true
+                  certificates:
+                  - subject: cloudflare.com
+                    issuer: Google Trust Services
+                    type: leaf
+                  - subject: Google Trust Services
+                    issuer: GlobalSign
+                    type: intermediate
+                  - subject: GlobalSign
+                    issuer: GlobalSign
+                    type: root
+                  issues: []
+                security:
+                  forward_secrecy: true
+                  forward_secrecy_cipher: TLS_AES_256_GCM_SHA384
+                  hsts_enabled: true
+                  hsts_max_age: 31536000
+                  hsts_include_subdomains: true
+                  hsts_preload: true
+                  hsts_header: max-age=31536000; includeSubDomains; preload
+                  hsts_preload_status: preloaded
+                  hsts_preloaded_domain: cloudflare.com
+                  hsts_preload_eligible: true
+                  hsts_final_url: https://cloudflare.com/
+                  hsts_errors: []
+                  alpn_negotiated: h2
+                  ocsp_stapling: true
+                  ocsp_stapling_fresh: true
+                  ocsp_stapling_status: successful (0x0)
+                  ocsp_stapling_this_update: '2026-04-15T02:35:16Z'
+                  ocsp_stapling_next_update: '2026-04-22T01:35:15Z'
+                  ct_compliance: true
+                  must_staple: false
+                  sct_embedded: true
+                  sct_count: 2
+                revocation:
+                  ocsp:
+                    present: true
+                    uris:
+                    - http://o.pki.goog/wr2
+                    checked_uri: http://o.pki.goog/wr2
+                    status: good
+                    verify_ok: true
+                    this_update: '2026-04-18T20:30:00Z'
+                    next_update: '2026-04-19T20:30:00Z'
+                    error: null
+                  crl:
+                    present: true
+                    uris:
+                    - http://c.pki.goog/wr2.crl
+                    checked_uri: http://c.pki.goog/wr2.crl
+                    fetched: true
+                    http_status: 200
+                    revoked: false
+                    last_update: '2026-04-17T00:00:00Z'
+                    next_update: '2026-04-24T00:00:00Z'
+                    revoked_serial_count: 0
+                    error: null
+                grade_delta:
+                  current_grade: A+
+                  score: 98
+                  next_grade: null
+                  points_to_next_grade: null
+                  top_blockers: []
+                issues: []
+                recommendations: []
+                checked_at: '2026-04-18T21:00:00Z'
+                check_duration_ms: 142
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/ssl/chain:
+    get:
+      tags:
+      - SSL Analysis
+      summary: SSL certificate chain
+      description: Analyze the SSL certificate chain for a domain
+      operationId: getSslChain
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to analyze
+      responses:
+        '200':
+          description: Certificate chain analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  chain:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        subject:
+                          type: string
+                        issuer:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                          - leaf
+                          - intermediate
+                          - root
+                        valid_from:
+                          type:
+                          - string
+                          - 'null'
+                        valid_until:
+                          type:
+                          - string
+                          - 'null'
+                  chain_length:
+                    type: integer
+                  root_trusted:
+                    type: boolean
+                  chain_valid:
+                    type: boolean
+                  certificate:
+                    type: object
+                    properties:
+                      subject:
+                        type: string
+                      issuer:
+                        type: string
+                      valid_from:
+                        type: string
+                        format: date-time
+                      valid_until:
+                        type: string
+                        format: date-time
+                      days_remaining:
+                        type: integer
+                      expired:
+                        type: boolean
+                      san:
+                        type: array
+                        items:
+                          type: string
+                      key_type:
+                        type: string
+                      key_size:
+                        type: integer
+                      signature_algorithm:
+                        type: string
+                      fingerprint_sha256:
+                        type: string
+                  protocol_support:
+                    type: object
+                    properties:
+                      tls_1_3:
+                        type: boolean
+                      tls_1_2:
+                        type: boolean
+                      tls_1_1:
+                        type: boolean
+                      tls_1_0:
+                        type: boolean
+                      ssl_3:
+                        type: boolean
+                      preferred_protocol:
+                        type: string
+                      detection_method:
+                        type: string
+                        enum:
+                        - inferred
+                        - active
+                  security:
+                    type: object
+                    properties:
+                      alpn_negotiated:
+                        type: string
+                      forward_secrecy:
+                        type: boolean
+                      forward_secrecy_cipher:
+                        type: string
+                      must_staple:
+                        type: boolean
+                      sct_embedded:
+                        type: boolean
+                      sct_count:
+                        type: integer
+                      ocsp_stapling:
+                        type: boolean
+                      ocsp_stapling_fresh:
+                        type: boolean
+                      ocsp_stapling_status:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_stapling_this_update:
+                        type:
+                        - string
+                        - 'null'
+                      ocsp_stapling_next_update:
+                        type:
+                        - string
+                        - 'null'
+                  issues:
+                    type: array
+                    items:
+                      type: string
+                  remediation_hints:
+                    type: array
+                    description: Actionable hints for missing intermediates, AIA fallback reliance, expired leaves, or hostname mismatches.
+                    items:
+                      type: string
+                  revocation:
+                    type: object
+                    properties:
+                      ocsp:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          status:
+                            type:
+                            - string
+                            - 'null'
+                            enum:
+                            - good
+                            - revoked
+                            - unknown
+                          verify_ok:
+                            type: boolean
+                          this_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                      crl:
+                        type: object
+                        properties:
+                          present:
+                            type: boolean
+                          uris:
+                            type: array
+                            items:
+                              type: string
+                          checked_uri:
+                            type:
+                            - string
+                            - 'null'
+                          fetched:
+                            type: boolean
+                          http_status:
+                            type:
+                            - integer
+                            - 'null'
+                          revoked:
+                            type:
+                            - boolean
+                            - 'null'
+                          last_update:
+                            type:
+                            - string
+                            - 'null'
+                          next_update:
+                            type:
+                            - string
+                            - 'null'
+                          revoked_serial_count:
+                            type:
+                            - integer
+                            - 'null'
+                          error:
+                            type:
+                            - string
+                            - 'null'
+                  checked_at:
+                    type: string
+                    format: date-time
+              example:
+                domain: cloudflare.com
+                chain:
+                - subject: cloudflare.com
+                  issuer: Google Trust Services
+                  type: leaf
+                  valid_from: '2026-03-01T00:00:00Z'
+                  valid_until: '2026-05-30T23:59:59Z'
+                - subject: Google Trust Services
+                  issuer: GlobalSign
+                  type: intermediate
+                  valid_from: '2024-01-01T00:00:00Z'
+                  valid_until: '2029-01-01T00:00:00Z'
+                chain_valid: true
+                chain_length: 2
+                root_trusted: true
+                certificate:
+                  subject: cloudflare.com
+                  issuer: Google Trust Services
+                  valid_from: '2026-03-01T00:00:00Z'
+                  valid_until: '2026-05-30T23:59:59Z'
+                  days_remaining: 42
+                  expired: false
+                  san:
+                  - cloudflare.com
+                  - '*.cloudflare.com'
+                  key_type: ECDSA
+                  key_size: 256
+                  signature_algorithm: ecdsaWithSHA256
+                  fingerprint_sha256: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
+                protocol_support:
+                  tls_1_3: true
+                  tls_1_2: true
+                  tls_1_1: false
+                  tls_1_0: false
+                  ssl_3: false
+                  preferred_protocol: TLSv1.3
+                  detection_method: active
+                security:
+                  alpn_negotiated: h2
+                  forward_secrecy: true
+                  forward_secrecy_cipher: TLS_AES_256_GCM_SHA384
+                  must_staple: false
+                  sct_embedded: true
+                  sct_count: 2
+                  ocsp_stapling: true
+                  ocsp_stapling_fresh: true
+                  ocsp_stapling_status: successful (0x0)
+                  ocsp_stapling_this_update: '2026-04-15T02:35:16Z'
+                  ocsp_stapling_next_update: '2026-04-22T01:35:15Z'
+                issues: []
+                remediation_hints: []
+                revocation:
+                  ocsp:
+                    present: true
+                    uris:
+                    - http://o.pki.goog/wr2
+                    checked_uri: http://o.pki.goog/wr2
+                    status: good
+                    verify_ok: true
+                    this_update: '2026-04-18T20:30:00Z'
+                    next_update: '2026-04-19T20:30:00Z'
+                    error: null
+                  crl:
+                    present: true
+                    uris:
+                    - http://c.pki.goog/wr2.crl
+                    checked_uri: http://c.pki.goog/wr2.crl
+                    fetched: true
+                    http_status: 200
+                    revoked: false
+                    last_update: '2026-04-17T00:00:00Z'
+                    next_update: '2026-04-24T00:00:00Z'
+                    revoked_serial_count: 0
+                    error: null
+                checked_at: '2026-04-18T21:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/ssl/expiring:
+    get:
+      tags:
+      - SSL Analysis
+      summary: Check SSL expiry
+      description: Check if a domain SSL certificate is expiring soon
+      operationId: getSslExpiring
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to check
+      - name: days
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+        description: Days threshold for expiry warning
+      - name: threshold_days
+        in: query
+        deprecated: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+        description: Deprecated compatibility alias for days. Ignored when days is also supplied.
+      responses:
+        '200':
+          description: SSL expiry status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  expiring_soon:
+                    type: boolean
+                  expired:
+                    type: boolean
+                  days_remaining:
+                    type: integer
+                  valid_from:
+                    type: string
+                    format: date-time
+                  valid_until:
+                    type: string
+                    format: date-time
+                  subject:
+                    type: string
+                  issuer:
+                    type: string
+                  urgency:
+                    type: string
+                    enum:
+                    - ok
+                    - notice
+                    - warning
+                    - critical
+                  recommendation:
+                    type: string
+                  checked_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

@@ -1,0 +1,574 @@
+openapi: 3.2.0
+info:
+  title: DomScan Hosting Detection API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Hosting Detection
+  description: Detect hosting providers, CDN, WAF, and email providers
+paths:
+  /v1/hosting:
+    get:
+      tags:
+      - Hosting Detection
+      summary: Detect hosting infrastructure
+      description: Detect hosting provider, CDN, WAF, DNS provider, email provider, and public SSH surface for a domain
+      operationId: getHosting
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Domain to analyze
+      responses:
+        '200':
+          description: Hosting detection results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  hosting:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      provider:
+                        type: string
+                      provider_id:
+                        type: string
+                      confidence:
+                        type: number
+                      region:
+                        type: string
+                      detection_method:
+                        type: string
+                  cdn:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      detected:
+                        type: boolean
+                      provider:
+                        type: string
+                      provider_id:
+                        type: string
+                      confidence:
+                        type: number
+                      detection_method:
+                        type: string
+                      features:
+                        type: array
+                        items:
+                          type: string
+                  waf:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      detected:
+                        type: boolean
+                      provider:
+                        type: string
+                      provider_id:
+                        type: string
+                      confidence:
+                        type: number
+                      detection_method:
+                        type: string
+                  dns_provider:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      provider:
+                        type: string
+                      provider_id:
+                        type: string
+                      nameservers:
+                        type: array
+                        items:
+                          type: string
+                      confidence:
+                        type: number
+                  dns_providers:
+                    type: array
+                    description: 'HOST-007: all DNS providers detected. Only present when 2+ distinct providers are identified in the NS set.'
+                    items:
+                      type: object
+                      properties:
+                        provider_id:
+                          type: string
+                        provider:
+                          type: string
+                  email_provider:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      provider:
+                        type: string
+                      provider_id:
+                        type: string
+                      mx_records:
+                        type: array
+                        items:
+                          type: string
+                      confidence:
+                        type: number
+                  ssh:
+                    type:
+                    - object
+                    - 'null'
+                    properties:
+                      host:
+                        type: string
+                      port:
+                        type: integer
+                      reachable:
+                        type: boolean
+                      banner:
+                        type:
+                        - string
+                        - 'null'
+                      algorithms:
+                        type: array
+                        items:
+                          type: string
+                      weak_algorithms:
+                        type: array
+                        items:
+                          type: string
+                      keys:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            host:
+                              type: string
+                            algorithm:
+                              type: string
+                            key_size:
+                              type:
+                              - integer
+                              - 'null'
+                            fingerprint_sha256:
+                              type:
+                              - string
+                              - 'null'
+                            weak:
+                              type: boolean
+                            weak_reasons:
+                              type: array
+                              items:
+                                type: string
+                      error:
+                        type:
+                        - string
+                        - 'null'
+                      checked_at:
+                        type: string
+                        format: date-time
+                  provider_summary:
+                    type: object
+                    description: Compact provider evidence, confidence, cache state, and surface summary.
+                    properties:
+                      cache_status:
+                        type: string
+                        enum:
+                        - hit
+                        - miss
+                      provider_count:
+                        type: integer
+                      detected_surfaces:
+                        type: array
+                        items:
+                          type: string
+                      confidence:
+                        type: string
+                        enum:
+                        - high
+                        - medium
+                        - low
+                      confidence_score:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                      hosting_provider:
+                        type:
+                        - string
+                        - 'null'
+                      cdn_provider:
+                        type:
+                        - string
+                        - 'null'
+                      waf_provider:
+                        type:
+                        - string
+                        - 'null'
+                      dns_provider_count:
+                        type: integer
+                      email_provider:
+                        type:
+                        - string
+                        - 'null'
+                      ssh_exposed:
+                        type:
+                        - boolean
+                        - 'null'
+                      evidence:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            surface:
+                              type: string
+                            provider:
+                              type: string
+                            confidence:
+                              type:
+                              - number
+                              - 'null'
+                            method:
+                              type:
+                              - string
+                              - 'null'
+                  ip_info:
+                    type: object
+                    properties:
+                      ipv4:
+                        type: array
+                        items:
+                          type: string
+                      ipv6:
+                        type: array
+                        items:
+                          type: string
+                  checked_at:
+                    type: string
+                  check_duration_ms:
+                    type: integer
+                example:
+                  domain: github.com
+                  hosting:
+                    provider: Microsoft Azure
+                    provider_id: azure
+                    confidence: 0.86
+                    detection_method: ip_range
+                  cdn:
+                    detected: true
+                    provider: Fastly
+                    provider_id: fastly
+                    confidence: 0.94
+                    detection_method: headers
+                  waf:
+                    detected: false
+                    confidence: 0.2
+                    detection_method: headers
+                  dns_provider:
+                    provider: AWS Route 53
+                    provider_id: route53
+                    nameservers:
+                    - ns-1283.awsdns-32.org
+                    - ns-1707.awsdns-21.co.uk
+                    confidence: 0.9
+                  email_provider:
+                    provider: Google Workspace
+                    provider_id: google_workspace
+                    mx_records:
+                    - aspmx.l.google.com
+                    confidence: 0.95
+                  ssh:
+                    host: github.com
+                    port: 22
+                    reachable: true
+                    banner: SSH-2.0-babeld
+                    algorithms:
+                    - ssh-ed25519
+                    - ecdsa-sha2-nistp256
+                    weak_algorithms: []
+                    keys:
+                    - host: github.com
+                      algorithm: ssh-ed25519
+                      key_size: 256
+                      fingerprint_sha256: SHA256:+DiY3wvvV6TuJJhbpZisF/Ym7N3QKXNoZk6sJ2x2d2s
+                      weak: false
+                      weak_reasons: []
+                    error: null
+                    checked_at: '2026-04-18T21:00:00Z'
+                  provider_summary:
+                    cache_status: miss
+                    provider_count: 4
+                    detected_surfaces:
+                    - hosting
+                    - cdn
+                    - dns
+                    - email
+                    - ssh
+                    confidence: high
+                    confidence_score: 92
+                    hosting_provider: Microsoft Azure
+                    cdn_provider: Fastly
+                    waf_provider: null
+                    dns_provider_count: 1
+                    email_provider: Google Workspace
+                    ssh_exposed: true
+                    evidence:
+                    - surface: hosting
+                      provider: Microsoft Azure
+                      confidence: 0.86
+                      method: ip_range
+                    - surface: cdn
+                      provider: Fastly
+                      confidence: 0.94
+                      method: headers
+                    - surface: dns
+                      provider: AWS Route 53
+                      confidence: 0.9
+                      method: ns
+                    - surface: email
+                      provider: Google Workspace
+                      confidence: 0.95
+                      method: mx
+                    - surface: ssh
+                      provider: public-ssh
+                      confidence: 90
+                      method: edge-relay
+                  ip_info:
+                    ipv4:
+                    - 140.82.121.4
+                    ipv6: []
+                  checked_at: '2026-04-18T21:00:00Z'
+                  check_duration_ms: 156
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+components:
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

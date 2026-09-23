@@ -1,0 +1,744 @@
+openapi: 3.2.0
+info:
+  title: DomScan Domain Intelligence API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Domain Intelligence
+  description: Domain comparison, scoring, popularity, lifecycle, and profile intelligence
+paths:
+  /v1/overview:
+    get:
+      tags:
+      - Domain Intelligence
+      summary: Domain overview
+      description: Aggregate DNS, RDAP registration, health, reputation, and popularity observations in one call. Fields are null when a component or individual DNS query could not be determined. component_freshness preserves degraded state and its reason across cache hits.
+      operationId: getDomainOverview
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain to analyze
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: Domain overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  health:
+                    type: object
+                    properties:
+                      dns_ok:
+                        type:
+                        - boolean
+                        - 'null'
+                        description: Null when the health DNS prerequisite could not be checked.
+                      https_ok:
+                        type:
+                        - boolean
+                        - 'null'
+                        description: Null when the health check could not determine the result.
+                  dns:
+                    type: object
+                    properties:
+                      has_a:
+                        type:
+                        - boolean
+                        - 'null'
+                      has_aaaa:
+                        type:
+                        - boolean
+                        - 'null'
+                      has_mx:
+                        type:
+                        - boolean
+                        - 'null'
+                      nameservers:
+                        type:
+                        - array
+                        - 'null'
+                        items:
+                          type: string
+                  registration:
+                    type: object
+                    properties:
+                      registered:
+                        type:
+                        - boolean
+                        - 'null'
+                        description: True or false only after a completed registration lookup. Null for unsupported TLDs or unavailable RDAP data.
+                      registrar:
+                        type:
+                        - string
+                        - 'null'
+                      created_date:
+                        type:
+                        - string
+                        - 'null'
+                      expiry_date:
+                        type:
+                        - string
+                        - 'null'
+                      age_days:
+                        type:
+                        - integer
+                        - 'null'
+                      days_until_expiry:
+                        type:
+                        - integer
+                        - 'null'
+                      dnssec:
+                        type:
+                        - boolean
+                        - 'null'
+                  reputation:
+                    type: object
+                    properties:
+                      score:
+                        type:
+                        - number
+                        - 'null'
+                      grade:
+                        type:
+                        - string
+                        - 'null'
+                  popularity:
+                    type: object
+                    properties:
+                      rank:
+                        type:
+                        - integer
+                        - 'null'
+                      bucket:
+                        type:
+                        - string
+                        - 'null'
+                  component_freshness:
+                    $ref: '#/components/schemas/OverviewComponentFreshness'
+                  query_time_ms:
+                    type: integer
+                  checked_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 5
+  /v1/popularity:
+    get:
+      tags:
+      - Domain Intelligence
+      summary: Get domain popularity
+      description: Return the registrable domain's current Tranco rank with explicit ranked, unranked, and unknown states. Unknown results still return HTTP 200 so clients receive a stable response shape, and the request charge is automatically refunded. A successful known lookup is recorded in the lookup-driven history.
+      operationId: getDomainPopularity
+      parameters:
+      - name: domain
+        description: Registrable domain to look up.
+        in: query
+        required: true
+        schema:
+          type: string
+          example: example.com
+      - name: include_history
+        description: Include the recorded popularity history. Accepts 1, true, yes, 0, false or no; anything else returns 400. History appears only once observations have been recorded for the domain.
+        in: query
+        schema:
+          type: boolean
+          default: false
+      - name: history_limit
+        description: History entries to return, most recent first, from 1 to 365. Validated even when include_history is false.
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+      responses:
+        '200':
+          description: Current ranked, unranked, or unknown popularity observation. Unknown results are not charged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainPopularityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/popularity/history:
+    get:
+      tags:
+      - Domain Intelligence
+      summary: Get domain popularity history
+      description: Return prior Tranco observations recorded by successful DomScan lookups. The result is not a complete daily series.
+      operationId: getDomainPopularityHistory
+      parameters:
+      - name: domain
+        description: Registrable domain whose recorded history you want.
+        in: query
+        required: true
+        schema:
+          type: string
+          example: example.com
+      - name: limit
+        description: History entries to return, most recent first, from 1 to 365.
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 30
+      responses:
+        '200':
+          description: Lookup-driven popularity observations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainPopularityHistoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+components:
+  schemas:
+    OverviewComponentFreshnessEntry:
+      type: object
+      properties:
+        source:
+          type: string
+        state:
+          type: string
+          enum:
+          - fresh
+          - degraded
+        checked_at:
+          type: string
+          format: date-time
+        evidence_count:
+          type: integer
+          description: Number of populated or explicitly observed fields for this component.
+        reason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - upstream_unavailable
+          - partial_upstream_failure
+          - unsupported_tld
+          - legacy_cache_without_provenance
+    DomainPopularityHistoryResponse:
+      type: object
+      required:
+      - domain
+      - collection
+      - complete_daily_series
+      - result_count
+      - empty_result
+      - observations
+      properties:
+        domain:
+          type: string
+        collection:
+          type: string
+          enum:
+          - lookup_driven
+        complete_daily_series:
+          type: boolean
+          enum:
+          - false
+        result_count:
+          type: integer
+          minimum: 0
+          maximum: 365
+        empty_result:
+          type: boolean
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainPopularityObservation'
+    DomainPopularityObservation:
+      type: object
+      required:
+      - domain
+      - rank
+      - bucket
+      - status
+      - source
+      - list_date
+      - observed_on
+      - checked_at
+      properties:
+        domain:
+          type: string
+        rank:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        bucket:
+          type: string
+          enum:
+          - top-100
+          - top-1k
+          - top-10k
+          - top-100k
+          - top-1m
+          - unranked
+        status:
+          type: string
+          enum:
+          - ranked
+          - unranked
+        source:
+          type: string
+          enum:
+          - tranco
+        list_date:
+          type:
+          - string
+          - 'null'
+          format: date
+        observed_on:
+          type: string
+          format: date
+        checked_at:
+          type: string
+          format: date-time
+    DomainPopularityResponse:
+      type: object
+      required:
+      - domain
+      - status
+      - rank
+      - bucket
+      - source
+      - freshness
+      - checked_at
+      - result_count
+      - empty_result
+      - history
+      properties:
+        domain:
+          type: string
+        status:
+          type: string
+          enum:
+          - ranked
+          - unranked
+          - unknown
+        rank:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        bucket:
+          type: string
+          enum:
+          - top-100
+          - top-1k
+          - top-10k
+          - top-100k
+          - top-1m
+          - unranked
+          - unknown
+        source:
+          type: object
+          required:
+          - id
+          - url
+          - list_date
+          - provenance
+          properties:
+            id:
+              type: string
+              enum:
+              - tranco
+            url:
+              type: string
+              format: uri
+            list_date:
+              type:
+              - string
+              - 'null'
+              format: date
+            provenance:
+              type: object
+              required:
+              - owner
+              - source_url
+              - methodology_url
+              - access_method
+              - cost
+              - runtime_rate_limits
+              - terms_status
+              - expected_freshness
+              - maintenance_risk
+              - fallback_behavior
+              - last_verified
+              additionalProperties: false
+              properties:
+                owner:
+                  type: string
+                source_url:
+                  type: string
+                  format: uri
+                methodology_url:
+                  type: string
+                  format: uri
+                access_method:
+                  type: string
+                  enum:
+                  - public_domain_rank_api
+                cost:
+                  type: string
+                  enum:
+                  - none
+                runtime_rate_limits:
+                  type: string
+                terms_status:
+                  type: string
+                expected_freshness:
+                  type: string
+                  enum:
+                  - daily
+                maintenance_risk:
+                  type: string
+                  enum:
+                  - medium
+                fallback_behavior:
+                  type: string
+                last_verified:
+                  type: string
+                  format: date
+        freshness:
+          type: object
+          required:
+          - cache_status
+          - ttl_seconds
+          properties:
+            cache_status:
+              type: string
+              enum:
+              - hit
+              - miss
+            ttl_seconds:
+              type: integer
+              enum:
+              - 300
+              - 86400
+        checked_at:
+          type: string
+          format: date-time
+        result_count:
+          type:
+          - integer
+          - 'null'
+          enum:
+          - 0
+          - 1
+          description: 1 when ranked, 0 when authoritatively unranked, and null when unknown.
+        empty_result:
+          type: boolean
+          description: True only for an authoritative unranked result, never for unknown.
+        history:
+          type: object
+          required:
+          - collection
+          - complete_daily_series
+          - available
+          properties:
+            collection:
+              type: string
+              enum:
+              - lookup_driven
+            complete_daily_series:
+              type: boolean
+              enum:
+              - false
+            available:
+              type: boolean
+            observations:
+              type: array
+              items:
+                $ref: '#/components/schemas/DomainPopularityObservation'
+    OverviewComponentFreshness:
+      type: object
+      description: Per-component observation status for health, DNS, registration, reputation, and popularity. Cache hits retain the state, timestamp, and reason recorded when the observation was made.
+      properties:
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        checked_at:
+          type: string
+          format: date-time
+        component_count:
+          type: integer
+        fresh_component_count:
+          type: integer
+        degraded_component_count:
+          type: integer
+        components:
+          type: object
+          properties:
+            health:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            dns:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            registration:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            reputation:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            popularity:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

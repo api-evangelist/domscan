@@ -1,0 +1,1379 @@
+openapi: 3.2.0
+info:
+  title: DomScan Pricing API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Pricing
+  description: Scheduled standard-TLD rows from official sources and separate exact-domain quotes. Current public provider coverage and source scope are documented per integration.
+  externalDocs:
+    description: Registrar pricing coverage
+    url: https://domscan.net/domain-pricing/registrars
+paths:
+  /v1/prices:
+    get:
+      tags:
+      - Pricing
+      summary: Get TLD pricing
+      description: Read daily standard-TLD snapshots from verified official registrar APIs or controlled official pages. Exact-domain premium quotes are separate. The input catalog is free when `tlds` is omitted. Otherwise, each unique TLD and selected registrar pair costs one credit; filters reduce planned work and cost.
+      operationId: getPrices
+      parameters:
+      - name: tlds
+        in: query
+        description: Comma-separated unique TLDs (max 20). If omitted, returns the input catalog, not a claim of current source coverage.
+        schema:
+          type: string
+          example: com,net,org
+      - name: registrars
+        in: query
+        description: Comma-separated enabled standard-pricing registrar IDs. Filters reduce pair checks and credits.
+        schema:
+          type: string
+          example: porkbun,dynadot
+      - name: skip_cache
+        in: query
+        description: Compatibility flag. Standard rows still come only from the scheduled snapshot and never trigger full-table ingestion in customer traffic.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: TLD pricing data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-domscan-credits:
+        model: per_pair
+        default: 1
+        variants:
+        - parameter: tlds
+          equals: ''
+          credits: 0
+        note: The input catalog is free when tlds is omitted. Otherwise, 1 credit is charged per unique TLD and selected registrar pair. Registrar filters reduce the planned and charged pair count.
+  /v1/prices/tld/{tld}:
+    get:
+      tags:
+      - Pricing
+      summary: Get specific TLD pricing
+      description: Read the daily standard-price snapshot for one TLD. Rows include official provenance, freshness, and recommendation eligibility. Each selected registrar pair costs one credit.
+      operationId: getTldPricing
+      parameters:
+      - name: tld
+        in: path
+        required: true
+        description: TLD to get pricing for (without dot)
+        schema:
+          type: string
+          example: com
+      - name: registrars
+        in: query
+        description: Comma-separated enabled standard-pricing registrar IDs. Filters reduce pair checks and credits.
+        schema:
+          type: string
+          example: porkbun,dynadot
+      - name: skip_cache
+        in: query
+        description: Compatibility flag. The request does not refresh upstream full-table sources.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: TLD pricing details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TldPricingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-domscan-credits:
+        model: per_pair
+        default: 1
+        note: 1 credit per selected registrar pair for this TLD. Registrar filters reduce the planned and charged pair count.
+  /v1/prices/bulk:
+    post:
+      tags:
+      - Pricing
+      summary: Bulk TLD pricing
+      description: 'Read scheduled standard pricing for up to 50 unique TLDs per HTTP request. Larger portfolios can be split across requests without changing pair billing.
+
+
+        **Credits:** 1 credit per unique TLD and selected registrar pair. Example: 10 TLDs across 2 registrars = 20 credits. A daily workload of 3,000 TLDs across 5 registrars uses 60 bulk requests and 15,000 credits per day, or 450,000 credits over 30 days. Registrar filters reduce the planned and charged pair count.'
+      operationId: bulkPricing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - tlds
+              properties:
+                tlds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 50
+                  description: Array of TLDs to price
+                  example:
+                  - com
+                  - net
+                  - org
+                  - io
+                registrars:
+                  type: array
+                  items:
+                    type: string
+                  description: Enabled standard-pricing registrar IDs. Metadata-only, disabled, or unconfigured registrars are rejected before pair billing.
+                  example:
+                  - porkbun
+                  - dynadot
+                options:
+                  type: object
+                  properties:
+                    skipCache:
+                      type: boolean
+                      default: false
+      responses:
+        '200':
+          description: Bulk pricing results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkPricingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-domscan-credits:
+        model: per_pair
+        default: 1
+        note: 1 credit per unique TLD and selected registrar pair. Registrar filters reduce the planned and charged pair count.
+  /v1/prices/registrars:
+    get:
+      tags:
+      - Pricing
+      summary: List registrar metadata
+      description: List registrar metadata and separately identify enabled standard-table sources and credential-backed exact-domain sources. A listed registrar is not necessarily a pricing integration. Use `pricingIntegrated`, `standardPricingSources`, `exactDomainPricingSources`, and `sourceHealth` to determine current production coverage. Public integration pages are available at `/domain-pricing/registrars`.
+      operationId: getRegistrars
+      externalDocs:
+        description: Connected registrar pricing providers
+        url: https://domscan.net/domain-pricing/registrars
+      responses:
+        '200':
+          description: List of registrars
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrarsResponse'
+              example:
+                success: true
+                data:
+                  registrars:
+                  - id: porkbun
+                    name: Porkbun
+                    website: https://porkbun.com
+                    apiAvailable: true
+                    providerType: registrar
+                    pricingIntegrated: true
+                    pricingIntegration: official_api
+                    standardPricingIntegration: official_api
+                    exactDomainPricingIntegrated: false
+                    pricingModes:
+                    - tld_standard
+                    features:
+                      freeWhoisPrivacy: true
+                      freeDns: true
+                      bulkDiscounts: false
+                  pricingCoverage:
+                    listedRegistrarCount: 120
+                    integratedRegistrarCount: 29
+                    standardPricingSources:
+                    - porkbun
+                    - dynadot
+                    - namesilo
+                    directPricingSources:
+                    - porkbun
+                    - namesilo
+                    - namebright
+                    scrapedPricingSources:
+                    - dynadot
+                    - gandi
+                    - name_com
+                    exactDomainPricingSources:
+                    - cloudflare
+                    - namesilo
+                    - name_com
+                    - spaceship
+                    - vercel
+                    snapshotGeneratedAt: '2026-07-12T10:35:11.735Z'
+                    sourceHealth:
+                    - source: porkbun
+                      registrar: porkbun
+                      configured: true
+                      success: true
+                      sourceType: official_api
+                      tldCount: 907
+                      durationMs: 421
+                      error: null
+                      retainedPreviousSnapshot: false
+                    note: Registrar entries are metadata. Standard and exact-domain integrations are reported separately.
+                  lastUpdated: '2026-07-12T10:35:11.735Z'
+                meta:
+                  requestId: req_example
+                  servedBy: pop=MAD
+                  durationMs: 12
+                  cacheStatus: bypass
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/prices/compare:
+    get:
+      tags:
+      - Pricing
+      summary: Compare domain prices
+      description: Return scheduled standard rows for the domain's TLD plus separate official exact-domain quotes from configured registrars. Premium and availability behavior stays in exact_quotes; missing renewal or transfer values remain null. Each selected registrar costs one credit.
+      operationId: comparePrices
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Full domain name to compare prices for
+        schema:
+          type: string
+          example: example.com
+      - name: registrars
+        in: query
+        description: Comma-separated enabled standard or configured exact-domain registrar IDs. Filters reduce checks and credits.
+        schema:
+          type: string
+          example: porkbun
+      - name: skip_cache
+        in: query
+        description: Compatibility flag for standard rows. Exact-domain adapters still perform their documented live checks.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: Price comparison with recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCompareResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      x-domscan-credits:
+        model: per_pair
+        default: 1
+        note: 1 credit per selected registrar pair for the exact domain. Standard rows and exact quotes remain separate.
+components:
+  schemas:
+    PriceComparisonSummary:
+      type: object
+      description: Additive comparison summary for first-year, renewal, transfer, Cloudflare live status, and renewal-trap risk.
+      properties:
+        first_year_registrar:
+          type:
+          - string
+          - 'null'
+        renewal_registrar:
+          type:
+          - string
+          - 'null'
+        transfer_registrar:
+          type:
+          - string
+          - 'null'
+        first_year_price:
+          type:
+          - number
+          - 'null'
+        renewal_price:
+          type:
+          - number
+          - 'null'
+        transfer_price:
+          type:
+          - number
+          - 'null'
+        first_year_vs_renewal_delta_usd:
+          type:
+          - number
+          - 'null'
+        first_year_vs_renewal_delta_pct:
+          type:
+          - number
+          - 'null'
+        cheapest_register_renews_higher:
+          type: boolean
+        renewal_trap_warning:
+          type: boolean
+        transfer_savings_usd:
+          type:
+          - number
+          - 'null'
+        cloudflare_live_status:
+          type: string
+          enum:
+          - registrable
+          - unavailable
+          - unsupported
+          - not_checked
+          - error
+        recommendation_basis:
+          type: string
+          enum:
+          - lowest_register
+          - renewal_savings
+          - transfer_savings
+          - no_price_data
+          - domain_unavailable
+          - insufficient_coverage
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    PricingMeta:
+      type: object
+      properties:
+        requestId:
+          type: string
+        servedBy:
+          type: string
+        durationMs:
+          type: integer
+        cacheStatus:
+          type: string
+          enum:
+          - hit
+          - miss
+          - stale
+          - bypass
+    PricesResponse:
+      type: object
+      description: TLD pricing response
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            supportedTlds:
+              type: array
+              items:
+                type: string
+              description: Input catalog returned when no tlds query is supplied. It is not a claim of current registrar-source coverage.
+            count:
+              type: integer
+              minimum: 0
+              description: Number of entries in supportedTlds when no tlds query is supplied.
+            hint:
+              type: string
+              description: Localized usage hint returned with the supported TLD input catalog.
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/TldPricing'
+            summary:
+              type: object
+              properties:
+                tldsRequested:
+                  type: integer
+                  description: Legacy count of requested TLDs.
+                tldsWithData:
+                  type: integer
+                  description: Legacy count of TLD results with at least one row.
+                totalPricePoints:
+                  type: integer
+                  description: Legacy count of returned registrar rows, not individual numeric fields.
+                quoteCount:
+                  type: integer
+                  description: Number of returned registrar quote rows across all TLDs.
+                numericPriceFieldCount:
+                  type: integer
+                  description: Number of non-null registration, renewal, and transfer price fields across all quote rows.
+                market_summary:
+                  $ref: '#/components/schemas/PricingMarketSummary'
+                checkAccounting:
+                  $ref: '#/components/schemas/PricingCheckAccounting'
+        meta:
+          $ref: '#/components/schemas/PricingMeta'
+    PriceSummary:
+      type: object
+      description: Additive registrar coverage, freshness, source, confidence, spread, and outlier summary for a TLD price set.
+      properties:
+        registrar_count:
+          type: integer
+        registrar_coverage_ratio:
+          type: number
+        price_points:
+          type: object
+          properties:
+            register:
+              type: integer
+            renew:
+              type: integer
+            transfer:
+              type: integer
+        source_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        confidence_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        freshness:
+          type: object
+          properties:
+            freshest_at:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            oldest_at:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            newest_age_hours:
+              type:
+              - number
+              - 'null'
+            stale_price_count:
+              type: integer
+            unknown_freshness_count:
+              type: integer
+        spread:
+          type: object
+          properties:
+            register_usd:
+              type:
+              - number
+              - 'null'
+            renew_usd:
+              type:
+              - number
+              - 'null'
+            transfer_usd:
+              type:
+              - number
+              - 'null'
+        outlier_count:
+          type: integer
+        recommendation_eligible_registrar_count:
+          type: integer
+        quality_status:
+          type: string
+          enum:
+          - healthy
+          - degraded
+          - insufficient
+        cheapest_register:
+          type:
+          - object
+          - 'null'
+        cheapest_renew:
+          type:
+          - object
+          - 'null'
+        cheapest_transfer:
+          type:
+          - object
+          - 'null'
+    PricingCheckAccounting:
+      type: object
+      description: Transparent pair-check plan and charge. One unique TLD and selected registrar pair costs one credit.
+      properties:
+        plannedChecks:
+          type: integer
+          minimum: 0
+        actualChecks:
+          type: integer
+          minimum: 0
+        successfulRows:
+          type: integer
+          minimum: 0
+        creditsCharged:
+          type: integer
+          minimum: 0
+        creditsPerCheck:
+          type: integer
+          enum:
+          - 1
+        selectedRegistrars:
+          type: array
+          items:
+            type: string
+      required:
+      - plannedChecks
+      - actualChecks
+      - successfulRows
+      - creditsCharged
+      - creditsPerCheck
+      - selectedRegistrars
+    TldPricing:
+      type: object
+      description: Scheduled standard-TLD price rows from enabled official sources. Fields remain null when the source does not publish them. Exact-domain and premium quotes are never mixed into this table.
+      properties:
+        tld:
+          type: string
+          description: Normalized TLD without the leading dot.
+        prices:
+          type: array
+          items:
+            type: object
+            properties:
+              registrar:
+                type: string
+                description: DomScan registrar ID for this row.
+              registrarName:
+                type: string
+                description: Display name for the registrar represented by this row.
+              register:
+                type:
+                - number
+                - 'null'
+                description: Listed standard registration price, or null when unavailable.
+              renew:
+                type:
+                - number
+                - 'null'
+                description: Listed renewal price, or null when unavailable.
+              transfer:
+                type:
+                - number
+                - 'null'
+                description: Listed transfer price, or null when the source does not publish one. DomScan does not infer transfer pricing from registration pricing.
+              currency:
+                type: string
+                enum:
+                - USD
+                description: Currency used for the price fields.
+              promoPrice:
+                type:
+                - number
+                - 'null'
+                description: Optional source-provided promotional registration price.
+              promoDetails:
+                type:
+                - string
+                - 'null'
+                description: Optional source-provided promotion details.
+              features:
+                type: object
+                description: Static registrar metadata, not a per-price source guarantee.
+                properties:
+                  freeWhoisPrivacy:
+                    type: boolean
+                  freeDns:
+                    type: boolean
+              lastUpdated:
+                type:
+                - string
+                - 'null'
+                format: date-time
+                description: Source observation timestamp for this row, not the response generation time.
+              source:
+                type: string
+                enum:
+                - api
+                - cached
+                - fallback
+                description: '`api` means an official structured source and `cached` means a controlled official-page observation stored by the daily job. The response meta.cacheStatus separately reports DomScan cache use.'
+              sourceName:
+                type: string
+                description: Human-readable official source provenance for this row.
+              sourceUrl:
+                type:
+                - string
+                - 'null'
+                format: uri
+                description: Official source documentation or page URL.
+              confidence:
+                type: string
+                enum:
+                - high
+                - medium
+                - low
+                description: DomScan confidence label based on source type, not a guarantee that checkout will match.
+              sourceType:
+                type: string
+                enum:
+                - official_api
+                - official_page
+                - third_party
+                - fallback
+              quoteScope:
+                type: string
+                enum:
+                - tld_standard
+              observedAt:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              recommendationEligible:
+                type: boolean
+              recommendationExclusionReason:
+                type:
+                - string
+                - 'null'
+                enum:
+                - stale
+                - unknown_freshness
+                - fallback
+                - third_party
+                - missing_registration_price
+                - source_error
+        cheapest:
+          type: object
+          description: Lowest returned non-null price for each price type.
+          properties:
+            register:
+              type:
+              - object
+              - 'null'
+            renew:
+              type:
+              - object
+              - 'null'
+            transfer:
+              type:
+              - object
+              - 'null'
+        averagePrice:
+          type: object
+          description: Averages across only the non-null rows returned for each price type.
+          properties:
+            register:
+              type:
+              - number
+              - 'null'
+            renew:
+              type:
+              - number
+              - 'null'
+            transfer:
+              type:
+              - number
+              - 'null'
+        priceRange:
+          type: object
+          description: Minimum and maximum across only the non-null returned rows.
+          properties:
+            register:
+              type:
+              - object
+              - 'null'
+            renew:
+              type:
+              - object
+              - 'null'
+            transfer:
+              type:
+              - object
+              - 'null'
+        lastUpdated:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Newest lastUpdated value among the returned price rows, or null when there are no dated rows. This is not the response generation time.
+        dataQuality:
+          type: object
+          description: Retrieval and confidence metadata for this result.
+          properties:
+            sourcesQueried:
+              type: integer
+              description: Upstream pricing sources queried for this retrieval. This is zero when DomScan serves the TLD from its own cache; registrar-row coverage is reported in price_summary.
+            sourcesSucceeded:
+              type: integer
+              description: Upstream pricing sources that succeeded for this retrieval. This is zero on a DomScan cache hit.
+            cacheHitRate:
+              type: number
+              description: DomScan cache hit ratio for this retrieval.
+            averageConfidence:
+              type: string
+              enum:
+              - high
+              - medium
+              - low
+        price_summary:
+          $ref: '#/components/schemas/PriceSummary'
+        checkAccounting:
+          $ref: '#/components/schemas/PricingCheckAccounting'
+    RegistrarsResponse:
+      type: object
+      description: Registrar metadata with explicit pricing-integration coverage.
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            registrars:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  website:
+                    type: string
+                    format: uri
+                  apiAvailable:
+                    type: boolean
+                    description: Whether the registrar is known to publish an API. This does not mean DomScan integrates its pricing.
+                  providerType:
+                    type: string
+                    enum:
+                    - registrar
+                    - reseller
+                    - hosting_platform
+                    description: Commercial role of the provider. Hosting platforms and resellers are not presented as accredited registrars.
+                  pricingIntegrated:
+                    type: boolean
+                  pricingIntegration:
+                    type:
+                    - string
+                    - 'null'
+                    enum:
+                    - official_api
+                    - official_page
+                    - exact_domain_api
+                    description: Legacy primary integration label. Use standardPricingIntegration, exactDomainPricingIntegrated, and pricingModes when a provider supports both modes.
+                  standardPricingIntegration:
+                    type:
+                    - string
+                    - 'null'
+                    enum:
+                    - official_api
+                    - official_page
+                    description: Official source type for scheduled standard-TLD pricing, or null when standard pricing is not enabled.
+                  exactDomainPricingIntegrated:
+                    type: boolean
+                    description: Whether credential-backed exact-domain quotes are enabled for this provider.
+                  pricingModes:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                      - tld_standard
+                      - exact_domain
+                    description: Every enabled pricing mode for this provider. Providers can expose both modes.
+                  features:
+                    type: object
+                    properties:
+                      freeWhoisPrivacy:
+                        type: boolean
+                      freeDns:
+                        type: boolean
+                      bulkDiscounts:
+                        type: boolean
+            pricingCoverage:
+              type: object
+              properties:
+                listedRegistrarCount:
+                  type: integer
+                integratedRegistrarCount:
+                  type: integer
+                standardPricingSources:
+                  type: array
+                  items:
+                    type: string
+                directPricingSources:
+                  type: array
+                  items:
+                    type: string
+                scrapedPricingSources:
+                  type: array
+                  items:
+                    type: string
+                exactDomainPricingSources:
+                  type: array
+                  items:
+                    type: string
+                snapshotGeneratedAt:
+                  type:
+                  - string
+                  - 'null'
+                  format: date-time
+                sourceHealth:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      source:
+                        type: string
+                      registrar:
+                        type:
+                        - string
+                        - 'null'
+                      configured:
+                        type: boolean
+                      success:
+                        type: boolean
+                      sourceType:
+                        type:
+                        - string
+                        - 'null'
+                      tldCount:
+                        type: integer
+                      durationMs:
+                        type: integer
+                      error:
+                        type:
+                        - string
+                        - 'null'
+                      retainedPreviousSnapshot:
+                        type: boolean
+                      runId:
+                        type: string
+                        description: Immutable ingestion run identifier for this observation.
+                      fetchedAt:
+                        type: string
+                        format: date-time
+                      previousTldCount:
+                        type:
+                        - integer
+                        - 'null'
+                      lastSuccessAt:
+                        type:
+                        - string
+                        - 'null'
+                        format: date-time
+                      contentHash:
+                        type:
+                        - string
+                        - 'null'
+                        description: SHA-256 of the normalized parsed source rows.
+                      schemaFingerprint:
+                        type:
+                        - string
+                        - 'null'
+                        description: Parsed row and operation-field coverage fingerprint.
+                      fieldCoverage:
+                        type: object
+                        properties:
+                          register:
+                            type: integer
+                          renew:
+                            type: integer
+                          transfer:
+                            type: integer
+                note:
+                  type: string
+            lastUpdated:
+              type: string
+              format: date-time
+              description: Time this metadata response was generated, not price freshness.
+        meta:
+          $ref: '#/components/schemas/PricingMeta'
+    TldPricingResponse:
+      type: object
+      description: Single TLD pricing
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/TldPricing'
+        meta:
+          $ref: '#/components/schemas/PricingMeta'
+    CloudflareCompareResult:
+      type: object
+      description: Optional exact-domain Cloudflare Registrar live check. This is additive metadata and does not replace the broader registrar comparison.
+      properties:
+        source:
+          type: string
+          enum:
+          - registrar_api_beta
+        checked:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - registrable
+          - unavailable
+          - unsupported
+          - not_checked
+          - error
+        supported:
+          type:
+          - boolean
+          - 'null'
+        registrable:
+          type:
+          - boolean
+          - 'null'
+        reason:
+          type:
+          - string
+          - 'null'
+        pricing:
+          type:
+          - object
+          - 'null'
+          properties:
+            currency:
+              type:
+              - string
+              - 'null'
+            registrationCost:
+              type:
+              - number
+              - 'null'
+            renewalCost:
+              type:
+              - number
+              - 'null'
+        checkedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    PriceCompareResponse:
+      type: object
+      description: Price comparison for a domain
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            domain:
+              type: string
+            tld:
+              type: string
+            pricing:
+              $ref: '#/components/schemas/TldPricing'
+            recommendation:
+              type:
+              - object
+              - 'null'
+              properties:
+                registrar:
+                  type: string
+                reason:
+                  type: string
+                savings:
+                  type: number
+            recommendation_status:
+              type: string
+              enum:
+              - available
+              - domain_unavailable
+              - insufficient_coverage
+              - no_fresh_prices
+              - availability_unknown
+            cloudflare:
+              $ref: '#/components/schemas/CloudflareCompareResult'
+            exact_quotes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExactDomainQuote'
+            checkAccounting:
+              $ref: '#/components/schemas/PricingCheckAccounting'
+            comparison_summary:
+              $ref: '#/components/schemas/PriceComparisonSummary'
+        meta:
+          $ref: '#/components/schemas/PricingMeta'
+    ExactDomainQuote:
+      type: object
+      description: A separate exact-domain quote from one configured official registrar API. Missing operation prices are never inferred.
+      properties:
+        registrar:
+          type: string
+        sourceType:
+          type: string
+          enum:
+          - official_api
+        sourceName:
+          type: string
+        sourceUrl:
+          type: string
+          format: uri
+        quoteScope:
+          type: string
+          enum:
+          - exact_domain
+        checked:
+          type: boolean
+        configured:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - registrable
+          - unavailable
+          - unsupported
+          - priced
+          - not_checked
+          - error
+        available:
+          type:
+          - boolean
+          - 'null'
+        definitive:
+          type:
+          - boolean
+          - 'null'
+        premium:
+          type:
+          - boolean
+          - 'null'
+        minimumRegistrationYears:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+          description: Registry minimum registration duration when the official exact-domain source exposes it.
+        currency:
+          type:
+          - string
+          - 'null'
+        register:
+          type:
+          - number
+          - 'null'
+        renew:
+          type:
+          - number
+          - 'null'
+        transfer:
+          type:
+          - number
+          - 'null'
+        checkedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        errorCode:
+          type:
+          - string
+          - 'null'
+    BulkPricingResponse:
+      type: object
+      description: Bulk pricing response
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/TldPricing'
+            summary:
+              $ref: '#/components/schemas/PricingMarketSummary'
+            meta:
+              type: object
+        meta:
+          $ref: '#/components/schemas/PricingMeta'
+    PricingMarketSummary:
+      type: object
+      description: Additive aggregate pricing coverage and freshness summary for multi-TLD pricing responses.
+      properties:
+        tlds_requested:
+          type: integer
+        tlds_with_data:
+          type: integer
+        quote_count:
+          type: integer
+        integrated_source_count:
+          type: integer
+        total_price_points:
+          type: integer
+          description: Number of non-null registration, renewal, and transfer price fields. This is not a registrar count.
+        average_registrar_coverage_ratio:
+          type: number
+        stale_tld_count:
+          type: integer
+        fallback_tld_count:
+          type: integer
+        outlier_tld_count:
+          type: integer
+        widest_register_spread_tld:
+          type:
+          - string
+          - 'null'
+        max_register_spread_usd:
+          type:
+          - number
+          - 'null'
+        freshest_price_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        oldest_price_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        checkAccounting:
+          $ref: '#/components/schemas/PricingCheckAccounting'
+  responses:
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    ServiceUnavailable:
+      description: The pricing request could not complete. Any base and supplemental pair charges are refunded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: SOURCE_UNAVAILABLE
+              message: Service temporarily unavailable
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

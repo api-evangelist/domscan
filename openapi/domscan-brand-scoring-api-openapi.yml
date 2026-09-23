@@ -1,0 +1,535 @@
+openapi: 3.2.0
+info:
+  title: DomScan Brand Scoring API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Brand Scoring
+  description: Brand name quality scoring and comparison
+paths:
+  /v1/score:
+    get:
+      tags:
+      - Brand Scoring
+      summary: Score a brand name
+      description: Score a potential brand name on pronounceability, memorability, length, and uniqueness
+      operationId: getDomainScore
+      parameters:
+      - name: name
+        in: query
+        required: false
+        description: Brand name to score. A full domain is also accepted and is reduced to its registrable label, so "brandify.com" scores "brandify".
+        schema:
+          type: string
+          example: brandify
+      - name: domain
+        in: query
+        required: false
+        description: Domain to score, used when name is absent. The registrable label is scored and the parsed label and TLD are echoed back as scored_label and tld.
+        schema:
+          type: string
+          example: brandify.com
+      responses:
+        '200':
+          description: Brand name score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/score/compare:
+    post:
+      tags:
+      - Brand Scoring
+      summary: Compare and rank multiple brand names
+      description: Compare up to 50 candidate brand names and return ranked scores.
+      operationId: compareBrandNames
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - names
+              properties:
+                names:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: string
+                  example:
+                  - brandify
+                  - brandpilot
+                  - brandmint
+      responses:
+        '200':
+          description: Ranked brand name comparison
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  names:
+                    type: array
+                    items:
+                      type: object
+                  best:
+                    type:
+                    - string
+                    - 'null'
+                  ranking:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        score:
+                          type: number
+                        rank:
+                          type: integer
+                  decision_summary:
+                    $ref: '#/components/schemas/ScoreCompareDecisionSummary'
+                  meta:
+                    type: object
+                    properties:
+                      total_compared:
+                        type: integer
+                      valid_scores:
+                        type: integer
+              example:
+                names:
+                - name: brandify
+                  score: 88
+                  grade: A
+                  verdict: Strong
+                - name: brandpilot
+                  score: 82
+                  grade: B+
+                  verdict: Promising
+                best: brandify
+                ranking:
+                - name: brandify
+                  score: 88
+                  rank: 1
+                - name: brandpilot
+                  score: 82
+                  rank: 2
+                decision_summary:
+                  compared_count: 2
+                  best: brandify
+                  runner_up: brandpilot
+                  score_margin: 6
+                  score_spread: 6
+                  tie_breaker: higher_brandability
+                  winning_dimension: brandability
+                meta:
+                  total_compared: 2
+                  valid_scores: 2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 2
+  /v1/score/info:
+    get:
+      tags:
+      - Brand Scoring
+      summary: Get brand scoring methodology details
+      description: Returns scoring dimensions, grade scale, and related scoring endpoints.
+      operationId: getScoreInfo
+      responses:
+        '200':
+          description: Brand scoring reference
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scoring_dimensions:
+                    type: object
+                  grade_scale:
+                    type: object
+                  endpoints:
+                    type: object
+              example:
+                scoring_dimensions:
+                  length:
+                    weight: 0.12
+                    description: Rewards concise names
+                  pronounceability:
+                    weight: 0.18
+                    description: Rewards names that are easy to say
+                grade_scale:
+                  A+: Exceptional
+                  A: Excellent
+                  B: Good
+                  C: Average
+                  D: Weak
+                  F: Poor
+                endpoints:
+                  GET /v1/score?name=<name>: Score a single name
+                  POST /v1/score/compare: Compare multiple names
+                  GET /v1/score/info: Get scoring methodology
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  schemas:
+    ScoreResponse:
+      type: object
+      description: Brand name scoring response
+      properties:
+        name:
+          type: string
+          description: Name scored
+        input:
+          type: string
+          description: The name or domain exactly as supplied by the caller
+          example: brandify.com
+        scored_label:
+          type: string
+          description: Registrable label that was scored. Present only when a full domain was supplied.
+          example: brandify
+        tld:
+          type: string
+          description: Public suffix parsed from the supplied domain. Present only when a full domain was supplied.
+          example: com
+        overall_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Overall score
+        grade:
+          type: string
+          description: Letter grade
+        scores:
+          type: object
+          description: Individual scoring factors
+          properties:
+            length:
+              type: integer
+              description: Length score (shorter = better)
+            pronounceability:
+              type: number
+              description: How easy to pronounce
+            memorability:
+              type: integer
+              description: How memorable
+            spelling:
+              type: integer
+              description: How easy to spell
+            uniqueness:
+              type: integer
+              description: How unique
+            brandability:
+              type: integer
+              description: How brandable
+        score_explanation:
+          $ref: '#/components/schemas/ScoreExplanation'
+        feedback:
+          type: array
+          items:
+            type: string
+          description: Improvement suggestions
+    ScoreDimensionDriver:
+      type: object
+      properties:
+        dimension:
+          type: string
+        score:
+          type: number
+        weight:
+          type: number
+    ScoreExplanation:
+      type: object
+      description: Additive score driver, blocker, weight, and next-grade sensitivity explanation.
+      properties:
+        score_band:
+          type: string
+          enum:
+          - excellent
+          - strong
+          - usable
+          - weak
+        top_strengths:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreDimensionDriver'
+        top_blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreDimensionDriver'
+        weighted_dimensions:
+          type: object
+        most_sensitive_dimension:
+          type: string
+        points_to_next_grade:
+          type:
+          - integer
+          - 'null'
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    ScoreCompareDecisionSummary:
+      type: object
+      description: Additive comparison explanation for winner, margin, spread, and tie-breaker dimension.
+      properties:
+        compared_count:
+          type: integer
+        best:
+          type:
+          - string
+          - 'null'
+        runner_up:
+          type:
+          - string
+          - 'null'
+        score_margin:
+          type:
+          - integer
+          - 'null'
+        score_spread:
+          type: integer
+        tie_breaker:
+          type:
+          - string
+          - 'null'
+        winning_dimension:
+          type:
+          - string
+          - 'null'
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

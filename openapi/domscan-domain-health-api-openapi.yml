@@ -1,0 +1,905 @@
+openapi: 3.2.0
+info:
+  title: DomScan Domain Health API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Domain Health
+  description: Comprehensive domain health analysis including DNS, SSL, and security
+paths:
+  /v1/health:
+    get:
+      tags:
+      - Domain Health
+      summary: Full domain health check
+      description: 'Comprehensive health analysis: DNS configuration, SSL certificates, email authentication records, security headers, and more. Accepts a subdomain (e.g. blog.example.com) as well as a registrable domain. Host-based checks run against the exact hostname, while registration and age data reflect the parent domain. Deprecated SMTP port probing is no longer performed.'
+      operationId: getDomainHealth
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain or subdomain to analyze (e.g. example.com or blog.example.com)
+        schema:
+          type: string
+          example: example.com
+      - name: details
+        in: query
+        description: Include detailed breakdown
+        schema:
+          type: boolean
+          default: true
+      responses:
+        '200':
+          description: Health check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                domain: cloudflare.com
+                health_score: 94
+                grade: A
+                checks:
+                  dns_configured: true
+                  ssl_valid: true
+                  email_deliverable: true
+                  blacklist_status: clean
+                  age_years: 15
+                  registration_stable: true
+                  dnssec_enabled: true
+                enriched:
+                  tls:
+                    grade: A+
+                    protocol: TLSv1.3
+                    cipher: TLS_AES_256_GCM_SHA384
+                    chain_valid: true
+                    days_to_expiry: 72
+                    hostname_match: true
+                    ocsp_stapling: true
+                    grade_reasons:
+                    - TLS 1.3 enabled
+                    - Valid certificate chain
+                  http_versions:
+                    http1_1: true
+                    http2: true
+                    http3: true
+                    alt_svc: h3=":443"; ma=86400
+                    http3_advertised: true
+                    alt_svc_protocols:
+                    - h3
+                    curl_http3_supported: true
+                    h2_alpn_accepted: h2
+                    h3_alpn_accepted: h3
+                  hsts:
+                    reachable: true
+                    final_url: https://cloudflare.com/
+                    status_code: 200
+                    header_present: true
+                    hsts_header: max-age=31536000; includeSubDomains
+                    max_age: 31536000
+                    include_subdomains: true
+                    preload_directive: false
+                    preload_eligible: true
+                    preload_status: preloaded
+                    preloaded_domain: cloudflare.com
+                    preload_bulk: false
+                    issues:
+                    - missing preload directive
+                    errors: []
+                warnings: []
+                recommendations:
+                - Publish the HSTS preload directive if you want preload-list eligibility.
+                checked_at: '2026-04-18T21:00:00Z'
+                details:
+                  dns:
+                    has_a_record: true
+                    has_aaaa_record: true
+                    has_nameservers: true
+                    has_mx_record: true
+                    nameservers:
+                    - ns3.cloudflare.com
+                    - ns5.cloudflare.com
+                    mx_records:
+                    - route1.mx.cloudflare.net
+                    a_records:
+                    - 104.16.132.229
+                    - 104.16.133.229
+                    aaaa_records:
+                    - 2606:4700::6810:84e5
+                    - 2606:4700::6810:85e5
+                  ssl:
+                    https_works: true
+                    certificate_valid: true
+                    days_until_expiry: 72
+                    issuer: Google Trust Services
+                  email:
+                    has_mx: true
+                    has_spf: true
+                    has_dmarc: true
+                    has_dkim_selector: true
+                    spf_record: v=spf1 include:_spf.google.com ~all
+                    dmarc_policy: reject
+                    mx_hosts:
+                    - route1.mx.cloudflare.net
+                  security:
+                    dnssec_enabled: true
+                    has_caa_record: true
+                    caa_issuers:
+                    - digicert.com
+                    - letsencrypt.org
+                    http_to_https_redirect: true
+                    has_security_txt: true
+                    security_txt_fields:
+                    - Contact
+                    - Expires
+                    - Preferred-Languages
+                    security_headers:
+                      has_hsts: true
+                      hsts_max_age: 31536000
+                      has_csp: true
+                      has_x_frame_options: true
+                      has_x_content_type_options: true
+                      has_referrer_policy: true
+                      has_permissions_policy: true
+                      score: 92
+                  age:
+                    registration_date: '2010-07-06T00:00:00Z'
+                    expiration_date: '2030-07-06T00:00:00Z'
+                    last_updated: '2025-07-06T00:00:00Z'
+                    age_days: 5766
+                    age_years: 15
+                    days_until_expiry: 1540
+                    registrar: Cloudflare Registrar
+                  blacklist:
+                    clean: true
+                    status: clean
+                    listed_on: []
+                    checked_lists:
+                    - spamhaus
+                    - surbl
+                    domain_listed_on: []
+                    ip_listed_on: []
+                    check_type: mixed
+                health_checks:
+                - category: dns
+                  name: Authoritative DNS records present
+                  passed: true
+                  score: 100
+                  weight: 15
+                meta:
+                  check_duration_ms: 248
+                  served_by: pop=MAD country=ES
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 3
+  /v1/health/quick:
+    get:
+      tags:
+      - Domain Health
+      summary: Quick health check
+      description: Fast health check focusing on DNS resolution and SSL certificate status. Accepts a subdomain (e.g. blog.example.com) as well as a registrable domain.
+      operationId: getQuickHealth
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain or subdomain to check (e.g. example.com or blog.example.com)
+        schema:
+          type: string
+          example: example.com
+      responses:
+        '200':
+          description: Quick health results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickHealthResponse'
+              example:
+                domain: example.com
+                dns_ok: true
+                https_ok: true
+                checked_at: '2026-04-18T21:00:00Z'
+                meta:
+                  check_duration_ms: 89
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/health/bulk:
+    post:
+      tags:
+      - Domain Health
+      summary: Bulk health check
+      description: 'Check health of multiple domains at once. Use quick=true for faster results with basic DNS/SSL checks only.
+
+
+        **Credits:** 3 credits per domain. Example: 10 domains = 30 credits.'
+      operationId: bulkHealthCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - domains
+              properties:
+                domains:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 10
+                  description: Array of domains or subdomains to check (max 10)
+                  example:
+                  - example.com
+                  - google.com
+                quick:
+                  type: boolean
+                  default: false
+                  description: Use quick check mode (DNS + SSL only)
+      responses:
+        '200':
+          description: Bulk health results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkHealthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 3
+components:
+  schemas:
+    QuickHealthConfidence:
+      type: object
+      description: Additive quick-health confidence object for DNS and HTTPS checks.
+      properties:
+        checks_run:
+          type: array
+          items:
+            type: string
+            enum:
+            - dns
+            - https
+        passed_count:
+          type: integer
+        failed_count:
+          type: integer
+        unknown_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        dns_ok:
+          type:
+          - boolean
+          - 'null'
+        https_ok:
+          type:
+          - boolean
+          - 'null'
+    BulkHealthResponse:
+      type: object
+      description: Bulk health check results
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              health_score:
+                type: integer
+              grade:
+                type: string
+              checks:
+                type: object
+              warnings:
+                type: array
+                items:
+                  type: string
+              error:
+                type: string
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            check_duration_ms:
+              type: integer
+    HealthResponse:
+      type: object
+      description: Comprehensive domain health check response
+      properties:
+        domain:
+          type: string
+          description: Domain checked
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Overall health score
+        grade:
+          type: string
+          enum:
+          - A
+          - B
+          - C
+          - D
+          - F
+          description: Health grade
+        checks:
+          type: object
+          description: Individual check results
+          properties:
+            dns_configured:
+              type: boolean
+            ssl_valid:
+              type: boolean
+            email_deliverable:
+              type: boolean
+            blacklist_status:
+              type: string
+              enum:
+              - clean
+              - listed
+              - unknown
+            age_years:
+              type:
+              - integer
+              - 'null'
+            registration_stable:
+              type: boolean
+            dnssec_enabled:
+              type: boolean
+        enriched:
+          type: object
+          description: 'HLTH-003/006/008/009: additive supplemental probes. Only present when optional enrichment is configured and at least one probe returned data.'
+          properties:
+            tls:
+              type: object
+              description: Full TLS handshake introspection (HLTH-003 / REP-002).
+              properties:
+                grade:
+                  type: string
+                  enum:
+                  - A+
+                  - A
+                  - B
+                  - C
+                  - F
+                protocol:
+                  type:
+                  - string
+                  - 'null'
+                cipher:
+                  type:
+                  - string
+                  - 'null'
+                chain_valid:
+                  type: boolean
+                days_to_expiry:
+                  type: integer
+                hostname_match:
+                  type:
+                  - boolean
+                  - 'null'
+                ocsp_stapling:
+                  type: boolean
+                grade_reasons:
+                  type: array
+                  items:
+                    type: string
+            http_versions:
+              type: object
+              description: 'HLTH-008: HTTP/1.1, HTTP/2, HTTP/3 support.'
+              properties:
+                http1_1:
+                  type: boolean
+                http2:
+                  type: boolean
+                http3:
+                  type: boolean
+                alt_svc:
+                  type:
+                  - string
+                  - 'null'
+                http3_advertised:
+                  type: boolean
+                alt_svc_protocols:
+                  type: array
+                  items:
+                    type: string
+                curl_http3_supported:
+                  type: boolean
+                h2_alpn_accepted:
+                  type:
+                  - string
+                  - 'null'
+                h3_alpn_accepted:
+                  type:
+                  - string
+                  - 'null'
+            hsts:
+              type: object
+              description: 'HLTH-023: live HSTS header and preload-list audit from the proxy.'
+              properties:
+                reachable:
+                  type: boolean
+                final_url:
+                  type:
+                  - string
+                  - 'null'
+                status_code:
+                  type:
+                  - integer
+                  - 'null'
+                header_present:
+                  type: boolean
+                hsts_header:
+                  type:
+                  - string
+                  - 'null'
+                max_age:
+                  type:
+                  - integer
+                  - 'null'
+                include_subdomains:
+                  type:
+                  - boolean
+                  - 'null'
+                preload_directive:
+                  type:
+                  - boolean
+                  - 'null'
+                preload_eligible:
+                  type: boolean
+                preload_status:
+                  type:
+                  - string
+                  - 'null'
+                preloaded_domain:
+                  type:
+                  - string
+                  - 'null'
+                preload_bulk:
+                  type:
+                  - boolean
+                  - 'null'
+                issues:
+                  type: array
+                  items:
+                    type: string
+                errors:
+                  type: array
+                  items:
+                    type: string
+            smtp:
+              type: object
+              deprecated: true
+              description: Deprecated legacy field. Health checks no longer perform SMTP port probes and this field is no longer emitted.
+              properties:
+                host:
+                  type: string
+                port:
+                  type: integer
+                reachable:
+                  type: boolean
+                tls_mode:
+                  type: string
+                  enum:
+                  - implicit
+                  - starttls
+                tls_negotiated:
+                  type: boolean
+                tls_protocol:
+                  type: string
+                tls_cipher:
+                  type: string
+                starttls_offered:
+                  type:
+                  - boolean
+                  - 'null'
+                banner:
+                  type: string
+                error:
+                  type: string
+                  description: Failure detail when neither probed SMTP TLS path responded successfully.
+                fcrdns:
+                  type: object
+                  description: 'HLTH-019: forward-confirmed reverse DNS check for the primary MX hostname.'
+                  properties:
+                    addresses:
+                      type: array
+                      items:
+                        type: string
+                    ptr_hostnames:
+                      type: array
+                      items:
+                        type: string
+                    all_forward_confirmed:
+                      type: boolean
+                    confirmed_addresses:
+                      type: array
+                      items:
+                        type: string
+                    unconfirmed_addresses:
+                      type: array
+                      items:
+                        type: string
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Warning messages
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Improvement recommendations
+        component_summary:
+          $ref: '#/components/schemas/HealthComponentSummary'
+        details:
+          type: object
+          description: Detailed check results
+        health_checks:
+          type: array
+          description: Weighted per-check scoring details. Only present when details are included.
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              name:
+                type: string
+              passed:
+                type: boolean
+              score:
+                type: integer
+              weight:
+                type: integer
+              details:
+                type:
+                - string
+                - 'null'
+        checked_at:
+          type: string
+          format: date-time
+        meta:
+          type: object
+          properties:
+            check_duration_ms:
+              type: integer
+            served_by:
+              type: string
+    QuickHealthResponse:
+      type: object
+      description: Quick health check (DNS + SSL only)
+      properties:
+        domain:
+          type: string
+        dns_ok:
+          type:
+          - boolean
+          - 'null'
+          description: Whether DNS resolves correctly; null when resolver checks were unavailable.
+        https_ok:
+          type:
+          - boolean
+          - 'null'
+          description: Whether HTTPS responds successfully; null when its DNS prerequisite is unknown.
+        dns_complete:
+          type: boolean
+          description: Whether every DNS query needed by the quick check completed.
+        checked_at:
+          type: string
+          format: date-time
+        confidence:
+          $ref: '#/components/schemas/QuickHealthConfidence'
+        meta:
+          type: object
+          properties:
+            check_duration_ms:
+              type: integer
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    HealthComponentSummary:
+      type: object
+      description: Additive full-health rollup for component pass/fail counts, warnings, recommendations, and optional enrichment coverage.
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+          enum:
+          - A
+          - B
+          - C
+          - D
+          - F
+        check_count:
+          type: integer
+        passed_count:
+          type: integer
+        failed_count:
+          type: integer
+        warning_count:
+          type: integer
+        recommendation_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        dns_ok:
+          type: boolean
+        https_ok:
+          type: boolean
+        email_ok:
+          type: boolean
+        blacklist_status:
+          type: string
+          enum:
+          - clean
+          - listed
+          - unknown
+        dnssec_enabled:
+          type: boolean
+        enriched_section_count:
+          type: integer
+        enriched_sections:
+          type: array
+          items:
+            type: string
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy

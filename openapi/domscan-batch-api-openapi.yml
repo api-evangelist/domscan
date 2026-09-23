@@ -1,0 +1,905 @@
+openapi: 3.2.0
+info:
+  title: DomScan Batch API
+  description: DomScan is a domain intelligence API providing domain analysis tools.
+  version: 2.15.0
+  contact:
+    name: DomScan Support
+    url: https://domscan.net
+    email: support@domscan.net
+  termsOfService: https://domscan.net/legal/terms
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: https://domscan.net
+  description: Production server
+security:
+- apiKey: []
+tags:
+- name: Batch
+paths:
+  /v1/domain-discovery/jobs:
+    post:
+      tags:
+      - Batch
+      summary: Create an asynchronous domain discovery job
+      description: Queue one cursor-paginated page from a curated English single-word corpus sourced from iannuttall/unclaimed under the MIT License. Filters are applied before page selection. Every selected word is checked across every requested TLD, and each word-TLD pair counts toward the hard limit of 100 checks per job and uses normal /v1/status pricing. Poll, retrieve results, or cancel the returned job through the existing /v1/batches endpoints. Use next_cursor to continue the filtered search. Unknown outcomes are preserved and are never reported as available.
+      operationId: createDomainDiscoveryJob
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        description: Optional idempotency key for safe job creation retries. Reusing the key with the same payload returns the existing job; reusing it with a different payload returns 409.
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 120
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - tlds
+              properties:
+                tlds:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  description: Supported TLDs to check, from 1 to 5 entries. Values are normalized and duplicates collapse before limits and billing are calculated. Each unique TLD creates one domain check for every word in the page.
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 253
+                    pattern: ^\.?[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$
+                    example: io
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  description: Maximum corpus words to include in this page. limit multiplied by the number of unique TLDs must not exceed 100. By default, DomScan selects the largest page that stays within that cap.
+                cursor:
+                  type: string
+                  minLength: 1
+                  maxLength: 512
+                  description: Opaque server-issued cursor from next_cursor on the previous discovery job. Omit it to start at the first filtered page. The cursor is bound to the corpus version, TLDs, and filter values; changing them returns 400.
+                min_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                  default: 3
+                  description: Minimum corpus word length, inclusive. Must not exceed max_length when both are provided.
+                max_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                  default: 16
+                  description: Maximum corpus word length, inclusive. Must be greater than or equal to min_length when both are provided.
+                singular_only:
+                  type: boolean
+                  default: false
+                  description: When true, exclude corpus entries that match the bundled corpus regular-plural heuristic.
+            example:
+              tlds:
+              - io
+              - ai
+              limit: 50
+              min_length: 4
+              max_length: 8
+              singular_only: true
+      responses:
+        '200':
+          description: Existing discovery batch returned for an idempotent replay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainDiscoveryJobResponse'
+        '202':
+          description: Discovery batch accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainDiscoveryJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '409':
+          description: Idempotency key was reused with different discovery input
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_item
+        default: 1
+        note: Each word-TLD pair uses the normal /v1/status credit cost, currently 1 credit. Billing and any eligible item refunds follow /v1/status behavior.
+  /v1/batches:
+    post:
+      tags:
+      - Batch
+      summary: Create asynchronous API batch
+      description: Queue up to 100 supported public GET API requests. Each item uses normal endpoint pricing, has independent refund settlement, and remains retrievable for 24 hours. An optional HTTPS webhook is signed with the supplied secret.
+      operationId: createApiBatch
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - requests
+              properties:
+                requests:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    $ref: '#/components/schemas/ApiBatchRequestItem'
+                webhook:
+                  type: object
+                  required:
+                  - url
+                  - secret
+                  properties:
+                    url:
+                      type: string
+                      format: uri
+                      maxLength: 2048
+                    secret:
+                      type: string
+                      minLength: 16
+                      maxLength: 256
+                      writeOnly: true
+            example:
+              requests:
+              - path: /v1/status
+                query:
+                  domain: example.com
+                reference: customer-42
+              - path: /v1/dns
+                query:
+                  domain: example.org
+                  type: MX
+              webhook:
+                url: https://example.com/hooks/domscan
+                secret: replace-with-a-private-secret
+      responses:
+        '200':
+          description: Existing batch returned for an idempotent replay
+        '202':
+          description: Batch accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - job
+                properties:
+                  job:
+                    $ref: '#/components/schemas/ApiBatchJob'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '409':
+          description: Idempotency key was reused with a different batch payload
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+        note: Each accepted item uses the normal credit cost of its target endpoint.
+    get:
+      tags:
+      - Batch
+      summary: List asynchronous API batches
+      description: List unexpired batches for the active customer account.
+      operationId: listApiBatches
+      parameters:
+      - name: limit
+        description: Batches to return per page.
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      responses:
+        '200':
+          description: Recent account batches
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - jobs
+                - retention_hours
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiBatchJob'
+                  retention_hours:
+                    type: integer
+                    enum:
+                    - 24
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/batches/{job_id}:
+    parameters:
+    - name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^bat_[a-f0-9]{32}$
+    get:
+      tags:
+      - Batch
+      summary: Get asynchronous API batch
+      description: Get account-scoped batch progress, billing, webhook, and expiration state.
+      operationId: getApiBatch
+      responses:
+        '200':
+          description: Batch status
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - job
+                properties:
+                  job:
+                    $ref: '#/components/schemas/ApiBatchJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+    delete:
+      tags:
+      - Batch
+      summary: Cancel asynchronous API batch
+      description: Cancel pending items and settle their refunds. An item already being processed may finish.
+      operationId: cancelApiBatch
+      responses:
+        '202':
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - job
+                properties:
+                  job:
+                    $ref: '#/components/schemas/ApiBatchJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/batches/{job_id}/results:
+    get:
+      tags:
+      - Batch
+      summary: Get asynchronous API batch results
+      description: Return ordered account-scoped results retained for 24 hours.
+      operationId: getApiBatchResults
+      parameters:
+      - name: job_id
+        description: Batch job identifier returned when the batch was created.
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^bat_[a-f0-9]{32}$
+      - name: after
+        description: Item position to read after, taken from next_after on the previous page. Ignored when format is csv, which returns every item.
+        in: query
+        schema:
+          type: integer
+          minimum: -1
+          default: -1
+      - name: limit
+        description: Items to return per page, from 1 to 100. Ignored when format is csv.
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 100
+      - name: format
+        in: query
+        description: Use csv to download all ordered job items as one RFC 4180 attachment. CSV export ignores after and limit because a batch contains at most 100 items.
+        schema:
+          type: string
+          enum:
+          - json
+          - csv
+          default: json
+      responses:
+        '200':
+          description: Ordered batch results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiBatchResultsResponse'
+            text/csv:
+              schema:
+                type: string
+                description: RFC 4180 CSV with stable request, result, error, billing, and timestamp columns.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+components:
+  responses:
+    Conflict:
+      description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
+    ApiBatchJob:
+      type: object
+      required:
+      - id
+      - status
+      - total
+      - counts
+      - billing
+      - webhook
+      - status_url
+      - results_url
+      - results_csv_url
+      - created_at
+      - updated_at
+      - processing_deadline_at
+      - results_expires_at
+      properties:
+        id:
+          type: string
+          pattern: ^bat_[a-f0-9]{32}$
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - cancelling
+          - completed
+          - completed_with_errors
+          - cancelled
+        total:
+          type: integer
+          minimum: 1
+          maximum: 100
+        counts:
+          type: object
+          required:
+          - pending
+          - processing
+          - succeeded
+          - failed
+          - cancelled
+          properties:
+            pending:
+              type: integer
+            processing:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            cancelled:
+              type: integer
+        billing:
+          type: object
+          required:
+          - credits_charged
+          - credits_refunded
+          - credits_net
+          properties:
+            credits_charged:
+              type: integer
+            credits_refunded:
+              type: integer
+            credits_net:
+              type: integer
+        webhook:
+          type: object
+          required:
+          - configured
+          - status
+          - attempts
+          properties:
+            configured:
+              type: boolean
+            status:
+              type: string
+              enum:
+              - not_configured
+              - waiting
+              - pending
+              - delivering
+              - delivered
+              - failed
+            attempts:
+              type: integer
+        status_url:
+          type: string
+          format: uri
+        results_url:
+          type: string
+          format: uri
+        results_csv_url:
+          type: string
+          format: uri
+        poll_after_ms:
+          type:
+          - integer
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancelled_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        processing_deadline_at:
+          type: string
+          format: date-time
+        results_expires_at:
+          type: string
+          format: date-time
+    ApiBatchRequestItem:
+      type: object
+      required:
+      - path
+      properties:
+        method:
+          type: string
+          enum:
+          - GET
+          default: GET
+          description: Only supported public GET endpoints can be batched.
+        path:
+          type: string
+          description: Exact non-parameterized public API path, without a query string.
+        query:
+          type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              maxItems: 100
+              items:
+                oneOf:
+                - type: string
+                - type: number
+                - type: boolean
+        reference:
+          type: string
+          maxLength: 128
+    ApiBatchResultsResponse:
+      type: object
+      required:
+      - job
+      - results
+      - next_after
+      properties:
+        job:
+          $ref: '#/components/schemas/ApiBatchJob'
+        results:
+          type: array
+          items:
+            type: object
+            required:
+            - position
+            - request
+            - status
+            - attempts
+            - http_status
+            - result
+            - error
+            - billing
+            properties:
+              position:
+                type: integer
+                minimum: 0
+              reference:
+                type:
+                - string
+                - 'null'
+              request:
+                type: object
+                required:
+                - method
+                - path
+                - query
+                properties:
+                  method:
+                    type: string
+                    enum:
+                    - GET
+                  path:
+                    type: string
+                  query:
+                    type: object
+                    additionalProperties: true
+              status:
+                type: string
+                enum:
+                - pending
+                - processing
+                - succeeded
+                - failed
+                - cancelled
+              attempts:
+                type: integer
+              http_status:
+                type:
+                - integer
+                - 'null'
+              result:
+                type:
+                - object
+                - 'null'
+                additionalProperties: true
+              error:
+                type:
+                - object
+                - 'null'
+                additionalProperties: true
+              billing:
+                type: object
+                additionalProperties: true
+              started_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              completed_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+        next_after:
+          type:
+          - integer
+          - 'null'
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    DomainDiscoveryJobResponse:
+      type: object
+      required:
+      - job
+      - discovery
+      properties:
+        job:
+          $ref: '#/components/schemas/ApiBatchJob'
+        discovery:
+          type: object
+          required:
+          - corpus
+          - corpus_version
+          - total_matching_words
+          - page_offset
+          - page_words
+          - domain_checks
+          - tlds
+          - filters
+          - credits_per_domain
+          - next_cursor
+          properties:
+            corpus:
+              type: string
+              enum:
+              - iannuttall/unclaimed
+            corpus_version:
+              type: string
+            total_matching_words:
+              type: integer
+              minimum: 1
+            page_offset:
+              type: integer
+              minimum: 0
+            page_words:
+              type: integer
+              minimum: 1
+              maximum: 100
+            domain_checks:
+              type: integer
+              minimum: 1
+              maximum: 100
+            tlds:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: string
+            filters:
+              type: object
+              required:
+              - min_length
+              - max_length
+              - singular_only
+              properties:
+                min_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                max_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                singular_only:
+                  type: boolean
+            credits_per_domain:
+              type: integer
+              minimum: 0
+              description: Normal /v1/status cost at job creation time.
+            next_cursor:
+              type:
+              - string
+              - 'null'
+              description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'API key for authentication. Get yours free at https://domscan.net. Also accepts Authorization: Bearer header.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Active DomScan browser session. Used by account-management endpoints.
+externalDocs:
+  description: Full API Documentation
+  url: https://domscan.net/docs
+x-rapidapi-product: domscan
+x-domscan-rate-limits:
+  free:
+    general:
+      scope: account
+      sustained_requests_per_minute: 120
+      burst_capacity: 60
+      shared_across_api_keys_and_sessions: true
+    bulk:
+      scope: all bulk endpoints combined
+      account_requests_per_minute: 20
+      network_requests_per_minute: 100
+      ipv6_network_prefix: 56
+  paid:
+    general:
+      scope: API key for key-authenticated requests; IP for browser sessions
+      sustained_requests_per_minute: 600
+      burst_capacity: 120
+    free_bulk_budget_applies: false
+  response:
+    status: 429
+    retry_header: Retry-After
+    headers_on_every_authenticated_response:
+    - X-RateLimit-Plan
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Policy
+    burst_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    policy_header: X-RateLimit-Policy
+x-domscan-response-metadata:
+  compatibility: additive response headers; established JSON success bodies are unchanged
+  headers:
+    X-Request-Id: Unique request identifier for logs and support
+    X-API-Version: DomScan API release version
+    X-Response-Time: Server processing duration in milliseconds
+    X-Credits-Requested: Credits requested before refund settlement
+    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Refunded: Credits returned during settlement
+    X-Credits-Remaining: Authenticated account balance after the request
+    X-Data-Freshness: fresh, cached, stale, mixed, or unknown
+    X-RateLimit-Limit: Active burst capacity
+    X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Plan: Active plan, or not_applicable before authentication
+    X-RateLimit-Policy: Machine-readable active rate policy
