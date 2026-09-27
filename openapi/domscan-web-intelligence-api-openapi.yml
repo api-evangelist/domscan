@@ -2054,7 +2054,605 @@ paths:
         model: per_request
         default: 2
 components:
+  responses:
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    TechServiceUnavailable:
+      description: DomScan could not perform the requested detection work. The request charge is refund-eligible. Target HTTP errors, blocks, empty responses, and target network failures are returned as billable 200 responses with partial analysis metadata instead.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: UPSTREAM_UNAVAILABLE
+              message: Failed to fetch website
+    Gone:
+      description: The invitation has expired and can no longer be accepted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: The pricing request could not complete. Any base and supplemental pair charges are refunded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: SOURCE_UNAVAILABLE
+              message: Service temporarily unavailable
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    TechPaymentRequired:
+      description: Insufficient credits. A technology detection request costs 3 credits.
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 3 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 3
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    Forbidden:
+      description: The signed-in member does not have permission to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   schemas:
+    WebDataMeta:
+      type: object
+      required:
+      - checked_at
+      - cached
+      - fetch_transport
+      properties:
+        checked_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+        fetch_transport:
+          type: string
+          enum:
+          - worker
+          - edge_relay
+        fetch_error:
+          type: string
+          enum:
+          - timeout
+          - network_error
+          description: 'Present only when fetch_state=unknown because the public page lookup timed out or encountered a network error. Values: timeout or network_error.'
+    CategorizeEvidenceSummary:
+      type: object
+      description: Additive evidence provenance showing whether page content was observed, which transport supplied it, and whether a verified cached result was served.
+      required:
+      - analysis_status
+      - content_observed
+      - content_source
+      - cache_status
+      - stale
+      - fetch_transport
+      - response_status
+      - final_url
+      - redirect_count
+      - body_truncated
+      properties:
+        analysis_status:
+          type: string
+          enum:
+          - complete
+          - partial
+        content_observed:
+          type: boolean
+        content_source:
+          type: string
+          enum:
+          - live_html
+          - known_domain
+        cache_status:
+          type: string
+          enum:
+          - miss
+          - hit
+          - stale
+        stale:
+          type: boolean
+        fetch_transport:
+          type:
+          - string
+          - 'null'
+          enum:
+          - direct
+          - relay
+        response_status:
+          type:
+          - integer
+          - 'null'
+        final_url:
+          type: string
+          format: uri
+        redirect_count:
+          type: integer
+          minimum: 0
+        body_truncated:
+          type: boolean
+        unavailable_reason:
+          type: string
+    RedirectsResponse:
+      type: object
+      description: Redirect chain tracing results
+      properties:
+        original_url:
+          type: string
+        final_url:
+          type: string
+        redirect_count:
+          type: integer
+        hops:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              status_code:
+                type: integer
+              location:
+                type: string
+              server:
+                type: string
+              content_type:
+                type: string
+        https_upgrade:
+          type: boolean
+        domain_changed:
+          type: boolean
+        final_status:
+          type: integer
+        final_title:
+          type: string
+        risk_summary:
+          $ref: '#/components/schemas/RedirectRiskSummary'
+        total_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+    TechScanJob:
+      type: object
+      required:
+      - id
+      - status
+      - mode
+      - max_pages
+      - total
+      - counts
+      - billing
+      - status_url
+      - results_url
+      - created_at
+      - updated_at
+      - processing_deadline_at
+      - results_expires_at
+      properties:
+        id:
+          type: string
+          pattern: ^tsj_[a-f0-9]{32}$
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - completed
+          - completed_with_errors
+          - cancelling
+          - cancelled
+          - expired
+        mode:
+          type: string
+          enum:
+          - fast
+          - rendered
+          - deep
+        max_pages:
+          type: integer
+          minimum: 1
+          maximum: 5
+        total:
+          type: integer
+          minimum: 1
+          maximum: 100
+        counts:
+          type: object
+          required:
+          - pending
+          - processing
+          - succeeded
+          - failed
+          - cancelled
+          properties:
+            pending:
+              type: integer
+            processing:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            cancelled:
+              type: integer
+        billing:
+          type: object
+          required:
+          - credits_per_item
+          - credits_charged
+          - credits_refunded
+          - credits_net
+          properties:
+            credits_per_item:
+              type: integer
+              enum:
+              - 3
+              - 6
+              - 9
+            credits_charged:
+              type: integer
+            credits_refunded:
+              type: integer
+            credits_net:
+              type: integer
+        status_url:
+          type: string
+          format: uri
+        results_url:
+          type: string
+          format: uri
+        poll_after_ms:
+          type:
+          - integer
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancelled_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        processing_deadline_at:
+          type: string
+          format: date-time
+        results_expires_at:
+          type: string
+          format: date-time
+    IdentityAssetsResponse:
+      type: object
+      required:
+      - domain
+      - website_url
+      - fetch_state
+      - assets
+      - social_profiles
+      - confidence
+      - evidence
+      - meta
+      properties:
+        domain:
+          type: string
+        website_url:
+          type: string
+          format: uri
+        fetch_state:
+          type: string
+          enum:
+          - ok
+          - blocked
+          - http_error
+          - non_html
+          - empty
+        organization_name:
+          type:
+          - string
+          - 'null'
+        assets:
+          type: object
+          properties:
+            logo_url:
+              type:
+              - string
+              - 'null'
+              format: uri
+            logo_kind:
+              type:
+              - string
+              - 'null'
+              enum:
+              - logo
+              - mask_icon
+              - touch_icon
+              description: The kind of candidate selected as the best available brand mark.
+            logo_source:
+              type:
+              - string
+              - 'null'
+              description: The source evidence used for the selected brand mark.
+            logo_verification:
+              type:
+              - string
+              - 'null'
+              enum:
+              - verified
+              - unverified
+              description: Whether a bounded direct probe confirmed that the selected brand asset is reachable.
+            favicon_url:
+              type:
+              - string
+              - 'null'
+              format: uri
+            touch_icon_url:
+              type:
+              - string
+              - 'null'
+              format: uri
+            preview_image_url:
+              type:
+              - string
+              - 'null'
+              format: uri
+            manifest_url:
+              type:
+              - string
+              - 'null'
+              format: uri
+            theme_color:
+              type:
+              - string
+              - 'null'
+            candidates:
+              type: array
+              items:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  kind:
+                    type: string
+                  source:
+                    type: string
+                  type:
+                    type:
+                    - string
+                    - 'null'
+                  sizes:
+                    type:
+                    - string
+                    - 'null'
+                  score:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  confidence:
+                    type: string
+                    enum:
+                    - high
+                    - medium
+                    - low
+        social_profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicIdentity'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidence:
+          type: array
+          items:
+            type: string
+        meta:
+          $ref: '#/components/schemas/WebDataMeta'
+    ScrapeBilling:
+      type: object
+      required:
+      - credits_charged
+      - credits_refunded
+      properties:
+        credits_charged:
+          type: integer
+          minimum: 0
+        credits_refunded:
+          type: integer
+          minimum: 0
+        credits_per_item:
+          type: integer
+          enum:
+          - 1
+          - 2
+          - 10
+          - 20
+        credits_net:
+          type: integer
+          minimum: 0
+        policy:
+          type: string
+          enum:
+          - effort_based
+    ReputationEvidenceSummary:
+      type: object
+      description: Additive reputation evidence rollup showing factor coverage, blacklist count, cache state, and prioritized remediation pressure.
+      properties:
+        checks_performed:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        risk_level:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        factor_count:
+          type: integer
+        scored_factor_count:
+          type: integer
+        passing_factor_count:
+          type: integer
+        warning_factor_count:
+          type: integer
+        failing_factor_count:
+          type: integer
+        lowest_scoring_factors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              score:
+                type:
+                - number
+                - 'null'
+              weight:
+                type:
+                - number
+                - 'null'
+        blacklist_listed_count:
+          type: integer
+        recommendation_count:
+          type: integer
+        high_priority_recommendation_count:
+          type: integer
+        grade_capped_by_parking:
+          type: boolean
     UrlIntelligenceResponse:
       type: object
       required:
@@ -2196,1145 +2794,6 @@ components:
                 type: string
         meta:
           $ref: '#/components/schemas/WebDataMeta'
-    TechDetectionSummary:
-      type: object
-      description: Additive detection rollup showing technology counts, category coverage, confidence bands, versions, and evidence source mix.
-      required:
-      - detected_count
-      - category_count
-      - categories
-      - high_confidence_count
-      - medium_confidence_count
-      - low_confidence_count
-      - versioned_count
-      - evidence_sources
-      - catalog_size
-      - catalog_category_count
-      - summary_field_count
-      properties:
-        detected_count:
-          type: integer
-        category_count:
-          type: integer
-        categories:
-          type: array
-          items:
-            type: string
-        high_confidence_count:
-          type: integer
-        medium_confidence_count:
-          type: integer
-        low_confidence_count:
-          type: integer
-        versioned_count:
-          type: integer
-        evidence_sources:
-          type: object
-          required:
-          - header
-          - html
-          - asset_url
-          - network_url
-          - javascript
-          - meta
-          - cookie
-          - url
-          properties:
-            header:
-              type: integer
-            html:
-              type: integer
-            asset_url:
-              type: integer
-            network_url:
-              type: integer
-            javascript:
-              type: integer
-            meta:
-              type: integer
-            cookie:
-              type: integer
-            url:
-              type: integer
-        catalog_size:
-          type: integer
-        catalog_category_count:
-          type: integer
-        summary_field_count:
-          type: integer
-    BulkReputationResult:
-      type: object
-      description: Single result inside a bulk reputation response
-      properties:
-        domain:
-          type: string
-        reputation_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-        grade:
-          type: string
-        risk_level:
-          type: string
-          enum:
-          - low
-          - medium
-          - high
-          - critical
-        reputation_score_confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-          description: Confidence in the score based on how many factor signals returned data.
-        grade_capped_by_parking:
-          type: boolean
-          description: Set when a parking signal clamped the grade to C. Only present when capping occurred.
-        factors:
-          type: object
-          additionalProperties: true
-        evidence_summary:
-          $ref: '#/components/schemas/ReputationEvidenceSummary'
-        recommendations:
-          type: array
-          items:
-            type: object
-            additionalProperties: true
-        meta:
-          type: object
-          additionalProperties: true
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-    TechBulkResponse:
-      type: object
-      required:
-      - results
-      - meta
-      properties:
-        results:
-          type: array
-          items:
-            type: object
-            required:
-            - index
-            - input
-            - status
-            - billing
-            properties:
-              index:
-                type: integer
-                minimum: 0
-              input:
-                type: string
-              reference:
-                type: string
-              status:
-                type: string
-                enum:
-                - succeeded
-                - failed
-              data:
-                type: object
-                description: Sanitized technology scan data for a successful item
-                additionalProperties: true
-              error:
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-                  status:
-                    type: integer
-                  retryable:
-                    type: boolean
-              billing:
-                type: object
-                required:
-                - credits_charged
-                - credits_refunded
-                properties:
-                  credits_charged:
-                    type: integer
-                    minimum: 0
-                  credits_refunded:
-                    type: integer
-                    minimum: 0
-        meta:
-          type: object
-          required:
-          - total
-          - succeeded
-          - failed
-          - mode
-          - max_items
-          - credits_per_item
-          - credits_charged
-          - credits_refunded
-          - analysis_status
-          - detected_count
-          - empty_result
-          - duration_ms
-          properties:
-            total:
-              type: integer
-            succeeded:
-              type: integer
-            failed:
-              type: integer
-            mode:
-              type: string
-              enum:
-              - fast
-            max_items:
-              type: integer
-              example: 10
-            credits_per_item:
-              type: integer
-              example: 3
-            credits_charged:
-              type: integer
-            credits_refunded:
-              type: integer
-            analysis_status:
-              type: string
-              enum:
-              - complete
-              - partial
-            detected_count:
-              type: integer
-              minimum: 0
-            empty_result:
-              type: boolean
-            duration_ms:
-              type: integer
-    ReputationResponse:
-      type: object
-      description: Domain reputation score and factors
-      properties:
-        domain:
-          type: string
-        reputation_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-        grade:
-          type: string
-        risk_level:
-          type: string
-          enum:
-          - low
-          - medium
-          - high
-          - critical
-        reputation_score_confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        grade_capped_by_parking:
-          type: boolean
-          description: Set when a parking signal clamped the displayed grade below the raw weighted score.
-        factors:
-          type: object
-          properties:
-            age:
-              type: object
-              additionalProperties: true
-            dns_security:
-              type: object
-              additionalProperties: true
-            ssl_certificate:
-              type: object
-              additionalProperties: true
-            hosting:
-              type: object
-              additionalProperties: true
-            web_presence:
-              type: object
-              additionalProperties: true
-            blacklists:
-              type: object
-              additionalProperties: true
-            email_config:
-              type: object
-              additionalProperties: true
-          additionalProperties: true
-        recommendations:
-          type: array
-          items:
-            type: object
-            properties:
-              priority:
-                type: string
-                enum:
-                - low
-                - medium
-                - high
-              category:
-                type: string
-              action:
-                type: string
-              impact:
-                type: string
-        evidence_summary:
-          $ref: '#/components/schemas/ReputationEvidenceSummary'
-        meta:
-          type: object
-          properties:
-            query_time_ms:
-              type: integer
-            checks_performed:
-              type: integer
-            cached:
-              type: boolean
-            served_by:
-              type: string
-    IdentityResolutionResponse:
-      type: object
-      required:
-      - query
-      - canonical_domain
-      - website_url
-      - fetch_state
-      - organization
-      - identities
-      - contacts
-      - confidence
-      - evidence
-      - meta
-      properties:
-        query:
-          type: string
-        canonical_domain:
-          type: string
-        website_url:
-          type: string
-          format: uri
-        fetch_state:
-          type: string
-          enum:
-          - ok
-          - blocked
-          - http_error
-          - non_html
-          - empty
-          - unknown
-        organization:
-          type: object
-          properties:
-            name:
-              type:
-              - string
-              - 'null'
-            description:
-              type:
-              - string
-              - 'null'
-        identities:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicIdentity'
-        contacts:
-          type: object
-          properties:
-            emails:
-              type: array
-              items:
-                type: string
-            phones:
-              type: array
-              items:
-                type: string
-        confidence:
-          type: number
-          minimum: 0
-          maximum: 1
-        evidence:
-          type: object
-          required:
-          - declared_identity_count
-          - high_confidence_count
-          - medium_confidence_count
-          - sources
-          properties:
-            declared_identity_count:
-              type: integer
-              minimum: 0
-            high_confidence_count:
-              type: integer
-              minimum: 0
-            medium_confidence_count:
-              type: integer
-              minimum: 0
-            sources:
-              type: array
-              items:
-                type: string
-        meta:
-          $ref: '#/components/schemas/WebDataMeta'
-    CompanyEvidenceSummary:
-      type: object
-      description: Additive company evidence provenance summary for source coverage, confidence, social profiles, email provider, and cache state.
-      properties:
-        sources:
-          type: array
-          items:
-            type: string
-        source_count:
-          type: integer
-        confidence:
-          type: number
-          minimum: 0
-          maximum: 1
-        confidence_label:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        company_field_count:
-          type: integer
-        social_profile_count:
-          type: integer
-        email_provider_detected:
-          type: boolean
-        website_technology_count:
-          type: integer
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    IdentityAssetsResponse:
-      type: object
-      required:
-      - domain
-      - website_url
-      - fetch_state
-      - assets
-      - social_profiles
-      - confidence
-      - evidence
-      - meta
-      properties:
-        domain:
-          type: string
-        website_url:
-          type: string
-          format: uri
-        fetch_state:
-          type: string
-          enum:
-          - ok
-          - blocked
-          - http_error
-          - non_html
-          - empty
-        organization_name:
-          type:
-          - string
-          - 'null'
-        assets:
-          type: object
-          properties:
-            logo_url:
-              type:
-              - string
-              - 'null'
-              format: uri
-            logo_kind:
-              type:
-              - string
-              - 'null'
-              enum:
-              - logo
-              - mask_icon
-              - touch_icon
-              description: The kind of candidate selected as the best available brand mark.
-            logo_source:
-              type:
-              - string
-              - 'null'
-              description: The source evidence used for the selected brand mark.
-            logo_verification:
-              type:
-              - string
-              - 'null'
-              enum:
-              - verified
-              - unverified
-              description: Whether a bounded direct probe confirmed that the selected brand asset is reachable.
-            favicon_url:
-              type:
-              - string
-              - 'null'
-              format: uri
-            touch_icon_url:
-              type:
-              - string
-              - 'null'
-              format: uri
-            preview_image_url:
-              type:
-              - string
-              - 'null'
-              format: uri
-            manifest_url:
-              type:
-              - string
-              - 'null'
-              format: uri
-            theme_color:
-              type:
-              - string
-              - 'null'
-            candidates:
-              type: array
-              items:
-                type: object
-                properties:
-                  url:
-                    type: string
-                    format: uri
-                  kind:
-                    type: string
-                  source:
-                    type: string
-                  type:
-                    type:
-                    - string
-                    - 'null'
-                  sizes:
-                    type:
-                    - string
-                    - 'null'
-                  score:
-                    type: integer
-                    minimum: 0
-                    maximum: 100
-                  confidence:
-                    type: string
-                    enum:
-                    - high
-                    - medium
-                    - low
-        social_profiles:
-          type: array
-          items:
-            $ref: '#/components/schemas/PublicIdentity'
-        confidence:
-          type: number
-          minimum: 0
-          maximum: 1
-        evidence:
-          type: array
-          items:
-            type: string
-        meta:
-          $ref: '#/components/schemas/WebDataMeta'
-    AgentReadinessResponse:
-      type: object
-      required:
-      - requested_url
-      - final_url
-      - checked_at
-      - outcome
-      - fetch_state
-      - http_status
-      - summary
-      - signals
-      - foundations
-      - dimensions
-      - checks
-      - recommendations
-      - meta
-      properties:
-        requested_url:
-          type: string
-          format: uri
-        final_url:
-          type: string
-          format: uri
-        checked_at:
-          type: string
-          format: date-time
-        outcome:
-          type: string
-          enum:
-          - complete
-          - partial
-          - unavailable
-        fetch_state:
-          type: string
-          enum:
-          - ok
-          - blocked
-          - http_error
-          - non_html
-          - empty
-          - unknown
-        http_status:
-          type:
-          - integer
-          - 'null'
-        summary:
-          type: object
-          required:
-          - coverage
-          - detected_signals
-          - total_signals
-          - score
-          - rating
-          - confidence
-          - passed_checks
-          - warning_checks
-          - failed_checks
-          - unknown_checks
-          - not_applicable_checks
-          description: The readiness score uses conclusive applicable checks. Unknown checks are excluded from the score and reduce the separate confidence percentage.
-          properties:
-            coverage:
-              type: string
-              enum:
-              - broad
-              - multi_channel
-              - single_channel
-              - none_detected
-              - indeterminate
-            detected_signals:
-              type: integer
-              minimum: 0
-              maximum: 12
-            total_signals:
-              type: integer
-              enum:
-              - 12
-            score:
-              type:
-              - integer
-              - 'null'
-              minimum: 0
-              maximum: 100
-            rating:
-              type: string
-              enum:
-              - excellent
-              - good
-              - fair
-              - needs_improvement
-              - indeterminate
-            confidence:
-              type: integer
-              minimum: 0
-              maximum: 100
-            passed_checks:
-              type: integer
-              minimum: 0
-            warning_checks:
-              type: integer
-              minimum: 0
-            failed_checks:
-              type: integer
-              minimum: 0
-            unknown_checks:
-              type: integer
-              minimum: 0
-            not_applicable_checks:
-              type: integer
-              minimum: 0
-        signals:
-          type: object
-          required:
-          - webmcp
-          - remote_mcp
-          - openapi
-          - llms_txt
-          - api_catalog
-          - mcp_server_card
-          - agent_skills
-          - oauth
-          - markdown
-          - web_bot_auth
-          - sitemap_markdown
-          - agent_guide
-          properties:
-            webmcp:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            remote_mcp:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            openapi:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            llms_txt:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            api_catalog:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            mcp_server_card:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            agent_skills:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            oauth:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            markdown:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            web_bot_auth:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            sitemap_markdown:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-            agent_guide:
-              $ref: '#/components/schemas/AgentReadinessSignal'
-        foundations:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/AgentReadinessFoundation'
-        dimensions:
-          type: object
-          required:
-          - discoverability
-          - content
-          - access_policy
-          - capabilities
-          properties:
-            discoverability:
-              $ref: '#/components/schemas/AgentReadinessDimensionScore'
-            content:
-              $ref: '#/components/schemas/AgentReadinessDimensionScore'
-            access_policy:
-              $ref: '#/components/schemas/AgentReadinessDimensionScore'
-            capabilities:
-              $ref: '#/components/schemas/AgentReadinessDimensionScore'
-        checks:
-          type: object
-          additionalProperties:
-            $ref: '#/components/schemas/AgentReadinessCheck'
-        recommendations:
-          type: array
-          items:
-            type: object
-            required:
-            - code
-            - severity
-            properties:
-              code:
-                type: string
-              severity:
-                type: string
-                enum:
-                - high
-                - medium
-                - low
-        meta:
-          type: object
-          required:
-          - cached
-          - fetch_path
-          - duration_ms
-          - probe_count
-          - body_truncated
-          - source_version
-          - last_verified
-          - rubric_version
-          - max_probes
-          properties:
-            cached:
-              type: boolean
-            fetch_path:
-              type: string
-              enum:
-              - primary
-              - fallback
-              - unknown
-            duration_ms:
-              type: integer
-            probe_count:
-              type: integer
-            body_truncated:
-              type: boolean
-            source_version:
-              type: string
-            last_verified:
-              type: string
-              format: date
-            rubric_version:
-              type: string
-            max_probes:
-              type: integer
-              minimum: 1
-    ReputationEvidenceSummary:
-      type: object
-      description: Additive reputation evidence rollup showing factor coverage, blacklist count, cache state, and prioritized remediation pressure.
-      properties:
-        checks_performed:
-          type: integer
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        risk_level:
-          type: string
-          enum:
-          - low
-          - medium
-          - high
-          - critical
-        factor_count:
-          type: integer
-        scored_factor_count:
-          type: integer
-        passing_factor_count:
-          type: integer
-        warning_factor_count:
-          type: integer
-        failing_factor_count:
-          type: integer
-        lowest_scoring_factors:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              score:
-                type:
-                - number
-                - 'null'
-              weight:
-                type:
-                - number
-                - 'null'
-        blacklist_listed_count:
-          type: integer
-        recommendation_count:
-          type: integer
-        high_priority_recommendation_count:
-          type: integer
-        grade_capped_by_parking:
-          type: boolean
-    TechJobResultsResponse:
-      type: object
-      required:
-      - job
-      - results
-      - pagination
-      properties:
-        job:
-          $ref: '#/components/schemas/TechScanJob'
-        results:
-          type: array
-          items:
-            type: object
-            required:
-            - index
-            - input
-            - status
-            - billing
-            properties:
-              index:
-                type: integer
-              input:
-                type: string
-              reference:
-                type: string
-              status:
-                type: string
-                enum:
-                - pending
-                - processing
-                - succeeded
-                - failed
-                - cancelled
-              data:
-                type: object
-                additionalProperties: true
-              error:
-                type: object
-                additionalProperties: true
-              billing:
-                type: object
-                additionalProperties: true
-              analysis_status:
-                type:
-                - string
-                - 'null'
-              detected_count:
-                type:
-                - integer
-                - 'null'
-        pagination:
-          type: object
-          required:
-          - limit
-          - next_cursor
-          - has_more
-          properties:
-            limit:
-              type: integer
-            next_cursor:
-              type:
-              - string
-              - 'null'
-            has_more:
-              type: boolean
-    CategorizeTaxonomyResponse:
-      type: object
-      description: Reference list of DomScan IAB-inspired categories and subcategories used by /v1/categorize.
-      properties:
-        taxonomy:
-          type: string
-          example: domscan-iab-inspired
-        version:
-          type: string
-          example: v1
-        official_iab_taxonomy:
-          type: boolean
-          description: False because DomScan returns IAB-style IDs from its own IAB-inspired taxonomy, not a verbatim official IAB export.
-        inspired_by:
-          type: string
-          example: IAB Tech Lab Content Taxonomy 3.x
-        category_count:
-          type: integer
-          example: 35
-        subcategory_count:
-          type: integer
-          example: 134
-        notes:
-          type: array
-          items:
-            type: string
-        categories:
-          type: array
-          items:
-            type: object
-            properties:
-              category_id:
-                type: string
-                example: IAB22
-              category:
-                type: string
-                description: Category name as returned in /v1/categorize category results.
-                example: E-commerce
-              taxonomy_name:
-                type: string
-                description: DomScan taxonomy label for the category. May differ from category for legacy compatibility.
-                example: Shopping & E-commerce
-              ranked_category:
-                type: boolean
-                description: Whether the category is normally returned in the ranked categories array.
-              subcategories:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    subcategory_id:
-                      type: string
-                      example: IAB22-1
-                    subcategory:
-                      type: string
-                      example: Online Retail
-        meta:
-          type: object
-          additionalProperties: true
-    CategorizeEvidenceSummary:
-      type: object
-      description: Additive evidence provenance showing whether page content was observed, which transport supplied it, and whether a verified cached result was served.
-      required:
-      - analysis_status
-      - content_observed
-      - content_source
-      - cache_status
-      - stale
-      - fetch_transport
-      - response_status
-      - final_url
-      - redirect_count
-      - body_truncated
-      properties:
-        analysis_status:
-          type: string
-          enum:
-          - complete
-          - partial
-        content_observed:
-          type: boolean
-        content_source:
-          type: string
-          enum:
-          - live_html
-          - known_domain
-        cache_status:
-          type: string
-          enum:
-          - miss
-          - hit
-          - stale
-        stale:
-          type: boolean
-        fetch_transport:
-          type:
-          - string
-          - 'null'
-          enum:
-          - direct
-          - relay
-        response_status:
-          type:
-          - integer
-          - 'null'
-        final_url:
-          type: string
-          format: uri
-        redirect_count:
-          type: integer
-          minimum: 0
-        body_truncated:
-          type: boolean
-        unavailable_reason:
-          type: string
-    BulkWebDataResponse:
-      type: object
-      required:
-      - results
-      - meta
-      properties:
-        results:
-          type: array
-          items:
-            type: object
-            required:
-            - input
-            properties:
-              input:
-                type: string
-              data:
-                type: object
-                additionalProperties: true
-              error:
-                $ref: '#/components/schemas/ErrorResponse'
-        meta:
-          type: object
-          properties:
-            total:
-              type: integer
-            succeeded:
-              type: integer
-            failed:
-              type: integer
-            unknown:
-              type: integer
-              description: Number of items returned with fetch_state=unknown; credits for these items are refunded.
-            max_items:
-              type: integer
-              example: 10
-            credits_per_item:
-              type: integer
-              example: 2
-            duration_ms:
-              type: integer
-    BulkReputationResponse:
-      type: object
-      description: Bulk reputation lookup response
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/BulkReputationResult'
-        summary:
-          type: object
-          properties:
-            total:
-              type: integer
-            successful:
-              type: integer
-            failed:
-              type: integer
-            cached:
-              type: integer
-            query_time_ms:
-              type: integer
-        meta:
-          type: object
-          properties:
-            served_by:
-              type: string
     CompanyResponse:
       type: object
       description: Company information extracted from domain
@@ -3412,714 +2871,72 @@ components:
           $ref: '#/components/schemas/CompanyEvidenceSummary'
         meta:
           type: object
-    ScrapeBilling:
+    TechDetectionSummary:
       type: object
+      description: Additive detection rollup showing technology counts, category coverage, confidence bands, versions, and evidence source mix.
       required:
-      - credits_charged
-      - credits_refunded
+      - detected_count
+      - category_count
+      - categories
+      - high_confidence_count
+      - medium_confidence_count
+      - low_confidence_count
+      - versioned_count
+      - evidence_sources
+      - catalog_size
+      - catalog_category_count
+      - summary_field_count
       properties:
-        credits_charged:
+        detected_count:
           type: integer
-          minimum: 0
-        credits_refunded:
+        category_count:
           type: integer
-          minimum: 0
-        credits_per_item:
-          type: integer
-          enum:
-          - 1
-          - 2
-          - 10
-          - 20
-        credits_net:
-          type: integer
-          minimum: 0
-        policy:
-          type: string
-          enum:
-          - effort_based
-    AgentReadinessFoundation:
-      type: object
-      required:
-      - state
-      - evidence
-      properties:
-        state:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-        evidence:
-          type: array
-          items:
-            type: string
-    CategorizeResponse:
-      type: object
-      description: Website categorization results with multi-signal analysis
-      properties:
-        url:
-          type: string
-          description: The URL that was categorized
-        primary_category:
-          type:
-          - string
-          - 'null'
-          description: Top category name
-        primary_category_id:
-          type:
-          - string
-          - 'null'
-          description: IAB-style category ID (e.g., IAB22)
         categories:
           type: array
-          description: Top categories sorted by confidence (max 5)
-          items:
-            type: object
-            properties:
-              category_id:
-                type: string
-                description: IAB-style ID (e.g., IAB22)
-              category:
-                type: string
-                description: Category name
-              subcategory_id:
-                type:
-                - string
-                - 'null'
-                description: Subcategory ID (e.g., IAB22-1)
-              subcategory:
-                type:
-                - string
-                - 'null'
-                description: Subcategory name
-              confidence:
-                type: integer
-                minimum: 0
-                maximum: 100
-              keywords_found:
-                type: array
-                items:
-                  type: string
-                description: Keywords that matched
-              signals:
-                type: array
-                description: Evidence signals that contributed to this category match
-                items:
-                  type: object
-                  properties:
-                    source:
-                      type: string
-                      description: Signal source (keyword_title, schema_org, tld_heuristic, etc.)
-                    evidence:
-                      type: string
-                      description: Human-readable explanation
-        primary_category_confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-          - none
-          description: 'CAT-006: confidence band derived from the top-1 vs top-2 margin. "low" also signals the top category absolute confidence is under 20.'
-        title:
-          type:
-          - string
-          - 'null'
-        description:
-          type:
-          - string
-          - 'null'
-        language:
-          type:
-          - string
-          - 'null'
-        language_confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-          - none
-          description: 'CAT-012: coarse confidence for the detected language.'
-        adult_content:
-          type: boolean
-          description: Whether adult content was detected
-        signals_used:
-          type: integer
-          description: Total number of signals analyzed
-        cached:
-          type: boolean
-          description: Whether result was served from cache
-        total_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-        evidence_summary:
-          $ref: '#/components/schemas/CategorizeEvidenceSummary'
-        meta:
-          type: object
-          properties:
-            served_by:
-              type: string
-            cache_status:
-              type: string
-              enum:
-              - miss
-              - hit
-              - stale
-    AgentReadinessSignal:
-      type: object
-      required:
-      - status
-      - validation
-      - method
-      - checked_url
-      - http_status
-      - evidence
-      - caveats
-      properties:
-        status:
-          type: string
-          enum:
-          - detected
-          - not_detected
-          - unknown
-          - unchecked
-          description: not_detected means only that the documented bounded probes found no signal. It is not proof of absence.
-        validation:
-          type: string
-          enum:
-          - confirmed
-          - advertised
-          - malformed
-          - runtime_required
-          - not_applicable
-        method:
-          type: string
-        checked_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-        http_status:
-          type:
-          - integer
-          - 'null'
-        evidence:
-          type: array
           items:
             type: string
-        caveats:
-          type: array
-          items:
-            type: string
-    AgentReadinessDimensionScore:
-      type: object
-      required:
-      - score
-      - confidence
-      - passed
-      - warned
-      - failed
-      - unknown
-      - not_applicable
-      - checks
-      properties:
-        score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-        confidence:
+        high_confidence_count:
           type: integer
-          minimum: 0
-          maximum: 100
-        passed:
+        medium_confidence_count:
           type: integer
-          minimum: 0
-        warned:
+        low_confidence_count:
           type: integer
-          minimum: 0
-        failed:
+        versioned_count:
           type: integer
-          minimum: 0
-        unknown:
-          type: integer
-          minimum: 0
-        not_applicable:
-          type: integer
-          minimum: 0
-        checks:
-          type: array
-          items:
-            type: string
-    RedirectsResponse:
-      type: object
-      description: Redirect chain tracing results
-      properties:
-        original_url:
-          type: string
-        final_url:
-          type: string
-        redirect_count:
-          type: integer
-        hops:
-          type: array
-          items:
-            type: object
-            properties:
-              url:
-                type: string
-              status_code:
-                type: integer
-              location:
-                type: string
-              server:
-                type: string
-              content_type:
-                type: string
-        https_upgrade:
-          type: boolean
-        domain_changed:
-          type: boolean
-        final_status:
-          type: integer
-        final_title:
-          type: string
-        risk_summary:
-          $ref: '#/components/schemas/RedirectRiskSummary'
-        total_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-    RedirectRiskSummary:
-      type: object
-      description: Additive redirect risk rollup for downgrade, domain change, long chains, tracking parameters, and incomplete chains.
-      properties:
-        risk_level:
-          type: string
-          enum:
-          - low
-          - medium
-          - high
-        risk_flags:
-          type: array
-          items:
-            type: string
-        hop_count:
-          type: integer
-        redirect_count:
-          type: integer
-        https_upgrade:
-          type: boolean
-        https_downgrade:
-          type: boolean
-        domain_changed:
-          type: boolean
-        final_status:
-          type: integer
-        error_present:
-          type: boolean
-        tracking_parameter_hops:
-          type: integer
-    AgentReadinessCheck:
-      type: object
-      required:
-      - id
-      - dimension
-      - state
-      - weight
-      - method
-      - checked_url
-      - http_status
-      - evidence
-      - caveats
-      - reference
-      - maturity
-      properties:
-        id:
-          type: string
-        dimension:
-          type: string
-          enum:
-          - discoverability
-          - content
-          - access_policy
-          - capabilities
-        state:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-          - not_applicable
-        weight:
-          type: integer
-          minimum: 1
-          maximum: 3
-        method:
-          type: string
-        checked_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-        http_status:
-          type:
-          - integer
-          - 'null'
-        evidence:
-          type: array
-          items:
-            type: string
-        caveats:
-          type: array
-          items:
-            type: string
-        reference:
-          type: string
-        maturity:
-          type: string
-          enum:
-          - standard
-          - specification
-          - proposal
-          - draft
-          - practice
-    PublicIdentity:
-      type: object
-      required:
-      - platform
-      - type
-      - url
-      - source
-      - confidence
-      properties:
-        platform:
-          type: string
-          example: github
-        type:
-          type: string
-          enum:
-          - social
-          - developer
-          - creator
-          - app_store
-          - federated
-          - other
-        handle:
-          type:
-          - string
-          - 'null'
-          example: example
-        url:
-          type: string
-          format: uri
-        source:
-          type: string
-          enum:
-          - same_as
-          - rel_me
-          - homepage_link
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-    WebDataMeta:
-      type: object
-      required:
-      - checked_at
-      - cached
-      - fetch_transport
-      properties:
-        checked_at:
-          type: string
-          format: date-time
-        cached:
-          type: boolean
-        fetch_transport:
-          type: string
-          enum:
-          - worker
-          - edge_relay
-        fetch_error:
-          type: string
-          enum:
-          - timeout
-          - network_error
-          description: 'Present only when fetch_state=unknown because the public page lookup timed out or encountered a network error. Values: timeout or network_error.'
-    ScrapeResult:
-      type: object
-      required:
-      - url
-      - final_url
-      - status
-      - outcome
-      - content_type
-      - content
-      - bytes
-      - truncated
-      - redirect_count
-      - attempt_count
-      - duration_ms
-      - fetched_at
-      - headers
-      - rendered
-      properties:
-        url:
-          type: string
-          format: uri
-        final_url:
-          type: string
-          format: uri
-        status:
-          type:
-          - integer
-          - 'null'
-        outcome:
-          type: string
-          enum:
-          - success
-          - blocked
-          - rate_limited
-          - http_error
-          - network_error
-          - unsupported_content
-          - empty
-        content_type:
-          type:
-          - string
-          - 'null'
-        content:
-          type: string
-        bytes:
-          type: integer
-          minimum: 0
-        truncated:
-          type: boolean
-        redirect_count:
-          type: integer
-          minimum: 0
-          maximum: 5
-        attempt_count:
-          type: integer
-          minimum: 1
-          maximum: 2
-        duration_ms:
-          type: integer
-          minimum: 0
-        fetched_at:
-          type: string
-          format: date-time
-        headers:
-          type: object
-          additionalProperties:
-            type: string
-          description: Safe allowlist of response metadata. Authentication and cookie headers are omitted.
-        rendered:
-          type: boolean
-    BulkLookupResponse:
-      type: object
-      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
-      required:
-      - results
-      - meta
-      properties:
-        results:
-          type: array
-          description: Results in the same order as the submitted inputs.
-          items:
-            oneOf:
-            - type: object
-              required:
-              - input
-              - data
-              properties:
-                input:
-                  type: string
-                data:
-                  type: object
-                  additionalProperties: true
-            - type: object
-              required:
-              - input
-              - error
-              properties:
-                input:
-                  type: string
-                error:
-                  type: object
-                  required:
-                  - code
-                  - message
-                  - status
-                  properties:
-                    code:
-                      type: string
-                    message:
-                      type: string
-                    status:
-                      type: integer
-                  additionalProperties: true
-        meta:
+        evidence_sources:
           type: object
           required:
-          - total
-          - succeeded
-          - failed
-          - max_items
-          - credits_per_item
-          - duration_ms
+          - header
+          - html
+          - asset_url
+          - network_url
+          - javascript
+          - meta
+          - cookie
+          - url
           properties:
-            total:
+            header:
               type: integer
-              minimum: 1
-              maximum: 10
-            succeeded:
+            html:
               type: integer
-              minimum: 0
-              maximum: 10
-            failed:
+            asset_url:
               type: integer
-              minimum: 0
-              maximum: 10
-            max_items:
+            network_url:
               type: integer
-              enum:
-              - 10
-            credits_per_item:
+            javascript:
               type: integer
-              minimum: 1
-            duration_ms:
+            meta:
               type: integer
-              minimum: 0
-    TechScanJob:
-      type: object
-      required:
-      - id
-      - status
-      - mode
-      - max_pages
-      - total
-      - counts
-      - billing
-      - status_url
-      - results_url
-      - created_at
-      - updated_at
-      - processing_deadline_at
-      - results_expires_at
-      properties:
-        id:
-          type: string
-          pattern: ^tsj_[a-f0-9]{32}$
-        status:
-          type: string
-          enum:
-          - queued
-          - running
-          - completed
-          - completed_with_errors
-          - cancelling
-          - cancelled
-          - expired
-        mode:
-          type: string
-          enum:
-          - fast
-          - rendered
-          - deep
-        max_pages:
+            cookie:
+              type: integer
+            url:
+              type: integer
+        catalog_size:
           type: integer
-          minimum: 1
-          maximum: 5
-        total:
+        catalog_category_count:
           type: integer
-          minimum: 1
-          maximum: 100
-        counts:
-          type: object
-          required:
-          - pending
-          - processing
-          - succeeded
-          - failed
-          - cancelled
-          properties:
-            pending:
-              type: integer
-            processing:
-              type: integer
-            succeeded:
-              type: integer
-            failed:
-              type: integer
-            cancelled:
-              type: integer
-        billing:
-          type: object
-          required:
-          - credits_per_item
-          - credits_charged
-          - credits_refunded
-          - credits_net
-          properties:
-            credits_per_item:
-              type: integer
-              enum:
-              - 3
-              - 6
-              - 9
-            credits_charged:
-              type: integer
-            credits_refunded:
-              type: integer
-            credits_net:
-              type: integer
-        status_url:
-          type: string
-          format: uri
-        results_url:
-          type: string
-          format: uri
-        poll_after_ms:
-          type:
-          - integer
-          - 'null'
-        created_at:
-          type: string
-          format: date-time
-        started_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        completed_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        cancelled_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        processing_deadline_at:
-          type: string
-          format: date-time
-        results_expires_at:
-          type: string
-          format: date-time
+        summary_field_count:
+          type: integer
     TechStackResponse:
       type: object
       description: Technology stack detection results
@@ -4532,6 +3349,651 @@ components:
             cached_at:
               type: string
               format: date-time
+    TechScanTarget:
+      oneOf:
+      - type: string
+        minLength: 1
+        maxLength: 2048
+      - type: object
+        required:
+        - url
+        additionalProperties: false
+        properties:
+          url:
+            type: string
+            minLength: 1
+            maxLength: 2048
+          reference:
+            type: string
+            minLength: 1
+            maxLength: 128
+    IdentityResolutionResponse:
+      type: object
+      required:
+      - query
+      - canonical_domain
+      - website_url
+      - fetch_state
+      - organization
+      - identities
+      - contacts
+      - confidence
+      - evidence
+      - meta
+      properties:
+        query:
+          type: string
+        canonical_domain:
+          type: string
+        website_url:
+          type: string
+          format: uri
+        fetch_state:
+          type: string
+          enum:
+          - ok
+          - blocked
+          - http_error
+          - non_html
+          - empty
+          - unknown
+        organization:
+          type: object
+          properties:
+            name:
+              type:
+              - string
+              - 'null'
+            description:
+              type:
+              - string
+              - 'null'
+        identities:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicIdentity'
+        contacts:
+          type: object
+          properties:
+            emails:
+              type: array
+              items:
+                type: string
+            phones:
+              type: array
+              items:
+                type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidence:
+          type: object
+          required:
+          - declared_identity_count
+          - high_confidence_count
+          - medium_confidence_count
+          - sources
+          properties:
+            declared_identity_count:
+              type: integer
+              minimum: 0
+            high_confidence_count:
+              type: integer
+              minimum: 0
+            medium_confidence_count:
+              type: integer
+              minimum: 0
+            sources:
+              type: array
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/WebDataMeta'
+    ReputationResponse:
+      type: object
+      description: Domain reputation score and factors
+      properties:
+        domain:
+          type: string
+        reputation_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+        risk_level:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        reputation_score_confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        grade_capped_by_parking:
+          type: boolean
+          description: Set when a parking signal clamped the displayed grade below the raw weighted score.
+        factors:
+          type: object
+          properties:
+            age:
+              type: object
+              additionalProperties: true
+            dns_security:
+              type: object
+              additionalProperties: true
+            ssl_certificate:
+              type: object
+              additionalProperties: true
+            hosting:
+              type: object
+              additionalProperties: true
+            web_presence:
+              type: object
+              additionalProperties: true
+            blacklists:
+              type: object
+              additionalProperties: true
+            email_config:
+              type: object
+              additionalProperties: true
+          additionalProperties: true
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              priority:
+                type: string
+                enum:
+                - low
+                - medium
+                - high
+              category:
+                type: string
+              action:
+                type: string
+              impact:
+                type: string
+        evidence_summary:
+          $ref: '#/components/schemas/ReputationEvidenceSummary'
+        meta:
+          type: object
+          properties:
+            query_time_ms:
+              type: integer
+            checks_performed:
+              type: integer
+            cached:
+              type: boolean
+            served_by:
+              type: string
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
+    PublicIdentity:
+      type: object
+      required:
+      - platform
+      - type
+      - url
+      - source
+      - confidence
+      properties:
+        platform:
+          type: string
+          example: github
+        type:
+          type: string
+          enum:
+          - social
+          - developer
+          - creator
+          - app_store
+          - federated
+          - other
+        handle:
+          type:
+          - string
+          - 'null'
+          example: example
+        url:
+          type: string
+          format: uri
+        source:
+          type: string
+          enum:
+          - same_as
+          - rel_me
+          - homepage_link
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+    RedirectRiskSummary:
+      type: object
+      description: Additive redirect risk rollup for downgrade, domain change, long chains, tracking parameters, and incomplete chains.
+      properties:
+        risk_level:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+        risk_flags:
+          type: array
+          items:
+            type: string
+        hop_count:
+          type: integer
+        redirect_count:
+          type: integer
+        https_upgrade:
+          type: boolean
+        https_downgrade:
+          type: boolean
+        domain_changed:
+          type: boolean
+        final_status:
+          type: integer
+        error_present:
+          type: boolean
+        tracking_parameter_hops:
+          type: integer
+    ScrapeResult:
+      type: object
+      required:
+      - url
+      - final_url
+      - status
+      - outcome
+      - content_type
+      - content
+      - bytes
+      - truncated
+      - redirect_count
+      - attempt_count
+      - duration_ms
+      - fetched_at
+      - headers
+      - rendered
+      properties:
+        url:
+          type: string
+          format: uri
+        final_url:
+          type: string
+          format: uri
+        status:
+          type:
+          - integer
+          - 'null'
+        outcome:
+          type: string
+          enum:
+          - success
+          - blocked
+          - rate_limited
+          - http_error
+          - network_error
+          - unsupported_content
+          - empty
+        content_type:
+          type:
+          - string
+          - 'null'
+        content:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+        redirect_count:
+          type: integer
+          minimum: 0
+          maximum: 5
+        attempt_count:
+          type: integer
+          minimum: 1
+          maximum: 2
+        duration_ms:
+          type: integer
+          minimum: 0
+        fetched_at:
+          type: string
+          format: date-time
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: Safe allowlist of response metadata. Authentication and cookie headers are omitted.
+        rendered:
+          type: boolean
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    BulkWebDataResponse:
+      type: object
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            required:
+            - input
+            properties:
+              input:
+                type: string
+              data:
+                type: object
+                additionalProperties: true
+              error:
+                $ref: '#/components/schemas/ErrorResponse'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            unknown:
+              type: integer
+              description: Number of items returned with fetch_state=unknown; credits for these items are refunded.
+            max_items:
+              type: integer
+              example: 10
+            credits_per_item:
+              type: integer
+              example: 2
+            duration_ms:
+              type: integer
+    BulkReputationResponse:
+      type: object
+      description: Bulk reputation lookup response
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkReputationResult'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            cached:
+              type: integer
+            query_time_ms:
+              type: integer
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+    CategorizeResponse:
+      type: object
+      description: Website categorization results with multi-signal analysis
+      properties:
+        url:
+          type: string
+          description: The URL that was categorized
+        primary_category:
+          type:
+          - string
+          - 'null'
+          description: Top category name
+        primary_category_id:
+          type:
+          - string
+          - 'null'
+          description: IAB-style category ID (e.g., IAB22)
+        categories:
+          type: array
+          description: Top categories sorted by confidence (max 5)
+          items:
+            type: object
+            properties:
+              category_id:
+                type: string
+                description: IAB-style ID (e.g., IAB22)
+              category:
+                type: string
+                description: Category name
+              subcategory_id:
+                type:
+                - string
+                - 'null'
+                description: Subcategory ID (e.g., IAB22-1)
+              subcategory:
+                type:
+                - string
+                - 'null'
+                description: Subcategory name
+              confidence:
+                type: integer
+                minimum: 0
+                maximum: 100
+              keywords_found:
+                type: array
+                items:
+                  type: string
+                description: Keywords that matched
+              signals:
+                type: array
+                description: Evidence signals that contributed to this category match
+                items:
+                  type: object
+                  properties:
+                    source:
+                      type: string
+                      description: Signal source (keyword_title, schema_org, tld_heuristic, etc.)
+                    evidence:
+                      type: string
+                      description: Human-readable explanation
+        primary_category_confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          - none
+          description: 'CAT-006: confidence band derived from the top-1 vs top-2 margin. "low" also signals the top category absolute confidence is under 20.'
+        title:
+          type:
+          - string
+          - 'null'
+        description:
+          type:
+          - string
+          - 'null'
+        language:
+          type:
+          - string
+          - 'null'
+        language_confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          - none
+          description: 'CAT-012: coarse confidence for the detected language.'
+        adult_content:
+          type: boolean
+          description: Whether adult content was detected
+        signals_used:
+          type: integer
+          description: Total number of signals analyzed
+        cached:
+          type: boolean
+          description: Whether result was served from cache
+        total_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        evidence_summary:
+          $ref: '#/components/schemas/CategorizeEvidenceSummary'
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            cache_status:
+              type: string
+              enum:
+              - miss
+              - hit
+              - stale
     ScrapeJob:
       type: object
       required:
@@ -4615,173 +4077,711 @@ components:
         results_expires_at:
           type: string
           format: date-time
-    TechScanTarget:
-      oneOf:
-      - type: string
-        minLength: 1
-        maxLength: 2048
-      - type: object
-        required:
-        - url
-        additionalProperties: false
-        properties:
-          url:
+    TechJobResultsResponse:
+      type: object
+      required:
+      - job
+      - results
+      - pagination
+      properties:
+        job:
+          $ref: '#/components/schemas/TechScanJob'
+        results:
+          type: array
+          items:
+            type: object
+            required:
+            - index
+            - input
+            - status
+            - billing
+            properties:
+              index:
+                type: integer
+              input:
+                type: string
+              reference:
+                type: string
+              status:
+                type: string
+                enum:
+                - pending
+                - processing
+                - succeeded
+                - failed
+                - cancelled
+              data:
+                type: object
+                additionalProperties: true
+              error:
+                type: object
+                additionalProperties: true
+              billing:
+                type: object
+                additionalProperties: true
+              analysis_status:
+                type:
+                - string
+                - 'null'
+              detected_count:
+                type:
+                - integer
+                - 'null'
+        pagination:
+          type: object
+          required:
+          - limit
+          - next_cursor
+          - has_more
+          properties:
+            limit:
+              type: integer
+            next_cursor:
+              type:
+              - string
+              - 'null'
+            has_more:
+              type: boolean
+    AgentReadinessCheck:
+      type: object
+      required:
+      - id
+      - dimension
+      - state
+      - weight
+      - method
+      - checked_url
+      - http_status
+      - evidence
+      - caveats
+      - reference
+      - maturity
+      properties:
+        id:
+          type: string
+        dimension:
+          type: string
+          enum:
+          - discoverability
+          - content
+          - access_policy
+          - capabilities
+        state:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+          - not_applicable
+        weight:
+          type: integer
+          minimum: 1
+          maximum: 3
+        method:
+          type: string
+        checked_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        http_status:
+          type:
+          - integer
+          - 'null'
+        evidence:
+          type: array
+          items:
             type: string
-            minLength: 1
-            maxLength: 2048
-          reference:
+        caveats:
+          type: array
+          items:
             type: string
-            minLength: 1
-            maxLength: 128
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
+        reference:
+          type: string
+        maturity:
+          type: string
+          enum:
+          - standard
+          - specification
+          - proposal
+          - draft
+          - practice
+    AgentReadinessFoundation:
+      type: object
+      required:
+      - state
+      - evidence
+      properties:
+        state:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+        evidence:
+          type: array
+          items:
             type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
+    TechBulkResponse:
+      type: object
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            required:
+            - index
+            - input
+            - status
+            - billing
+            properties:
+              index:
+                type: integer
+                minimum: 0
+              input:
+                type: string
+              reference:
+                type: string
+              status:
+                type: string
+                enum:
+                - succeeded
+                - failed
+              data:
+                type: object
+                description: Sanitized technology scan data for a successful item
+                additionalProperties: true
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  status:
+                    type: integer
+                  retryable:
+                    type: boolean
+              billing:
+                type: object
+                required:
+                - credits_charged
+                - credits_refunded
+                properties:
+                  credits_charged:
+                    type: integer
+                    minimum: 0
+                  credits_refunded:
+                    type: integer
+                    minimum: 0
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - mode
+          - max_items
+          - credits_per_item
+          - credits_charged
+          - credits_refunded
+          - analysis_status
+          - detected_count
+          - empty_result
+          - duration_ms
+          properties:
+            total:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            mode:
+              type: string
+              enum:
+              - fast
+            max_items:
+              type: integer
+              example: 10
+            credits_per_item:
+              type: integer
+              example: 3
+            credits_charged:
+              type: integer
+            credits_refunded:
+              type: integer
+            analysis_status:
+              type: string
+              enum:
+              - complete
+              - partial
+            detected_count:
+              type: integer
+              minimum: 0
+            empty_result:
+              type: boolean
+            duration_ms:
+              type: integer
+    CompanyEvidenceSummary:
+      type: object
+      description: Additive company evidence provenance summary for source coverage, confidence, social profiles, email provider, and cache state.
+      properties:
+        sources:
+          type: array
+          items:
             type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    TechPaymentRequired:
-      description: Insufficient credits. A technology detection request costs 3 credits.
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on the account
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 3 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 3
-              purchase_url: https://domscan.net/billing
-    Gone:
-      description: The invitation has expired and can no longer be accepted.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Forbidden:
-      description: The signed-in member does not have permission to perform this action.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadGateway:
-      description: The public website could not be fetched or returned an unusable response.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: FETCH_ERROR
-              message: Failed to fetch website
-    ServiceUnavailable:
-      description: The pricing request could not complete. Any base and supplemental pair charges are refunded.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: SOURCE_UNAVAILABLE
-              message: Service temporarily unavailable
-    TechServiceUnavailable:
-      description: DomScan could not perform the requested detection work. The request charge is refund-eligible. Target HTTP errors, blocks, empty responses, and target network failures are returned as billable 200 responses with partial analysis metadata instead.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: UPSTREAM_UNAVAILABLE
-              message: Failed to fetch website
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
+        source_count:
+          type: integer
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidence_label:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        company_field_count:
+          type: integer
+        social_profile_count:
+          type: integer
+        email_provider_detected:
+          type: boolean
+        website_technology_count:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+    AgentReadinessResponse:
+      type: object
+      required:
+      - requested_url
+      - final_url
+      - checked_at
+      - outcome
+      - fetch_state
+      - http_status
+      - summary
+      - signals
+      - foundations
+      - dimensions
+      - checks
+      - recommendations
+      - meta
+      properties:
+        requested_url:
+          type: string
+          format: uri
+        final_url:
+          type: string
+          format: uri
+        checked_at:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+        fetch_state:
+          type: string
+          enum:
+          - ok
+          - blocked
+          - http_error
+          - non_html
+          - empty
+          - unknown
+        http_status:
+          type:
+          - integer
+          - 'null'
+        summary:
+          type: object
+          required:
+          - coverage
+          - detected_signals
+          - total_signals
+          - score
+          - rating
+          - confidence
+          - passed_checks
+          - warning_checks
+          - failed_checks
+          - unknown_checks
+          - not_applicable_checks
+          description: The readiness score uses conclusive applicable checks. Unknown checks are excluded from the score and reduce the separate confidence percentage.
+          properties:
+            coverage:
+              type: string
+              enum:
+              - broad
+              - multi_channel
+              - single_channel
+              - none_detected
+              - indeterminate
+            detected_signals:
+              type: integer
+              minimum: 0
+              maximum: 12
+            total_signals:
+              type: integer
+              enum:
+              - 12
+            score:
+              type:
+              - integer
+              - 'null'
+              minimum: 0
+              maximum: 100
+            rating:
+              type: string
+              enum:
+              - excellent
+              - good
+              - fair
+              - needs_improvement
+              - indeterminate
+            confidence:
+              type: integer
+              minimum: 0
+              maximum: 100
+            passed_checks:
+              type: integer
+              minimum: 0
+            warning_checks:
+              type: integer
+              minimum: 0
+            failed_checks:
+              type: integer
+              minimum: 0
+            unknown_checks:
+              type: integer
+              minimum: 0
+            not_applicable_checks:
+              type: integer
+              minimum: 0
+        signals:
+          type: object
+          required:
+          - webmcp
+          - remote_mcp
+          - openapi
+          - llms_txt
+          - api_catalog
+          - mcp_server_card
+          - agent_skills
+          - oauth
+          - markdown
+          - web_bot_auth
+          - sitemap_markdown
+          - agent_guide
+          properties:
+            webmcp:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            remote_mcp:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            openapi:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            llms_txt:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            api_catalog:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            mcp_server_card:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            agent_skills:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            oauth:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            markdown:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            web_bot_auth:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            sitemap_markdown:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+            agent_guide:
+              $ref: '#/components/schemas/AgentReadinessSignal'
+        foundations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AgentReadinessFoundation'
+        dimensions:
+          type: object
+          required:
+          - discoverability
+          - content
+          - access_policy
+          - capabilities
+          properties:
+            discoverability:
+              $ref: '#/components/schemas/AgentReadinessDimensionScore'
+            content:
+              $ref: '#/components/schemas/AgentReadinessDimensionScore'
+            access_policy:
+              $ref: '#/components/schemas/AgentReadinessDimensionScore'
+            capabilities:
+              $ref: '#/components/schemas/AgentReadinessDimensionScore'
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/AgentReadinessCheck'
+        recommendations:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - severity
+            properties:
+              code:
+                type: string
+              severity:
+                type: string
+                enum:
+                - high
+                - medium
+                - low
+        meta:
+          type: object
+          required:
+          - cached
+          - fetch_path
+          - duration_ms
+          - probe_count
+          - body_truncated
+          - source_version
+          - last_verified
+          - rubric_version
+          - max_probes
+          properties:
+            cached:
+              type: boolean
+            fetch_path:
+              type: string
+              enum:
+              - primary
+              - fallback
+              - unknown
+            duration_ms:
+              type: integer
+            probe_count:
+              type: integer
+            body_truncated:
+              type: boolean
+            source_version:
+              type: string
+            last_verified:
+              type: string
+              format: date
+            rubric_version:
+              type: string
+            max_probes:
+              type: integer
+              minimum: 1
+    BulkReputationResult:
+      type: object
+      description: Single result inside a bulk reputation response
+      properties:
+        domain:
+          type: string
+        reputation_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+        risk_level:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+          - critical
+        reputation_score_confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          description: Confidence in the score based on how many factor signals returned data.
+        grade_capped_by_parking:
+          type: boolean
+          description: Set when a parking signal clamped the grade to C. Only present when capping occurred.
+        factors:
+          type: object
+          additionalProperties: true
+        evidence_summary:
+          $ref: '#/components/schemas/ReputationEvidenceSummary'
+        recommendations:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    AgentReadinessSignal:
+      type: object
+      required:
+      - status
+      - validation
+      - method
+      - checked_url
+      - http_status
+      - evidence
+      - caveats
+      properties:
+        status:
+          type: string
+          enum:
+          - detected
+          - not_detected
+          - unknown
+          - unchecked
+          description: not_detected means only that the documented bounded probes found no signal. It is not proof of absence.
+        validation:
+          type: string
+          enum:
+          - confirmed
+          - advertised
+          - malformed
+          - runtime_required
+          - not_applicable
+        method:
+          type: string
+        checked_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        http_status:
+          type:
+          - integer
+          - 'null'
+        evidence:
+          type: array
+          items:
+            type: string
+        caveats:
+          type: array
+          items:
+            type: string
+    AgentReadinessDimensionScore:
+      type: object
+      required:
+      - score
+      - confidence
+      - passed
+      - warned
+      - failed
+      - unknown
+      - not_applicable
+      - checks
+      properties:
+        score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        passed:
+          type: integer
+          minimum: 0
+        warned:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        unknown:
+          type: integer
+          minimum: 0
+        not_applicable:
+          type: integer
+          minimum: 0
+        checks:
+          type: array
+          items:
+            type: string
+    CategorizeTaxonomyResponse:
+      type: object
+      description: Reference list of DomScan IAB-inspired categories and subcategories used by /v1/categorize.
+      properties:
+        taxonomy:
+          type: string
+          example: domscan-iab-inspired
+        version:
+          type: string
+          example: v1
+        official_iab_taxonomy:
+          type: boolean
+          description: False because DomScan returns IAB-style IDs from its own IAB-inspired taxonomy, not a verbatim official IAB export.
+        inspired_by:
+          type: string
+          example: IAB Tech Lab Content Taxonomy 3.x
+        category_count:
+          type: integer
+          example: 35
+        subcategory_count:
+          type: integer
+          example: 134
+        notes:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category_id:
+                type: string
+                example: IAB22
+              category:
+                type: string
+                description: Category name as returned in /v1/categorize category results.
+                example: E-commerce
+              taxonomy_name:
+                type: string
+                description: DomScan taxonomy label for the category. May differ from category for legacy compatibility.
+                example: Shopping & E-commerce
+              ranked_category:
+                type: boolean
+                description: Whether the category is normally returned in the ranked categories array.
+              subcategories:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subcategory_id:
+                      type: string
+                      example: IAB22-1
+                    subcategory:
+                      type: string
+                      example: Online Retail
+        meta:
+          type: object
+          additionalProperties: true
   securitySchemes:
     apiKey:
       type: apiKey

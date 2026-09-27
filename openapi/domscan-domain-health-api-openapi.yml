@@ -285,38 +285,90 @@ paths:
         model: per_item
         default: 3
 components:
-  schemas:
-    QuickHealthConfidence:
-      type: object
-      description: Additive quick-health confidence object for DNS and HTTPS checks.
-      properties:
-        checks_run:
-          type: array
-          items:
+  responses:
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
             type: string
             enum:
-            - dns
-            - https
-        passed_count:
-          type: integer
-        failed_count:
-          type: integer
-        unknown_count:
-          type: integer
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        dns_ok:
-          type:
-          - boolean
-          - 'null'
-        https_ok:
-          type:
-          - boolean
-          - 'null'
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+  schemas:
     BulkHealthResponse:
       type: object
       description: Bulk health check results
@@ -349,6 +401,118 @@ components:
               type: integer
             check_duration_ms:
               type: integer
+    QuickHealthResponse:
+      type: object
+      description: Quick health check (DNS + SSL only)
+      properties:
+        domain:
+          type: string
+        dns_ok:
+          type:
+          - boolean
+          - 'null'
+          description: Whether DNS resolves correctly; null when resolver checks were unavailable.
+        https_ok:
+          type:
+          - boolean
+          - 'null'
+          description: Whether HTTPS responds successfully; null when its DNS prerequisite is unknown.
+        dns_complete:
+          type: boolean
+          description: Whether every DNS query needed by the quick check completed.
+        checked_at:
+          type: string
+          format: date-time
+        confidence:
+          $ref: '#/components/schemas/QuickHealthConfidence'
+        meta:
+          type: object
+          properties:
+            check_duration_ms:
+              type: integer
+    QuickHealthConfidence:
+      type: object
+      description: Additive quick-health confidence object for DNS and HTTPS checks.
+      properties:
+        checks_run:
+          type: array
+          items:
+            type: string
+            enum:
+            - dns
+            - https
+        passed_count:
+          type: integer
+        failed_count:
+          type: integer
+        unknown_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        dns_ok:
+          type:
+          - boolean
+          - 'null'
+        https_ok:
+          type:
+          - boolean
+          - 'null'
+    HealthComponentSummary:
+      type: object
+      description: Additive full-health rollup for component pass/fail counts, warnings, recommendations, and optional enrichment coverage.
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        grade:
+          type: string
+          enum:
+          - A
+          - B
+          - C
+          - D
+          - F
+        check_count:
+          type: integer
+        passed_count:
+          type: integer
+        failed_count:
+          type: integer
+        warning_count:
+          type: integer
+        recommendation_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        dns_ok:
+          type: boolean
+        https_ok:
+          type: boolean
+        email_ok:
+          type: boolean
+        blacklist_status:
+          type: string
+          enum:
+          - clean
+          - listed
+          - unknown
+        dnssec_enabled:
+          type: boolean
+        enriched_section_count:
+          type: integer
+        enriched_sections:
+          type: array
+          items:
+            type: string
     HealthResponse:
       type: object
       description: Comprehensive domain health check response
@@ -614,35 +778,6 @@ components:
               type: integer
             served_by:
               type: string
-    QuickHealthResponse:
-      type: object
-      description: Quick health check (DNS + SSL only)
-      properties:
-        domain:
-          type: string
-        dns_ok:
-          type:
-          - boolean
-          - 'null'
-          description: Whether DNS resolves correctly; null when resolver checks were unavailable.
-        https_ok:
-          type:
-          - boolean
-          - 'null'
-          description: Whether HTTPS responds successfully; null when its DNS prerequisite is unknown.
-        dns_complete:
-          type: boolean
-          description: Whether every DNS query needed by the quick check completed.
-        checked_at:
-          type: string
-          format: date-time
-        confidence:
-          $ref: '#/components/schemas/QuickHealthConfidence'
-        meta:
-          type: object
-          properties:
-            check_duration_ms:
-              type: integer
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -708,141 +843,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    HealthComponentSummary:
-      type: object
-      description: Additive full-health rollup for component pass/fail counts, warnings, recommendations, and optional enrichment coverage.
-      properties:
-        score:
-          type: integer
-          minimum: 0
-          maximum: 100
-        grade:
-          type: string
-          enum:
-          - A
-          - B
-          - C
-          - D
-          - F
-        check_count:
-          type: integer
-        passed_count:
-          type: integer
-        failed_count:
-          type: integer
-        warning_count:
-          type: integer
-        recommendation_count:
-          type: integer
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        dns_ok:
-          type: boolean
-        https_ok:
-          type: boolean
-        email_ok:
-          type: boolean
-        blacklist_status:
-          type: string
-          enum:
-          - clean
-          - listed
-          - unknown
-        dnssec_enabled:
-          type: boolean
-        enriched_section_count:
-          type: integer
-        enriched_sections:
-          type: array
-          items:
-            type: string
-  responses:
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    InternalError:
-      description: Unexpected service error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

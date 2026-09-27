@@ -906,87 +906,144 @@ paths:
         model: per_request
         default: 0
 components:
+  responses:
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    EmailServiceUnavailable:
+      description: The invitation email could not be delivered, so the invitation was cancelled.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+    Gone:
+      description: The invitation has expired and can no longer be accepted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    Forbidden:
+      description: The signed-in member does not have permission to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    CreditBalanceResponse:
+    CustomerAccountSummaryResponse:
       type: object
-      description: Current balance for the authenticated customer account
-      additionalProperties: false
       required:
-      - credits
-      - free_credits
-      - paid_credits
-      - free_cycle_month
+      - account
       properties:
-        credits:
-          type: integer
-          description: Current total account credit balance
-        free_credits:
-          type: integer
-          description: Current account monthly free-credit balance
-        paid_credits:
-          type: integer
-          description: Current account paid credit balance
-        free_cycle_month:
-          type:
-          - string
-          - 'null'
-          description: Current monthly free-credit cycle in YYYY-MM format
-    EmailPreferencesUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        categories:
-          type: object
-          additionalProperties: false
-          minProperties: 1
-          properties:
-            required_transactional:
-              type: boolean
-              enum:
-              - true
-            requested_alerts:
-              type: boolean
-            onboarding:
-              type: boolean
-            lifecycle:
-              type: boolean
-            digest:
-              type: boolean
-            product_updates:
-              type: boolean
-            reactivation:
-              type: boolean
-        marketing_suppressed:
+        success:
           type: boolean
-        preferred_locale:
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
+    ApiKeyCreateResponse:
+      type: object
+      description: Newly created API key (full key only shown once)
+      properties:
+        id:
           type: string
-          enum:
-          - en
-          - es
-          - de
-          - fr
-          - pt
-          - ja
-          - zh
-          - ar
-          - it
-          - ko
-          - ru
-          - nl
-          - tr
-          - pl
-          - sv
-        frequency:
-          type: object
-          additionalProperties: false
-          minProperties: 1
-          properties:
-            digest:
-              type: string
-              enum:
-              - weekly
-              - monthly
+        key:
+          type: string
+          description: Full API key - save this, shown only once!
+        prefix:
+          type: string
+        name:
+          type: string
+        account_credits:
+          type: integer
+          description: Current account-level credit balance after the key is created
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
     ApiKeysResponse:
       type: object
       description: API keys and credit balance for the active customer account
@@ -1042,79 +1099,32 @@ components:
               - owner
               - admin
               - guest
-    SuccessResponse:
-      type: object
+    EmailConsentState:
+      type:
+      - object
+      - 'null'
       required:
-      - success
+      - enabled
+      - source
+      - policy_version
+      - occurred_at
       properties:
-        success:
+        enabled:
           type: boolean
-          example: true
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
+        source:
+          type: string
+          enum:
+          - dashboard
+          - signup
+          - email_unsubscribe
+          - admin
+          - import
+          - system
+        policy_version:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
     CustomerAccountMember:
       type: object
       required:
@@ -1150,24 +1160,87 @@ components:
           format: date-time
         is_current_user:
           type: boolean
-    CustomerAccountResponse:
+    EmailPreferences:
       type: object
       required:
-      - account
-      - members
-      - invitations
+      - policy_version
+      - categories
+      - marketing_suppressed
+      - preferred_locale
+      - frequency
+      - consent
       properties:
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/CustomerAccountMember'
-        invitations:
-          type: array
-          description: Visible to the account owner. Admins and guests receive an empty array.
-          items:
-            $ref: '#/components/schemas/AccountInvitation'
+        policy_version:
+          type: string
+          example: '2026-08-02'
+        categories:
+          $ref: '#/components/schemas/EmailPreferenceCategories'
+        marketing_suppressed:
+          type: boolean
+          default: false
+        preferred_locale:
+          type: string
+          enum:
+          - en
+          - es
+          - de
+          - fr
+          - pt
+          - ja
+          - zh
+          - ar
+          - it
+          - ko
+          - ru
+          - nl
+          - tr
+          - pl
+          - sv
+          default: en
+        frequency:
+          type: object
+          required:
+          - digest
+          properties:
+            digest:
+              type: string
+              enum:
+              - weekly
+              - monthly
+              default: monthly
+        consent:
+          type: object
+          required:
+          - requested_alerts
+          - onboarding
+          - lifecycle
+          - digest
+          - product_updates
+          - reactivation
+          - all_marketing
+          properties:
+            requested_alerts:
+              $ref: '#/components/schemas/EmailConsentState'
+            onboarding:
+              $ref: '#/components/schemas/EmailConsentState'
+            lifecycle:
+              $ref: '#/components/schemas/EmailConsentState'
+            digest:
+              $ref: '#/components/schemas/EmailConsentState'
+            product_updates:
+              $ref: '#/components/schemas/EmailConsentState'
+            reactivation:
+              $ref: '#/components/schemas/EmailConsentState'
+            all_marketing:
+              $ref: '#/components/schemas/EmailConsentState'
+    SuccessResponse:
+      type: object
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+          example: true
     ApiRequestLogSummary:
       type: object
       required:
@@ -1248,15 +1321,6 @@ components:
         expiresAt:
           type: string
           format: date-time
-    CustomerAccountSummaryResponse:
-      type: object
-      required:
-      - account
-      properties:
-        success:
-          type: boolean
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
     EmailPreferenceCategories:
       type: object
       additionalProperties: false
@@ -1292,98 +1356,37 @@ components:
         reactivation:
           type: boolean
           default: true
-    ApiKeyCreateResponse:
-      type: object
-      description: Newly created API key (full key only shown once)
-      properties:
-        id:
-          type: string
-        key:
-          type: string
-          description: Full API key - save this, shown only once!
-        prefix:
-          type: string
-        name:
-          type: string
-        account_credits:
-          type: integer
-          description: Current account-level credit balance after the key is created
-        created_at:
-          type: string
-          format: date-time
-        message:
-          type: string
-    AccountInvitation:
+    CustomerAccountSummary:
       type: object
       required:
       - id
-      - email
-      - status
-      - expires_at
-      - created_at
+      - name
+      - role
       properties:
         id:
           type: string
           format: uuid
-        email:
+        name:
           type: string
-          format: email
-        status:
+        role:
           type: string
           enum:
-          - pending
-          - accepted
-          - cancelled
-          - expired
-        expires_at:
+          - owner
+          - admin
+          - guest
+        owner_user_id:
           type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
-    ApiRequestLogDetail:
-      allOf:
-      - $ref: '#/components/schemas/ApiRequestLogSummary'
-      - type: object
-        required:
-        - request
-        - response
-        properties:
-          request:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON request preview.
-          response:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON response preview.
-          aiHelp:
-            type:
-            - object
-            - 'null'
-            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
-            required:
-            - answer
-            - language
-            - model
-            - createdAt
-            properties:
-              answer:
-                type: string
-                description: Plain-text analysis of the logged request.
-              language:
-                type: string
-                description: Language the analysis was written in.
-              model:
-                type: string
-                description: Model that produced the analysis.
-              createdAt:
-                type: string
-                format: date-time
+          format: uuid
+        member_count:
+          type: integer
+          minimum: 1
+    AccountInvitationCreateResponse:
+      type: object
+      required:
+      - invitation
+      properties:
+        invitation:
+          $ref: '#/components/schemas/AccountInvitation'
     UsageResponse:
       type: object
       description: API usage statistics for the active customer account
@@ -1433,32 +1436,99 @@ components:
               type: number
             credits_change_pct:
               type: number
-    EmailConsentState:
-      type:
-      - object
-      - 'null'
+    AccountInvitation:
+      type: object
       required:
-      - enabled
-      - source
-      - policy_version
-      - occurred_at
+      - id
+      - email
+      - status
+      - expires_at
+      - created_at
       properties:
-        enabled:
-          type: boolean
-        source:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        status:
           type: string
           enum:
-          - dashboard
-          - signup
-          - email_unsubscribe
-          - admin
-          - import
-          - system
-        policy_version:
-          type: string
-        occurred_at:
+          - pending
+          - accepted
+          - cancelled
+          - expired
+        expires_at:
           type: string
           format: date-time
+        created_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
     CreditsResponse:
       type: object
       description: Active customer account credit balance and transaction history
@@ -1504,55 +1574,34 @@ components:
               created_at:
                 type: string
                 format: date-time
-    CustomerAccountSummary:
+    EmailPreferencesUpdate:
       type: object
-      required:
-      - id
-      - name
-      - role
+      additionalProperties: false
+      minProperties: 1
       properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        role:
-          type: string
-          enum:
-          - owner
-          - admin
-          - guest
-        owner_user_id:
-          type: string
-          format: uuid
-        member_count:
-          type: integer
-          minimum: 1
-    AccountInvitationCreateResponse:
-      type: object
-      required:
-      - invitation
-      properties:
-        invitation:
-          $ref: '#/components/schemas/AccountInvitation'
-    EmailPreferences:
-      type: object
-      required:
-      - policy_version
-      - categories
-      - marketing_suppressed
-      - preferred_locale
-      - frequency
-      - consent
-      properties:
-        policy_version:
-          type: string
-          example: '2026-08-02'
         categories:
-          $ref: '#/components/schemas/EmailPreferenceCategories'
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            required_transactional:
+              type: boolean
+              enum:
+              - true
+            requested_alerts:
+              type: boolean
+            onboarding:
+              type: boolean
+            lifecycle:
+              type: boolean
+            digest:
+              type: boolean
+            product_updates:
+              type: boolean
+            reactivation:
+              type: boolean
         marketing_suppressed:
           type: boolean
-          default: false
         preferred_locale:
           type: string
           enum:
@@ -1571,150 +1620,101 @@ components:
           - tr
           - pl
           - sv
-          default: en
         frequency:
           type: object
-          required:
-          - digest
+          additionalProperties: false
+          minProperties: 1
           properties:
             digest:
               type: string
               enum:
               - weekly
               - monthly
-              default: monthly
-        consent:
-          type: object
-          required:
-          - requested_alerts
-          - onboarding
-          - lifecycle
-          - digest
-          - product_updates
-          - reactivation
-          - all_marketing
-          properties:
-            requested_alerts:
-              $ref: '#/components/schemas/EmailConsentState'
-            onboarding:
-              $ref: '#/components/schemas/EmailConsentState'
-            lifecycle:
-              $ref: '#/components/schemas/EmailConsentState'
-            digest:
-              $ref: '#/components/schemas/EmailConsentState'
-            product_updates:
-              $ref: '#/components/schemas/EmailConsentState'
-            reactivation:
-              $ref: '#/components/schemas/EmailConsentState'
-            all_marketing:
-              $ref: '#/components/schemas/EmailConsentState'
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Gone:
-      description: The invitation has expired and can no longer be accepted.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Forbidden:
-      description: The signed-in member does not have permission to perform this action.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    EmailServiceUnavailable:
-      description: The invitation email could not be delivered, so the invitation was cancelled.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
+    CreditBalanceResponse:
+      type: object
+      description: Current balance for the authenticated customer account
+      additionalProperties: false
+      required:
+      - credits
+      - free_credits
+      - paid_credits
+      - free_cycle_month
+      properties:
+        credits:
+          type: integer
+          description: Current total account credit balance
+        free_credits:
+          type: integer
+          description: Current account monthly free-credit balance
+        paid_credits:
+          type: integer
+          description: Current account paid credit balance
+        free_cycle_month:
+          type:
+          - string
+          - 'null'
+          description: Current monthly free-credit cycle in YYYY-MM format
+    ApiRequestLogDetail:
+      allOf:
+      - $ref: '#/components/schemas/ApiRequestLogSummary'
+      - type: object
+        required:
+        - request
+        - response
+        properties:
+          request:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON request preview.
+          response:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON response preview.
+          aiHelp:
+            type:
+            - object
+            - 'null'
+            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
+            required:
+            - answer
+            - language
+            - model
+            - createdAt
+            properties:
+              answer:
+                type: string
+                description: Plain-text analysis of the logged request.
+              language:
+                type: string
+                description: Language the analysis was written in.
+              model:
+                type: string
+                description: Model that produced the analysis.
+              createdAt:
+                type: string
+                format: date-time
+    CustomerAccountResponse:
+      type: object
+      required:
+      - account
+      - members
+      - invitations
+      properties:
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAccountMember'
+        invitations:
+          type: array
+          description: Visible to the account owner. Admins and guests receive an empty array.
+          items:
+            $ref: '#/components/schemas/AccountInvitation'
   securitySchemes:
     apiKey:
       type: apiKey

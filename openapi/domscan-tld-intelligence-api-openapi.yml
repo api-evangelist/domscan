@@ -219,130 +219,68 @@ paths:
         model: per_request
         default: 0
 components:
-  responses:
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
   schemas:
-    CompareDecisionSummary:
+    TldsListResponse:
       type: object
-      description: Additive domain comparison explanation for winner, runner-up, margin, and deciding factor.
+      description: List of supported TLDs
       properties:
-        compared_count:
+        tlds:
+          type: array
+          items:
+            type: object
+            properties:
+              tld:
+                type: string
+                description: Effective public suffix used for comparison
+              type:
+                type: string
+                enum:
+                - gTLD
+                - ccTLD
+                - newTLD
+                - idn
+              name:
+                type: string
+              rdap_supported:
+                type: boolean
+              trust_tier:
+                type: string
+                enum:
+                - premium
+                - standard
+                - economy
+                - suspicious
+              popularity_rank:
+                type: integer
+              registration_usd:
+                type: number
+        total:
           type: integer
-        best_overall:
-          type:
-          - string
-          - 'null'
-        best_available:
-          type:
-          - string
-          - 'null'
-        runner_up:
-          type:
-          - string
-          - 'null'
-        rank_margin:
-          type:
-          - integer
-          - 'null'
-        score_margin:
-          type:
-          - integer
-          - 'null'
-        value_margin_usd:
-          type:
-          - number
-          - 'null'
-        availability_used:
-          type: boolean
-        winning_factor:
-          type:
-          - string
-          - 'null'
-          enum:
-          - availability
-          - brand_score
-          - valuation
-          - tld_trust
-          - overall_rank
-        tie_breaker:
-          type:
-          - string
-          - 'null'
+        by_type:
+          type: object
+          properties:
+            gTLD:
+              type: integer
+            ccTLD:
+              type: integer
+            newTLD:
+              type: integer
+            idn:
+              type: integer
+        by_trust_tier:
+          type: object
+          properties:
+            premium:
+              type: integer
+            standard:
+              type: integer
+            economy:
+              type: integer
+        use_case:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
     CoverageResponse:
       type: object
       description: TLD coverage information
@@ -416,98 +354,6 @@ components:
               type: integer
             live:
               type: boolean
-    TldDetailResponse:
-      type: object
-      description: Detailed TLD information
-      properties:
-        tld:
-          type: string
-        type:
-          type: string
-          enum:
-          - gTLD
-          - ccTLD
-          - newTLD
-          - idn
-        name:
-          type: string
-        description:
-          type: string
-        introduced:
-          type: integer
-        operator:
-          type:
-          - string
-          - 'null'
-        country:
-          type:
-          - string
-          - 'null'
-        restrictions:
-          type: string
-        rdap_supported:
-          type: boolean
-        rdap_endpoint:
-          type:
-          - string
-          - 'null'
-        idn_supported:
-          type: boolean
-        dnssec_supported:
-          type: boolean
-        pricing:
-          type: object
-          properties:
-            registration_usd:
-              type: number
-            renewal_usd:
-              type: number
-            transfer_usd:
-              type: number
-            currency:
-              type: string
-              enum:
-              - USD
-            source:
-              type: string
-              enum:
-              - estimate
-              - market_average
-        popularity:
-          type: object
-          properties:
-            rank:
-              type: integer
-            tier:
-              type: string
-              enum:
-              - top10
-              - top50
-              - top100
-              - other
-            use_cases:
-              type: array
-              items:
-                type: string
-        trust:
-          type: object
-          properties:
-            score:
-              type: number
-            tier:
-              type: string
-              enum:
-              - premium
-              - standard
-              - economy
-              - suspicious
-            notes:
-              type:
-              - string
-              - 'null'
-        meta:
-          type: object
-          additionalProperties: true
     CompareDomainsResponse:
       type: object
       description: Domain comparison results
@@ -634,6 +480,144 @@ components:
               type: integer
             total_ms:
               type: integer
+    TldDetailResponse:
+      type: object
+      description: Detailed TLD information
+      properties:
+        tld:
+          type: string
+        type:
+          type: string
+          enum:
+          - gTLD
+          - ccTLD
+          - newTLD
+          - idn
+        name:
+          type: string
+        description:
+          type: string
+        introduced:
+          type: integer
+        operator:
+          type:
+          - string
+          - 'null'
+        country:
+          type:
+          - string
+          - 'null'
+        restrictions:
+          type: string
+        rdap_supported:
+          type: boolean
+        rdap_endpoint:
+          type:
+          - string
+          - 'null'
+        idn_supported:
+          type: boolean
+        dnssec_supported:
+          type: boolean
+        pricing:
+          type: object
+          properties:
+            registration_usd:
+              type: number
+            renewal_usd:
+              type: number
+            transfer_usd:
+              type: number
+            currency:
+              type: string
+              enum:
+              - USD
+            source:
+              type: string
+              enum:
+              - estimate
+              - market_average
+        popularity:
+          type: object
+          properties:
+            rank:
+              type: integer
+            tier:
+              type: string
+              enum:
+              - top10
+              - top50
+              - top100
+              - other
+            use_cases:
+              type: array
+              items:
+                type: string
+        trust:
+          type: object
+          properties:
+            score:
+              type: number
+            tier:
+              type: string
+              enum:
+              - premium
+              - standard
+              - economy
+              - suspicious
+            notes:
+              type:
+              - string
+              - 'null'
+        meta:
+          type: object
+          additionalProperties: true
+    CompareDecisionSummary:
+      type: object
+      description: Additive domain comparison explanation for winner, runner-up, margin, and deciding factor.
+      properties:
+        compared_count:
+          type: integer
+        best_overall:
+          type:
+          - string
+          - 'null'
+        best_available:
+          type:
+          - string
+          - 'null'
+        runner_up:
+          type:
+          - string
+          - 'null'
+        rank_margin:
+          type:
+          - integer
+          - 'null'
+        score_margin:
+          type:
+          - integer
+          - 'null'
+        value_margin_usd:
+          type:
+          - number
+          - 'null'
+        availability_used:
+          type: boolean
+        winning_factor:
+          type:
+          - string
+          - 'null'
+          enum:
+          - availability
+          - brand_score
+          - valuation
+          - tld_trust
+          - overall_rank
+        tie_breaker:
+          type:
+          - string
+          - 'null'
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -699,67 +683,83 @@ components:
           - retryable
           - request_id
           - docs_url
-    TldsListResponse:
-      type: object
-      description: List of supported TLDs
-      properties:
-        tlds:
-          type: array
-          items:
-            type: object
-            properties:
-              tld:
-                type: string
-                description: Effective public suffix used for comparison
-              type:
-                type: string
-                enum:
-                - gTLD
-                - ccTLD
-                - newTLD
-                - idn
-              name:
-                type: string
-              rdap_supported:
-                type: boolean
-              trust_tier:
-                type: string
-                enum:
-                - premium
-                - standard
-                - economy
-                - suspicious
-              popularity_rank:
-                type: integer
-              registration_usd:
-                type: number
-        total:
-          type: integer
-        by_type:
-          type: object
-          properties:
-            gTLD:
-              type: integer
-            ccTLD:
-              type: integer
-            newTLD:
-              type: integer
-            idn:
-              type: integer
-        by_trust_tier:
-          type: object
-          properties:
-            premium:
-              type: integer
-            standard:
-              type: integer
-            economy:
-              type: integer
-        use_case:
-          type: string
-        meta:
-          type: object
-          additionalProperties: true
+  responses:
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

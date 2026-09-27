@@ -41,7 +41,7 @@ tags:
 - OSINT
 - Threat Intelligence
 - MCP
-- agent-native
+- Agent-Native
 tags_raw:
 - domains
 - dns
@@ -60,7 +60,6 @@ apis:
   name: DomScan Agent Readiness API
   description: The Agent Readiness API from DomScan — 1 operation(s) for agent readiness.
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Agent Readiness
   properties:
@@ -78,7 +77,6 @@ apis:
   name: DomScan Batch API
   description: The Batch API from DomScan — 4 operation(s) for batch.
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Batch
   properties:
@@ -96,7 +94,6 @@ apis:
   name: DomScan Brand Protection API
   description: The Brand Protection API from DomScan — 5 operation(s) for brand protection.
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Brand Protection
   properties:
@@ -114,7 +111,6 @@ apis:
   name: DomScan Brand Scoring API
   description: Brand name quality scoring and comparison
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Brand Scoring
   properties:
@@ -132,7 +128,6 @@ apis:
   name: DomScan Dataset API
   description: Reference datasets and coverage metadata
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Datasets
   tags_raw:
@@ -152,7 +147,6 @@ apis:
   name: DomScan DNS API
   description: DNS record lookup, security analysis, and propagation checking
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - DNS
   properties:
@@ -170,7 +164,6 @@ apis:
   name: DomScan DNS History API
   description: Review lookup-driven, day-level DNS observations from DomScan
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - DNS History
   properties:
@@ -188,7 +181,6 @@ apis:
   name: DomScan Domain Availability API
   description: Check if domains are available for registration using RDAP
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Availability
   properties:
@@ -206,7 +198,6 @@ apis:
   name: DomScan Domain Health API
   description: Comprehensive domain health analysis including DNS, SSL, and security
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Health
   properties:
@@ -224,7 +215,6 @@ apis:
   name: DomScan Domain Intelligence API
   description: Domain comparison, scoring, popularity, lifecycle, and profile intelligence
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Intelligence
   properties:
@@ -242,7 +232,6 @@ apis:
   name: DomScan Domain Lifecycle API
   description: Registration lifecycle, expiry, renewal, and deletion timing signals
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Lifecycle
   properties:
@@ -260,7 +249,6 @@ apis:
   name: DomScan Domain Suggestions API
   description: AI-powered domain name suggestions with availability checking
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Suggestions
   properties:
@@ -278,7 +266,6 @@ apis:
   name: DomScan Domain Valuation API
   description: Algorithmic domain value estimation based on multiple factors
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Domain Valuation
   properties:
@@ -296,7 +283,6 @@ apis:
   name: DomScan Email API
   description: Email blacklist checking, disposable domain detection, and email validation
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Email
   properties:
@@ -314,7 +300,6 @@ apis:
   name: DomScan Email Authentication API
   description: Build and validate SPF, DMARC, and DKIM records
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Email Authentication
   properties:
@@ -332,7 +317,6 @@ apis:
   name: DomScan Hosting Detection API
   description: Detect hosting providers, CDN, WAF, and email providers
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Hosting Detection
   properties:
@@ -350,7 +334,6 @@ apis:
   name: DomScan Infrastructure API
   description: Network and hosting infrastructure discovery
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Infrastructure
   properties:
@@ -368,7 +351,6 @@ apis:
   name: DomScan IP Intelligence API
   description: IP geolocation, ASN lookup, and reverse DNS
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - IP Intelligence
   properties:
@@ -386,7 +368,6 @@ apis:
   name: DomScan Meta API
   description: API information and system endpoints
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Meta
   properties:
@@ -404,7 +385,6 @@ apis:
   name: DomScan OSINT API
   description: Open source intelligence tools for domain analysis
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - OSINT
   properties:
@@ -423,7 +403,6 @@ apis:
   description: >-
     Privacy-first phone number validation and formatting against bundled numbering-plan metadata
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Phone Intelligence
   properties:
@@ -443,7 +422,6 @@ apis:
     Scheduled standard-TLD rows from official sources and separate exact-domain quotes. Current public
     provider coverage and source scope are documented per integration.
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Pricing
   properties:
@@ -461,7 +439,6 @@ apis:
   name: DomScan RDAP API
   description: Typed RDAP lookups and related registration analysis
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - RDAP
   tags_raw:
@@ -482,7 +459,6 @@ apis:
   name: DomScan Recipes API
   description: Compound API endpoints bundling multiple services with credit savings
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Recipes
   properties:
@@ -500,7 +476,6 @@ apis:
   name: DomScan Security API
   description: Security posture, reputation, exposure, and vulnerability intelligence
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Security
   properties:
@@ -518,7 +493,6 @@ apis:
   name: DomScan Social API
   description: Social media handle availability checking
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Social
   properties:
@@ -536,7 +510,6 @@ apis:
   name: DomScan SSL Analysis API
   description: SSL certificate grading, chain analysis, and expiry monitoring
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - SSL Analysis
   properties:
@@ -554,7 +527,6 @@ apis:
   name: DomScan SSL API
   description: TLS certificate, protocol, and transport security checks
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - SSL
   properties:
@@ -572,7 +544,6 @@ apis:
   name: DomScan SSL Certificates API
   description: Certificate transparency search and subdomain discovery
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - SSL Certificates
   properties:
@@ -590,7 +561,6 @@ apis:
   name: DomScan TLD Intelligence API
   description: TLD information, comparison, and coverage data
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - TLD Intelligence
   properties:
@@ -608,7 +578,6 @@ apis:
   name: DomScan Typosquatting API
   description: Detect typosquatting and brand impersonation risks
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Typosquatting
   properties:
@@ -626,7 +595,6 @@ apis:
   name: DomScan User API
   description: API key management and usage statistics (requires login)
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - User
   properties:
@@ -644,7 +612,6 @@ apis:
   name: DomScan Watchlist API
   description: Domain monitoring for expiration and availability (requires login)
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Watchlist
   properties:
@@ -662,7 +629,6 @@ apis:
   name: DomScan Web Intelligence API
   description: Tech stack detection, categorization, and reputation
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - Web Intelligence
   properties:
@@ -680,7 +646,6 @@ apis:
   name: DomScan WHOIS/RDAP API
   description: Domain registration data lookup via RDAP and WHOIS
   humanURL: https://domscan.net/docs
-  baseURL: https://domscan.net
   tags:
   - WHOIS/RDAP
   properties:

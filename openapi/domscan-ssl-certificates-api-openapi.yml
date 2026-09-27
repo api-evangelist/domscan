@@ -353,18 +353,6 @@ paths:
         note: 4 credits by default; 5 credits when verify=true.
 components:
   responses:
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -418,6 +406,18 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -495,24 +495,6 @@ components:
           description: Newest valid first_seen value among returned entries, or null.
         warning_count:
           type: integer
-    CertificatePagination:
-      type: object
-      description: Offset cursor pagination for certificate transparency results.
-      properties:
-        limit:
-          type: integer
-        offset:
-          type: integer
-        returned:
-          type: integer
-        total:
-          type: integer
-        has_more:
-          type: boolean
-        next_cursor:
-          type:
-          - string
-          - 'null'
     SubdomainsResponse:
       type: object
       description: Best-effort public hostname evidence. This response is not a complete inventory and can include the apex when a source returns it.
@@ -719,6 +701,24 @@ components:
           - string
           - 'null'
         warning_code:
+          type:
+          - string
+          - 'null'
+    CertificatePagination:
+      type: object
+      description: Offset cursor pagination for certificate transparency results.
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        returned:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+        next_cursor:
           type:
           - string
           - 'null'
