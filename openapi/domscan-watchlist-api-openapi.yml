@@ -220,6 +220,65 @@ paths:
         default: 1
 components:
   schemas:
+    WatchlistCheckResponse:
+      type: object
+      description: Watchlist check results
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            available:
+              type: integer
+            expiring_soon:
+              type: integer
+            registered:
+              type: integer
+        alerts:
+          type: object
+          properties:
+            newly_available:
+              type: array
+              items:
+                type: string
+            expiring_soon:
+              type: array
+              items:
+                type: object
+        checked_at:
+          type: string
+          format: date-time
+    WatchedDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+        added_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - registered
+          - available
+          - expiring_soon
+          - unknown
+        last_checked:
+          type: string
+          format: date-time
+        expiry_date:
+          type: string
+          format: date-time
+        days_until_expiry:
+          type: integer
+        notify_email:
+          type: string
+          format: email
     WatchlistAddResponse:
       type: object
       properties:
@@ -233,6 +292,17 @@ components:
             $ref: '#/components/schemas/WatchedDomain'
         total:
           type: integer
+    AvailableDomainsResponse:
+      type: object
+      properties:
+        available_domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        total:
+          type: integer
+        message:
+          type: string
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -322,77 +392,25 @@ components:
           type: integer
         threshold_days:
           type: integer
-    WatchlistCheckResponse:
-      type: object
-      description: Watchlist check results
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        summary:
-          type: object
-          properties:
-            total:
-              type: integer
-            available:
-              type: integer
-            expiring_soon:
-              type: integer
-            registered:
-              type: integer
-        alerts:
-          type: object
-          properties:
-            newly_available:
-              type: array
-              items:
-                type: string
-            expiring_soon:
-              type: array
-              items:
-                type: object
-        checked_at:
-          type: string
-          format: date-time
-    AvailableDomainsResponse:
-      type: object
-      properties:
-        available_domains:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        total:
-          type: integer
-        message:
-          type: string
-    WatchedDomain:
-      type: object
-      properties:
-        domain:
-          type: string
-        added_at:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum:
-          - registered
-          - available
-          - expiring_soon
-          - unknown
-        last_checked:
-          type: string
-          format: date-time
-        expiry_date:
-          type: string
-          format: date-time
-        days_until_expiry:
-          type: integer
-        notify_email:
-          type: string
-          format: email
   responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -428,24 +446,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:

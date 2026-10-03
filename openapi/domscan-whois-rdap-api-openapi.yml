@@ -710,213 +710,53 @@ paths:
         model: per_request
         default: 3
 components:
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    BadGateway:
-      description: The public website could not be fetched or returned an unusable response.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: FETCH_ERROR
-              message: Failed to fetch website
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   schemas:
-    RdapResponse:
+    DomainProfileSourceSummary:
       type: object
-      description: RDAP lookup response wrapper
+      description: Additive profile provenance summary showing RDAP, WHOIS fallback, or cache source coverage.
       properties:
-        query:
-          type: string
-        type:
+        source:
           type: string
           enum:
-          - domain
-          - ip
-          - autnum
-        status:
+          - rdap
+          - whois
+          - dns
+          - cache
+          - unknown
+        authoritative_source:
           type: string
           enum:
-          - registered
-          - available
-          - found
-          - not_found
-        rdap:
+          - rdap
+          - whois
+          - dns
+          - unknown
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        fallback_used:
+          type: boolean
+        relay_configured:
+          type: boolean
+        registered:
           type:
-          - object
+          - boolean
           - 'null'
-          additionalProperties: true
-        entity_summary:
-          $ref: '#/components/schemas/RdapEntitySummary'
-        dns_status:
-          type: object
-          description: DNS evidence used when domain RDAP is temporarily unavailable and a best-effort fallback response is returned.
-          properties:
-            checked:
-              type: boolean
-            has_nameservers:
-              type: boolean
-            resolvable:
-              type: boolean
-            error:
-              type: string
-        lookup_summary:
-          $ref: '#/components/schemas/RdapLookupSummary'
-        meta:
-          type: object
-          description: Response metadata and fallback warnings.
-          additionalProperties: true
-    BulkLookupResponse:
-      type: object
-      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
-      required:
-      - results
-      - meta
-      properties:
-        results:
+        status_count:
+          type: integer
+        nameserver_count:
+          type: integer
+        event_count:
+          type: integer
+        date_fields_present:
           type: array
-          description: Results in the same order as the submitted inputs.
           items:
-            oneOf:
-            - type: object
-              required:
-              - input
-              - data
-              properties:
-                input:
-                  type: string
-                data:
-                  type: object
-                  additionalProperties: true
-            - type: object
-              required:
-              - input
-              - error
-              properties:
-                input:
-                  type: string
-                error:
-                  type: object
-                  required:
-                  - code
-                  - message
-                  - status
-                  properties:
-                    code:
-                      type: string
-                    message:
-                      type: string
-                    status:
-                      type: integer
-                  additionalProperties: true
-        meta:
-          type: object
-          required:
-          - total
-          - succeeded
-          - failed
-          - max_items
-          - credits_per_item
-          - duration_ms
-          properties:
-            total:
-              type: integer
-              minimum: 1
-              maximum: 10
-            succeeded:
-              type: integer
-              minimum: 0
-              maximum: 10
-            failed:
-              type: integer
-              minimum: 0
-              maximum: 10
-            max_items:
-              type: integer
-              enum:
-              - 10
-            credits_per_item:
-              type: integer
-              minimum: 1
-            duration_ms:
-              type: integer
-              minimum: 0
+            type: string
+        contact_field_count:
+          type: integer
+        privacy_detected:
+          type: boolean
     DomainProfileResponse:
       type: object
       description: Normalized domain profile
@@ -1024,6 +864,87 @@ components:
         meta:
           type: object
           additionalProperties: true
+    RdapResponse:
+      type: object
+      description: RDAP lookup response wrapper
+      properties:
+        query:
+          type: string
+        type:
+          type: string
+          enum:
+          - domain
+          - ip
+          - autnum
+        status:
+          type: string
+          enum:
+          - registered
+          - available
+          - found
+          - not_found
+        rdap:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        entity_summary:
+          $ref: '#/components/schemas/RdapEntitySummary'
+        dns_status:
+          type: object
+          description: DNS evidence used when domain RDAP is temporarily unavailable and a best-effort fallback response is returned.
+          properties:
+            checked:
+              type: boolean
+            has_nameservers:
+              type: boolean
+            resolvable:
+              type: boolean
+            error:
+              type: string
+        lookup_summary:
+          $ref: '#/components/schemas/RdapLookupSummary'
+        meta:
+          type: object
+          description: Response metadata and fallback warnings.
+          additionalProperties: true
+    RdapEntitySummary:
+      type:
+      - object
+      - 'null'
+      description: Typed extraction of public RDAP entities by role, including abuse, registrar, registrant, admin, and technical contacts when present.
+      properties:
+        roles_present:
+          type: array
+          items:
+            type: string
+        abuse_contact:
+          $ref: '#/components/schemas/RdapEntityContact'
+        registrar:
+          $ref: '#/components/schemas/RdapEntityContact'
+        registrant:
+          $ref: '#/components/schemas/RdapEntityContact'
+        admin:
+          $ref: '#/components/schemas/RdapEntityContact'
+        tech:
+          $ref: '#/components/schemas/RdapEntityContact'
+        entity_count:
+          type: integer
+        redacted_role_count:
+          type: integer
+    WhoisPrivacyInfo:
+      type: object
+      properties:
+        is_private:
+          type: boolean
+        privacy_service:
+          type:
+          - string
+          - 'null'
+        detected_patterns:
+          type: array
+          items:
+            type: string
     WhoisEdgeSummary:
       type: object
       description: Compact source and confidence summary for WHOIS responses, including fallback evidence.
@@ -1099,23 +1020,81 @@ components:
           type:
           - string
           - 'null'
-    BulkWhoisResponse:
+    BulkLookupResponse:
       type: object
-      description: Bulk WHOIS lookup response
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
       properties:
         results:
           type: array
+          description: Results in the same order as the submitted inputs.
           items:
-            $ref: '#/components/schemas/WhoisResponse'
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
         meta:
           type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
           properties:
             total:
               type: integer
-            successful:
+              minimum: 1
+              maximum: 10
+            succeeded:
               type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
             duration_ms:
               type: integer
+              minimum: 0
     RdapLookupSummary:
       type: object
       description: Compact source and fallback summary for RDAP responses, including WHOIS and DNS fallback evidence.
@@ -1160,139 +1139,6 @@ components:
           type:
           - boolean
           - 'null'
-    WhoisContact:
-      type:
-      - object
-      - 'null'
-      properties:
-        name:
-          type:
-          - string
-          - 'null'
-        organization:
-          type:
-          - string
-          - 'null'
-        email:
-          type:
-          - string
-          - 'null'
-        phone:
-          type:
-          - string
-          - 'null'
-        fax:
-          type:
-          - string
-          - 'null'
-        address:
-          type: object
-          properties:
-            street:
-              type:
-              - string
-              - 'null'
-            city:
-              type:
-              - string
-              - 'null'
-            state:
-              type:
-              - string
-              - 'null'
-            postal_code:
-              type:
-              - string
-              - 'null'
-            country:
-              type:
-              - string
-              - 'null'
-        role:
-          type: string
-    RdapEntitySummary:
-      type:
-      - object
-      - 'null'
-      description: Typed extraction of public RDAP entities by role, including abuse, registrar, registrant, admin, and technical contacts when present.
-      properties:
-        roles_present:
-          type: array
-          items:
-            type: string
-        abuse_contact:
-          $ref: '#/components/schemas/RdapEntityContact'
-        registrar:
-          $ref: '#/components/schemas/RdapEntityContact'
-        registrant:
-          $ref: '#/components/schemas/RdapEntityContact'
-        admin:
-          $ref: '#/components/schemas/RdapEntityContact'
-        tech:
-          $ref: '#/components/schemas/RdapEntityContact'
-        entity_count:
-          type: integer
-        redacted_role_count:
-          type: integer
-    WhoisPrivacyInfo:
-      type: object
-      properties:
-        is_private:
-          type: boolean
-        privacy_service:
-          type:
-          - string
-          - 'null'
-        detected_patterns:
-          type: array
-          items:
-            type: string
-    DomainProfileSourceSummary:
-      type: object
-      description: Additive profile provenance summary showing RDAP, WHOIS fallback, or cache source coverage.
-      properties:
-        source:
-          type: string
-          enum:
-          - rdap
-          - whois
-          - dns
-          - cache
-          - unknown
-        authoritative_source:
-          type: string
-          enum:
-          - rdap
-          - whois
-          - dns
-          - unknown
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        fallback_used:
-          type: boolean
-        relay_configured:
-          type: boolean
-        registered:
-          type:
-          - boolean
-          - 'null'
-        status_count:
-          type: integer
-        nameserver_count:
-          type: integer
-        event_count:
-          type: integer
-        date_fields_present:
-          type: array
-          items:
-            type: string
-        contact_field_count:
-          type: integer
-        privacy_detected:
-          type: boolean
     WhoisResponse:
       type: object
       description: WHOIS lookup response
@@ -1426,29 +1272,6 @@ components:
         meta:
           type: object
           additionalProperties: true
-    RdapEntityContact:
-      type:
-      - object
-      - 'null'
-      properties:
-        handle:
-          type:
-          - string
-          - 'null'
-        name:
-          type:
-          - string
-          - 'null'
-        email:
-          type:
-          - string
-          - 'null'
-        roles:
-          type: array
-          items:
-            type: string
-        public_field_count:
-          type: integer
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -1514,6 +1337,183 @@ components:
           - retryable
           - request_id
           - docs_url
+    RdapEntityContact:
+      type:
+      - object
+      - 'null'
+      properties:
+        handle:
+          type:
+          - string
+          - 'null'
+        name:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        roles:
+          type: array
+          items:
+            type: string
+        public_field_count:
+          type: integer
+    BulkWhoisResponse:
+      type: object
+      description: Bulk WHOIS lookup response
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WhoisResponse'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            duration_ms:
+              type: integer
+    WhoisContact:
+      type:
+      - object
+      - 'null'
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        organization:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        fax:
+          type:
+          - string
+          - 'null'
+        address:
+          type: object
+          properties:
+            street:
+              type:
+              - string
+              - 'null'
+            city:
+              type:
+              - string
+              - 'null'
+            state:
+              type:
+              - string
+              - 'null'
+            postal_code:
+              type:
+              - string
+              - 'null'
+            country:
+              type:
+              - string
+              - 'null'
+        role:
+          type: string
+  responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

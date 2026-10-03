@@ -907,12 +907,6 @@ paths:
         default: 0
 components:
   responses:
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -931,31 +925,44 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
-    EmailServiceUnavailable:
-      description: The invitation email could not be delivered, so the invitation was cancelled.
+    Forbidden:
+      description: The signed-in member does not have permission to perform this action.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Bad request - invalid parameters
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
     Gone:
       description: The invitation has expired and can no longer be accepted.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+    EmailServiceUnavailable:
+      description: The invitation email could not be delivered, so the invitation was cancelled.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: The requested account resource was not found.
       content:
         application/json:
           schema:
@@ -995,136 +1002,18 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+    BadRequest:
+      description: Bad request - invalid parameters
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    Forbidden:
-      description: The signed-in member does not have permission to perform this action.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   schemas:
-    CustomerAccountSummaryResponse:
-      type: object
-      required:
-      - account
-      properties:
-        success:
-          type: boolean
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
-    ApiKeyCreateResponse:
-      type: object
-      description: Newly created API key (full key only shown once)
-      properties:
-        id:
-          type: string
-        key:
-          type: string
-          description: Full API key - save this, shown only once!
-        prefix:
-          type: string
-        name:
-          type: string
-        account_credits:
-          type: integer
-          description: Current account-level credit balance after the key is created
-        created_at:
-          type: string
-          format: date-time
-        message:
-          type: string
-    ApiKeysResponse:
-      type: object
-      description: API keys and credit balance for the active customer account
-      properties:
-        keys:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-              prefix:
-                type: string
-                description: Key prefix for identification
-              name:
-                type: string
-              credits_used:
-                type: integer
-              last_used_at:
-                type: string
-                format: date-time
-              created_at:
-                type: string
-                format: date-time
-              is_active:
-                type: boolean
-              created_by_user_id:
-                type: string
-                format: uuid
-              is_own:
-                type: boolean
-        account:
-          type: object
-          description: Account-level credit balance shared across active keys
-          properties:
-            total_credits:
-              type: integer
-            free_credits:
-              type: integer
-            paid_credits:
-              type: integer
-            free_cycle_month:
-              type:
-              - string
-              - 'null'
-              description: Current monthly free-credit cycle in YYYY-MM format
-            id:
-              type: string
-              format: uuid
-            role:
-              type: string
-              enum:
-              - owner
-              - admin
-              - guest
-    EmailConsentState:
-      type:
-      - object
-      - 'null'
-      required:
-      - enabled
-      - source
-      - policy_version
-      - occurred_at
-      properties:
-        enabled:
-          type: boolean
-        source:
-          type: string
-          enum:
-          - dashboard
-          - signup
-          - email_unsubscribe
-          - admin
-          - import
-          - system
-        policy_version:
-          type: string
-        occurred_at:
-          type: string
-          format: date-time
     CustomerAccountMember:
       type: object
       required:
@@ -1160,87 +1049,32 @@ components:
           format: date-time
         is_current_user:
           type: boolean
-    EmailPreferences:
-      type: object
+    EmailConsentState:
+      type:
+      - object
+      - 'null'
       required:
+      - enabled
+      - source
       - policy_version
-      - categories
-      - marketing_suppressed
-      - preferred_locale
-      - frequency
-      - consent
+      - occurred_at
       properties:
-        policy_version:
-          type: string
-          example: '2026-08-02'
-        categories:
-          $ref: '#/components/schemas/EmailPreferenceCategories'
-        marketing_suppressed:
+        enabled:
           type: boolean
-          default: false
-        preferred_locale:
+        source:
           type: string
           enum:
-          - en
-          - es
-          - de
-          - fr
-          - pt
-          - ja
-          - zh
-          - ar
-          - it
-          - ko
-          - ru
-          - nl
-          - tr
-          - pl
-          - sv
-          default: en
-        frequency:
-          type: object
-          required:
-          - digest
-          properties:
-            digest:
-              type: string
-              enum:
-              - weekly
-              - monthly
-              default: monthly
-        consent:
-          type: object
-          required:
-          - requested_alerts
-          - onboarding
-          - lifecycle
-          - digest
-          - product_updates
-          - reactivation
-          - all_marketing
-          properties:
-            requested_alerts:
-              $ref: '#/components/schemas/EmailConsentState'
-            onboarding:
-              $ref: '#/components/schemas/EmailConsentState'
-            lifecycle:
-              $ref: '#/components/schemas/EmailConsentState'
-            digest:
-              $ref: '#/components/schemas/EmailConsentState'
-            product_updates:
-              $ref: '#/components/schemas/EmailConsentState'
-            reactivation:
-              $ref: '#/components/schemas/EmailConsentState'
-            all_marketing:
-              $ref: '#/components/schemas/EmailConsentState'
-    SuccessResponse:
-      type: object
-      required:
-      - success
-      properties:
-        success:
-          type: boolean
-          example: true
+          - dashboard
+          - signup
+          - email_unsubscribe
+          - admin
+          - import
+          - system
+        policy_version:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
     ApiRequestLogSummary:
       type: object
       required:
@@ -1321,6 +1155,330 @@ components:
         expiresAt:
           type: string
           format: date-time
+    CreditBalanceResponse:
+      type: object
+      description: Current balance for the authenticated customer account
+      additionalProperties: false
+      required:
+      - credits
+      - free_credits
+      - paid_credits
+      - free_cycle_month
+      properties:
+        credits:
+          type: integer
+          description: Current total account credit balance
+        free_credits:
+          type: integer
+          description: Current account monthly free-credit balance
+        paid_credits:
+          type: integer
+          description: Current account paid credit balance
+        free_cycle_month:
+          type:
+          - string
+          - 'null'
+          description: Current monthly free-credit cycle in YYYY-MM format
+    CreditsResponse:
+      type: object
+      description: Active customer account credit balance and transaction history
+      properties:
+        credits:
+          type: integer
+          description: Current account credit balance
+        free_credits:
+          type: integer
+          description: Current account monthly free-credit balance
+        paid_credits:
+          type: integer
+          description: Current account paid credit balance
+        free_cycle_month:
+          type:
+          - string
+          - 'null'
+          description: Current monthly free-credit cycle in YYYY-MM format
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              amount:
+                type: integer
+                description: Transaction amount (negative for usage)
+              balance_after:
+                type: integer
+              type:
+                type: string
+                enum:
+                - usage
+                - purchase
+                - auto_recharge
+                - refund
+                - signup_bonus
+                - monthly_grant
+                - admin_adjustment
+                - migration_opening_balance
+                - reconciliation_adjustment
+              description:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+    SuccessResponse:
+      type: object
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+          example: true
+    ApiKeyCreateResponse:
+      type: object
+      description: Newly created API key (full key only shown once)
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+          description: Full API key - save this, shown only once!
+        prefix:
+          type: string
+        name:
+          type: string
+        account_credits:
+          type: integer
+          description: Current account-level credit balance after the key is created
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+    EmailPreferences:
+      type: object
+      required:
+      - policy_version
+      - categories
+      - marketing_suppressed
+      - preferred_locale
+      - frequency
+      - consent
+      properties:
+        policy_version:
+          type: string
+          example: '2026-08-02'
+        categories:
+          $ref: '#/components/schemas/EmailPreferenceCategories'
+        marketing_suppressed:
+          type: boolean
+          default: false
+        preferred_locale:
+          type: string
+          enum:
+          - en
+          - es
+          - de
+          - fr
+          - pt
+          - ja
+          - zh
+          - ar
+          - it
+          - ko
+          - ru
+          - nl
+          - tr
+          - pl
+          - sv
+          default: en
+        frequency:
+          type: object
+          required:
+          - digest
+          properties:
+            digest:
+              type: string
+              enum:
+              - weekly
+              - monthly
+              default: monthly
+        consent:
+          type: object
+          required:
+          - requested_alerts
+          - onboarding
+          - lifecycle
+          - digest
+          - product_updates
+          - reactivation
+          - all_marketing
+          properties:
+            requested_alerts:
+              $ref: '#/components/schemas/EmailConsentState'
+            onboarding:
+              $ref: '#/components/schemas/EmailConsentState'
+            lifecycle:
+              $ref: '#/components/schemas/EmailConsentState'
+            digest:
+              $ref: '#/components/schemas/EmailConsentState'
+            product_updates:
+              $ref: '#/components/schemas/EmailConsentState'
+            reactivation:
+              $ref: '#/components/schemas/EmailConsentState'
+            all_marketing:
+              $ref: '#/components/schemas/EmailConsentState'
+    CustomerAccountSummary:
+      type: object
+      required:
+      - id
+      - name
+      - role
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          type: string
+          enum:
+          - owner
+          - admin
+          - guest
+        owner_user_id:
+          type: string
+          format: uuid
+        member_count:
+          type: integer
+          minimum: 1
+    ApiKeysResponse:
+      type: object
+      description: API keys and credit balance for the active customer account
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              prefix:
+                type: string
+                description: Key prefix for identification
+              name:
+                type: string
+              credits_used:
+                type: integer
+              last_used_at:
+                type: string
+                format: date-time
+              created_at:
+                type: string
+                format: date-time
+              is_active:
+                type: boolean
+              created_by_user_id:
+                type: string
+                format: uuid
+              is_own:
+                type: boolean
+        account:
+          type: object
+          description: Account-level credit balance shared across active keys
+          properties:
+            total_credits:
+              type: integer
+            free_credits:
+              type: integer
+            paid_credits:
+              type: integer
+            free_cycle_month:
+              type:
+              - string
+              - 'null'
+              description: Current monthly free-credit cycle in YYYY-MM format
+            id:
+              type: string
+              format: uuid
+            role:
+              type: string
+              enum:
+              - owner
+              - admin
+              - guest
+    CustomerAccountResponse:
+      type: object
+      required:
+      - account
+      - members
+      - invitations
+      properties:
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAccountMember'
+        invitations:
+          type: array
+          description: Visible to the account owner. Admins and guests receive an empty array.
+          items:
+            $ref: '#/components/schemas/AccountInvitation'
+    EmailPreferencesUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        categories:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            required_transactional:
+              type: boolean
+              enum:
+              - true
+            requested_alerts:
+              type: boolean
+            onboarding:
+              type: boolean
+            lifecycle:
+              type: boolean
+            digest:
+              type: boolean
+            product_updates:
+              type: boolean
+            reactivation:
+              type: boolean
+        marketing_suppressed:
+          type: boolean
+        preferred_locale:
+          type: string
+          enum:
+          - en
+          - es
+          - de
+          - fr
+          - pt
+          - ja
+          - zh
+          - ar
+          - it
+          - ko
+          - ru
+          - nl
+          - tr
+          - pl
+          - sv
+        frequency:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            digest:
+              type: string
+              enum:
+              - weekly
+              - monthly
     EmailPreferenceCategories:
       type: object
       additionalProperties: false
@@ -1356,30 +1514,49 @@ components:
         reactivation:
           type: boolean
           default: true
-    CustomerAccountSummary:
-      type: object
-      required:
-      - id
-      - name
-      - role
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        role:
-          type: string
-          enum:
-          - owner
-          - admin
-          - guest
-        owner_user_id:
-          type: string
-          format: uuid
-        member_count:
-          type: integer
-          minimum: 1
+    ApiRequestLogDetail:
+      allOf:
+      - $ref: '#/components/schemas/ApiRequestLogSummary'
+      - type: object
+        required:
+        - request
+        - response
+        properties:
+          request:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON request preview.
+          response:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON response preview.
+          aiHelp:
+            type:
+            - object
+            - 'null'
+            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
+            required:
+            - answer
+            - language
+            - model
+            - createdAt
+            properties:
+              answer:
+                type: string
+                description: Plain-text analysis of the logged request.
+              language:
+                type: string
+                description: Language the analysis was written in.
+              model:
+                type: string
+                description: Model that produced the analysis.
+              createdAt:
+                type: string
+                format: date-time
     AccountInvitationCreateResponse:
       type: object
       required:
@@ -1387,6 +1564,43 @@ components:
       properties:
         invitation:
           $ref: '#/components/schemas/AccountInvitation'
+    AccountInvitation:
+      type: object
+      required:
+      - id
+      - email
+      - status
+      - expires_at
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum:
+          - pending
+          - accepted
+          - cancelled
+          - expired
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    CustomerAccountSummaryResponse:
+      type: object
+      required:
+      - account
+      properties:
+        success:
+          type: boolean
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
     UsageResponse:
       type: object
       description: API usage statistics for the active customer account
@@ -1436,34 +1650,6 @@ components:
               type: number
             credits_change_pct:
               type: number
-    AccountInvitation:
-      type: object
-      required:
-      - id
-      - email
-      - status
-      - expires_at
-      - created_at
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-          format: email
-        status:
-          type: string
-          enum:
-          - pending
-          - accepted
-          - cancelled
-          - expired
-        expires_at:
-          type: string
-          format: date-time
-        created_at:
-          type: string
-          format: date-time
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -1529,192 +1715,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    CreditsResponse:
-      type: object
-      description: Active customer account credit balance and transaction history
-      properties:
-        credits:
-          type: integer
-          description: Current account credit balance
-        free_credits:
-          type: integer
-          description: Current account monthly free-credit balance
-        paid_credits:
-          type: integer
-          description: Current account paid credit balance
-        free_cycle_month:
-          type:
-          - string
-          - 'null'
-          description: Current monthly free-credit cycle in YYYY-MM format
-        transactions:
-          type: array
-          items:
-            type: object
-            properties:
-              amount:
-                type: integer
-                description: Transaction amount (negative for usage)
-              balance_after:
-                type: integer
-              type:
-                type: string
-                enum:
-                - usage
-                - purchase
-                - auto_recharge
-                - refund
-                - signup_bonus
-                - monthly_grant
-                - admin_adjustment
-                - migration_opening_balance
-                - reconciliation_adjustment
-              description:
-                type: string
-              created_at:
-                type: string
-                format: date-time
-    EmailPreferencesUpdate:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        categories:
-          type: object
-          additionalProperties: false
-          minProperties: 1
-          properties:
-            required_transactional:
-              type: boolean
-              enum:
-              - true
-            requested_alerts:
-              type: boolean
-            onboarding:
-              type: boolean
-            lifecycle:
-              type: boolean
-            digest:
-              type: boolean
-            product_updates:
-              type: boolean
-            reactivation:
-              type: boolean
-        marketing_suppressed:
-          type: boolean
-        preferred_locale:
-          type: string
-          enum:
-          - en
-          - es
-          - de
-          - fr
-          - pt
-          - ja
-          - zh
-          - ar
-          - it
-          - ko
-          - ru
-          - nl
-          - tr
-          - pl
-          - sv
-        frequency:
-          type: object
-          additionalProperties: false
-          minProperties: 1
-          properties:
-            digest:
-              type: string
-              enum:
-              - weekly
-              - monthly
-    CreditBalanceResponse:
-      type: object
-      description: Current balance for the authenticated customer account
-      additionalProperties: false
-      required:
-      - credits
-      - free_credits
-      - paid_credits
-      - free_cycle_month
-      properties:
-        credits:
-          type: integer
-          description: Current total account credit balance
-        free_credits:
-          type: integer
-          description: Current account monthly free-credit balance
-        paid_credits:
-          type: integer
-          description: Current account paid credit balance
-        free_cycle_month:
-          type:
-          - string
-          - 'null'
-          description: Current monthly free-credit cycle in YYYY-MM format
-    ApiRequestLogDetail:
-      allOf:
-      - $ref: '#/components/schemas/ApiRequestLogSummary'
-      - type: object
-        required:
-        - request
-        - response
-        properties:
-          request:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON request preview.
-          response:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON response preview.
-          aiHelp:
-            type:
-            - object
-            - 'null'
-            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
-            required:
-            - answer
-            - language
-            - model
-            - createdAt
-            properties:
-              answer:
-                type: string
-                description: Plain-text analysis of the logged request.
-              language:
-                type: string
-                description: Language the analysis was written in.
-              model:
-                type: string
-                description: Model that produced the analysis.
-              createdAt:
-                type: string
-                format: date-time
-    CustomerAccountResponse:
-      type: object
-      required:
-      - account
-      - members
-      - invitations
-      properties:
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/CustomerAccountMember'
-        invitations:
-          type: array
-          description: Visible to the account owner. Admins and guests receive an empty array.
-          items:
-            $ref: '#/components/schemas/AccountInvitation'
   securitySchemes:
     apiKey:
       type: apiKey

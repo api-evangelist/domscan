@@ -371,95 +371,6 @@ paths:
         model: per_request
         default: 0
 components:
-  responses:
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   schemas:
     ApiBatchRequestItem:
       type: object
@@ -492,131 +403,6 @@ components:
         reference:
           type: string
           maxLength: 128
-    ApiBatchJob:
-      type: object
-      required:
-      - id
-      - status
-      - total
-      - counts
-      - billing
-      - webhook
-      - status_url
-      - results_url
-      - results_csv_url
-      - created_at
-      - updated_at
-      - processing_deadline_at
-      - results_expires_at
-      properties:
-        id:
-          type: string
-          pattern: ^bat_[a-f0-9]{32}$
-        status:
-          type: string
-          enum:
-          - queued
-          - running
-          - cancelling
-          - completed
-          - completed_with_errors
-          - cancelled
-        total:
-          type: integer
-          minimum: 1
-          maximum: 100
-        counts:
-          type: object
-          required:
-          - pending
-          - processing
-          - succeeded
-          - failed
-          - cancelled
-          properties:
-            pending:
-              type: integer
-            processing:
-              type: integer
-            succeeded:
-              type: integer
-            failed:
-              type: integer
-            cancelled:
-              type: integer
-        billing:
-          type: object
-          required:
-          - credits_charged
-          - credits_refunded
-          - credits_net
-          properties:
-            credits_charged:
-              type: integer
-            credits_refunded:
-              type: integer
-            credits_net:
-              type: integer
-        webhook:
-          type: object
-          required:
-          - configured
-          - status
-          - attempts
-          properties:
-            configured:
-              type: boolean
-            status:
-              type: string
-              enum:
-              - not_configured
-              - waiting
-              - pending
-              - delivering
-              - delivered
-              - failed
-            attempts:
-              type: integer
-        status_url:
-          type: string
-          format: uri
-        results_url:
-          type: string
-          format: uri
-        results_csv_url:
-          type: string
-          format: uri
-        poll_after_ms:
-          type:
-          - integer
-          - 'null'
-        created_at:
-          type: string
-          format: date-time
-        started_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        completed_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        cancelled_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        processing_deadline_at:
-          type: string
-          format: date-time
-        results_expires_at:
-          type: string
-          format: date-time
     DomainDiscoveryJobResponse:
       type: object
       required:
@@ -778,6 +564,131 @@ components:
           type:
           - integer
           - 'null'
+    ApiBatchJob:
+      type: object
+      required:
+      - id
+      - status
+      - total
+      - counts
+      - billing
+      - webhook
+      - status_url
+      - results_url
+      - results_csv_url
+      - created_at
+      - updated_at
+      - processing_deadline_at
+      - results_expires_at
+      properties:
+        id:
+          type: string
+          pattern: ^bat_[a-f0-9]{32}$
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - cancelling
+          - completed
+          - completed_with_errors
+          - cancelled
+        total:
+          type: integer
+          minimum: 1
+          maximum: 100
+        counts:
+          type: object
+          required:
+          - pending
+          - processing
+          - succeeded
+          - failed
+          - cancelled
+          properties:
+            pending:
+              type: integer
+            processing:
+              type: integer
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            cancelled:
+              type: integer
+        billing:
+          type: object
+          required:
+          - credits_charged
+          - credits_refunded
+          - credits_net
+          properties:
+            credits_charged:
+              type: integer
+            credits_refunded:
+              type: integer
+            credits_net:
+              type: integer
+        webhook:
+          type: object
+          required:
+          - configured
+          - status
+          - attempts
+          properties:
+            configured:
+              type: boolean
+            status:
+              type: string
+              enum:
+              - not_configured
+              - waiting
+              - pending
+              - delivering
+              - delivered
+              - failed
+            attempts:
+              type: integer
+        status_url:
+          type: string
+          format: uri
+        results_url:
+          type: string
+          format: uri
+        results_csv_url:
+          type: string
+          format: uri
+        poll_after_ms:
+          type:
+          - integer
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        cancelled_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        processing_deadline_at:
+          type: string
+          format: date-time
+        results_expires_at:
+          type: string
+          format: date-time
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -843,6 +754,95 @@ components:
           - retryable
           - request_id
           - docs_url
+  responses:
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

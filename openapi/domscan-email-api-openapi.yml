@@ -1158,40 +1158,6 @@ paths:
         default: 2
 components:
   schemas:
-    EmailProviderReadiness:
-      type: object
-      properties:
-        provider:
-          type: string
-          enum:
-          - google
-          - microsoft
-        display_name:
-          type: string
-        status:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-        dns_visible_status:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-        requirements:
-          type: array
-          items:
-            $ref: '#/components/schemas/EmailComplianceRequirement'
-        verification_required:
-          type: array
-          items:
-            type: string
-        notes:
-          type: array
-          items:
-            type: string
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -1267,6 +1233,40 @@ components:
             duration_ms:
               type: integer
               minimum: 0
+    EmailComplianceRequirement:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+        severity:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          - info
+        category:
+          type: string
+          enum:
+          - dns
+          - message
+          - transport
+          - reputation
+          - content
+        evidence:
+          type: string
+        recommendation:
+          type: string
     EmailComplianceResponse:
       type: object
       description: Provider-oriented email sender compliance readiness report with DNS-visible status separated from live message-level verification.
@@ -1341,40 +1341,6 @@ components:
           format: date-time
         check_duration_ms:
           type: integer
-    EmailComplianceRequirement:
-      type: object
-      properties:
-        id:
-          type: string
-        label:
-          type: string
-        status:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-        severity:
-          type: string
-          enum:
-          - critical
-          - high
-          - medium
-          - low
-          - info
-        category:
-          type: string
-          enum:
-          - dns
-          - message
-          - transport
-          - reputation
-          - content
-        evidence:
-          type: string
-        recommendation:
-          type: string
     EmailComplianceActionItem:
       type: object
       properties:
@@ -1400,6 +1366,40 @@ components:
           type: string
         fix:
           type: string
+    EmailProviderReadiness:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+          - google
+          - microsoft
+        display_name:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+        dns_visible_status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailComplianceRequirement'
+        verification_required:
+          type: array
+          items:
+            type: string
+        notes:
+          type: array
+          items:
+            type: string
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -1466,6 +1466,24 @@ components:
           - request_id
           - docs_url
   responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -1501,24 +1519,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:

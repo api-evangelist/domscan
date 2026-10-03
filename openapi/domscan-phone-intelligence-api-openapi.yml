@@ -165,58 +165,186 @@ paths:
         default: 1
 components:
   schemas:
-    PhoneIntelligenceRelay:
+    PhoneValidationResponse:
+      allOf:
+      - $ref: '#/components/schemas/PhoneValidationResult'
+      - type: object
+        required:
+        - credits_used
+        properties:
+          credits_used:
+            type: integer
+            example: 1
+    PhoneValidationRequest:
       type: object
-      description: Whether supplemental offline enrichment was configured and contributed data.
       required:
-      - configured
-      - used
-      - persisted
+      - phone
       properties:
-        configured:
-          type: boolean
-        used:
-          type: boolean
-        persisted:
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 256
+          example: +34 612 345 678
+          description: International number, RFC 3966 tel URI, phone-shaped vanity number such as 1-800-FLOWERS, or national number when default_country is supplied. Text surrounding a number is rejected.
+        default_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Parsing context required for national numbers. It is also used for country-match intelligence.
+        expected_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Optional expected country or region. A mismatch adds COUNTRY_MISMATCH and changes an otherwise valid recommendation to review.
+        dialing_from_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Optional caller country or region used to produce out-of-country and mobile dialing guidance. It does not change parsing or validation.
+        language:
+          $ref: '#/components/schemas/PhoneLanguageCode'
+          description: Preferred language for offline numbering-plan location and original prefix-carrier labels.
+    PhoneValidationBulkRequest:
+      type: object
+      required:
+      - phones
+      properties:
+        phones:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: Phone strings or per-item request objects. Input order and duplicates are preserved.
+          items:
+            oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 256
+            - $ref: '#/components/schemas/PhoneValidationRequest'
+        default_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Shared parsing context for national numbers.
+        expected_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Shared expected country or region for mismatch detection.
+        dialing_from_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Shared caller country or region for dialing guidance. Per-item objects can override it.
+        language:
+          $ref: '#/components/schemas/PhoneLanguageCode'
+          description: Shared language for offline location and original-carrier labels. Per-item objects can override it.
+    PhoneIntelligenceLocation:
+      type: object
+      description: Offline numbering-plan location. This is never the device or subscriber current physical location.
+      required:
+      - label
+      - country_name
+      - country
+      - language
+      - granularity
+      - current_physical_location
+      properties:
+        label:
+          type:
+          - string
+          - 'null'
+          example: Madrid
+          description: Localized area or country label when the prefix metadata has one.
+        country_name:
+          type:
+          - string
+          - 'null'
+          example: Spain
+        country:
+          type:
+          - string
+          - 'null'
+          example: ES
+          description: Resolved numbering-plan region.
+        language:
+          type: string
+          example: es
+        granularity:
+          type: string
+          enum:
+          - numbering_plan_area
+          - country
+          description: Whether the label describes a numbering-plan area or only the numbering-plan country. It does not expose device coordinates.
+        current_physical_location:
           type: boolean
           enum:
           - false
-    PhoneValidationBulkResponse:
+          description: Always false. No live device-location lookup is performed.
+    PhoneCountryCode:
+      type: string
+      minLength: 2
+      maxLength: 2
+      pattern: ^[A-Za-z]{2}$
+      example: ES
+      description: ISO 3166-1 alpha-2 country or region code supported by the bundled numbering metadata.
+    PhoneIntelligenceNumberDetails:
       type: object
+      description: Additional structural details from offline numbering-plan metadata.
       required:
-      - total
-      - valid_count
-      - possible_only_count
-      - invalid_count
-      - validation_level
-      - results
-      - credits_used
+      - geographical
+      - geographical_area_code
+      - geographical_area_code_length
+      - national_destination_code
+      - national_destination_code_length
+      - subscriber_number_length
+      - mobile_token
       properties:
-        total:
-          type: integer
-          minimum: 1
-          maximum: 100
-        valid_count:
-          type: integer
-          minimum: 0
-        possible_only_count:
-          type: integer
-          minimum: 0
-        invalid_count:
+        geographical:
+          type: boolean
+        geographical_area_code:
+          type:
+          - string
+          - 'null'
+          description: Geographic area-code digits inferred from the numbering plan, such as 202 for a Washington, D.C. NANP number.
+        geographical_area_code_length:
           type: integer
           minimum: 0
-        validation_level:
+        national_destination_code:
+          type:
+          - string
+          - 'null'
+          description: National destination code digits inferred from the numbering plan. This is often the NANP area code for United States and Canadian numbers.
+        national_destination_code_length:
+          type: integer
+          minimum: 0
+        subscriber_number_length:
+          type: integer
+          minimum: 0
+        mobile_token:
+          type:
+          - string
+          - 'null'
+    PhoneIntelligenceCarrier:
+      type: object
+      description: Original prefix-carrier or code-holder metadata. The source and evidence fields distinguish bundled prefix metadata from an official allocation record. Number portability and thousands-block pooling mean this must never be interpreted as the current carrier.
+      required:
+      - name
+      - source_id
+      - evidence
+      - current_carrier
+      - portability_may_change_carrier
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+          example: Vodafone
+        source_id:
+          type:
+          - string
+          - 'null'
+          example: nanpa_us
+          description: Offline source that supplied the name, or null when no name is available.
+        evidence:
           type: string
           enum:
-          - numbering_plan
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/PhoneValidationResult'
-        credits_used:
-          type: integer
-          minimum: 1
-          maximum: 100
+          - offline_prefix_metadata
+          - official_allocation_record
+          - unavailable
+        current_carrier:
+          type: boolean
+          enum:
+          - false
+        portability_may_change_carrier:
+          type: boolean
     PhoneIntelligencePortability:
       type: object
       description: Whether the resolved region supports mobile number portability. The individual number current porting state is not queried.
@@ -230,114 +358,49 @@ components:
           type: boolean
           enum:
           - false
-    PhoneIntelligenceServiceSignals:
+    PhoneIntelligenceCoverage:
       type: object
-      description: Numbering-plan service classification. These signals describe the prefix category and do not prove live service capabilities.
+      description: Country-specific offline coverage. Global metadata supports validation, geography, time zones, service type, and dialing. Official snapshots add regulator allocation evidence only where an openly reusable source is loaded.
       required:
-      - number_type
-      - geographical
-      - toll_free
-      - premium_rate
-      - shared_cost
-      - voip
-      - personal_number
-      - likely_sms_capable
+      - country
+      - level
+      - global_numbering_metadata
+      - official_snapshot_available
+      - official_allocation_match
+      - official_source_ids
+      - matching_source_ids
+      - current_carrier_lookup
       properties:
-        number_type:
+        country:
+          type:
+          - string
+          - 'null'
+          example: US
+        level:
           type: string
           enum:
-          - fixed_line
-          - mobile
-          - fixed_line_or_mobile
-          - toll_free
-          - premium_rate
-          - shared_cost
-          - voip
-          - personal_number
-          - pager
-          - uan
-          - voicemail
-          - unknown
-        geographical:
+          - global_numbering_metadata
+          - official_snapshot
+          - official_allocation_match
+        global_numbering_metadata:
           type: boolean
-        toll_free:
+        official_snapshot_available:
           type: boolean
-        premium_rate:
+        official_allocation_match:
           type: boolean
-        shared_cost:
+        official_source_ids:
+          type: array
+          items:
+            type: string
+        matching_source_ids:
+          type: array
+          items:
+            type: string
+        current_carrier_lookup:
           type: boolean
-        voip:
-          type: boolean
-        personal_number:
-          type: boolean
-        likely_sms_capable:
-          type:
-          - boolean
-          - 'null'
-          description: A numbering-plan inference for mobile categories, not an SMS reachability check.
-    PhoneIntelligenceSource:
-      type: object
-      description: Offline library or downloaded official dataset that contributed to this result.
-      required:
-      - id
-      - name
-      - type
-      - url
-      properties:
-        id:
-          type: string
-          example: google_libphonenumber
-        name:
-          type: string
-          example: Google libphonenumber metadata
-        type:
-          type: string
           enum:
-          - offline_metadata
-          - official_regulator_snapshot
-        version:
-          type:
-          - string
-          - 'null'
-          example: 9.0.34
-        updated_at:
-          type:
-          - string
-          - 'null'
-        retrieved_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        age_days:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          description: Age of an official regulator snapshot in whole days when its source date is known.
-        record_count:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          description: Number of normalized records loaded from this official source.
-        license:
-          type:
-          - string
-          - 'null'
-          example: Apache-2.0
-        license_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-        url:
-          type: string
-          format: uri
-        attribution:
-          type:
-          - string
-          - 'null'
+          - false
+          description: Always false. DomScan performs no live carrier or portability query.
     PhoneRegulatorAllocation:
       type: object
       description: Longest matching range from a downloaded official regulator snapshot. It describes a range allocation, not current routing, porting, or assignment of the submitted individual number.
@@ -443,29 +506,6 @@ components:
         details:
           type: object
           additionalProperties: true
-    PhoneValidationRequest:
-      type: object
-      required:
-      - phone
-      properties:
-        phone:
-          type: string
-          minLength: 1
-          maxLength: 256
-          example: +34 612 345 678
-          description: International number, RFC 3966 tel URI, phone-shaped vanity number such as 1-800-FLOWERS, or national number when default_country is supplied. Text surrounding a number is rejected.
-        default_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Parsing context required for national numbers. It is also used for country-match intelligence.
-        expected_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Optional expected country or region. A mismatch adds COUNTRY_MISMATCH and changes an otherwise valid recommendation to review.
-        dialing_from_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Optional caller country or region used to produce out-of-country and mobile dialing guidance. It does not change parsing or validation.
-        language:
-          $ref: '#/components/schemas/PhoneLanguageCode'
-          description: Preferred language for offline numbering-plan location and original prefix-carrier labels.
     PhoneIntelligence:
       type: object
       description: Deterministic additive enrichment. The object is always present, including when enrichment is unavailable or not applicable.
@@ -548,252 +588,6 @@ components:
           description: Machine-readable accuracy and scope warnings, including original-carrier, location, allocation, and live-check limits.
         relay:
           $ref: '#/components/schemas/PhoneIntelligenceRelay'
-    PhoneIntelligenceShortNumber:
-      type: object
-      description: Country-specific short-number metadata. Emergency behavior and cost classification depend on the dialing region.
-      required:
-      - region
-      - possible
-      - valid
-      - emergency
-      - connects_to_emergency
-      - sms_service
-      - carrier_specific
-      - expected_cost
-      properties:
-        region:
-          type: string
-          example: ES
-        possible:
-          type: boolean
-        valid:
-          type: boolean
-        emergency:
-          type: boolean
-        connects_to_emergency:
-          type: boolean
-        sms_service:
-          type: boolean
-        carrier_specific:
-          type: boolean
-        expected_cost:
-          type: string
-          enum:
-          - toll_free
-          - standard_rate
-          - premium_rate
-          - unknown
-    PhoneIntelligenceNumberDetails:
-      type: object
-      description: Additional structural details from offline numbering-plan metadata.
-      required:
-      - geographical
-      - geographical_area_code
-      - geographical_area_code_length
-      - national_destination_code
-      - national_destination_code_length
-      - subscriber_number_length
-      - mobile_token
-      properties:
-        geographical:
-          type: boolean
-        geographical_area_code:
-          type:
-          - string
-          - 'null'
-          description: Geographic area-code digits inferred from the numbering plan, such as 202 for a Washington, D.C. NANP number.
-        geographical_area_code_length:
-          type: integer
-          minimum: 0
-        national_destination_code:
-          type:
-          - string
-          - 'null'
-          description: National destination code digits inferred from the numbering plan. This is often the NANP area code for United States and Canadian numbers.
-        national_destination_code_length:
-          type: integer
-          minimum: 0
-        subscriber_number_length:
-          type: integer
-          minimum: 0
-        mobile_token:
-          type:
-          - string
-          - 'null'
-    PhoneIntelligenceCoverage:
-      type: object
-      description: Country-specific offline coverage. Global metadata supports validation, geography, time zones, service type, and dialing. Official snapshots add regulator allocation evidence only where an openly reusable source is loaded.
-      required:
-      - country
-      - level
-      - global_numbering_metadata
-      - official_snapshot_available
-      - official_allocation_match
-      - official_source_ids
-      - matching_source_ids
-      - current_carrier_lookup
-      properties:
-        country:
-          type:
-          - string
-          - 'null'
-          example: US
-        level:
-          type: string
-          enum:
-          - global_numbering_metadata
-          - official_snapshot
-          - official_allocation_match
-        global_numbering_metadata:
-          type: boolean
-        official_snapshot_available:
-          type: boolean
-        official_allocation_match:
-          type: boolean
-        official_source_ids:
-          type: array
-          items:
-            type: string
-        matching_source_ids:
-          type: array
-          items:
-            type: string
-        current_carrier_lookup:
-          type: boolean
-          enum:
-          - false
-          description: Always false. DomScan performs no live carrier or portability query.
-    PhoneIntelligenceCarrier:
-      type: object
-      description: Original prefix-carrier or code-holder metadata. The source and evidence fields distinguish bundled prefix metadata from an official allocation record. Number portability and thousands-block pooling mean this must never be interpreted as the current carrier.
-      required:
-      - name
-      - source_id
-      - evidence
-      - current_carrier
-      - portability_may_change_carrier
-      properties:
-        name:
-          type:
-          - string
-          - 'null'
-          example: Vodafone
-        source_id:
-          type:
-          - string
-          - 'null'
-          example: nanpa_us
-          description: Offline source that supplied the name, or null when no name is available.
-        evidence:
-          type: string
-          enum:
-          - offline_prefix_metadata
-          - official_allocation_record
-          - unavailable
-        current_carrier:
-          type: boolean
-          enum:
-          - false
-        portability_may_change_carrier:
-          type: boolean
-    PhoneIntelligenceDialing:
-      type: object
-      description: Offline dialing guidance. Caller-relative fields use dialing_from_country when supplied.
-      required:
-      - from_country
-      - international
-      - mobile
-      - internationally_diallable
-      properties:
-        from_country:
-          type:
-          - string
-          - 'null'
-          example: US
-        international:
-          type:
-          - string
-          - 'null'
-          example: 011 34 612 34 56 78
-        mobile:
-          type:
-          - string
-          - 'null'
-          example: +34 612 34 56 78
-        internationally_diallable:
-          type: boolean
-    PhoneCountryCode:
-      type: string
-      minLength: 2
-      maxLength: 2
-      pattern: ^[A-Za-z]{2}$
-      example: ES
-      description: ISO 3166-1 alpha-2 country or region code supported by the bundled numbering metadata.
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
     PhoneIntelligenceTimeZones:
       type: object
       description: Possible IANA time zones inferred from numbering-plan prefixes, not from current device location.
@@ -815,44 +609,22 @@ components:
           type: string
           enum:
           - number_prefix
-    PhoneValidationResponse:
-      allOf:
-      - $ref: '#/components/schemas/PhoneValidationResult'
-      - type: object
-        required:
-        - credits_used
-        properties:
-          credits_used:
-            type: integer
-            example: 1
-    PhoneValidationBulkRequest:
+    PhoneIntelligenceRelay:
       type: object
+      description: Whether supplemental offline enrichment was configured and contributed data.
       required:
-      - phones
+      - configured
+      - used
+      - persisted
       properties:
-        phones:
-          type: array
-          minItems: 1
-          maxItems: 100
-          description: Phone strings or per-item request objects. Input order and duplicates are preserved.
-          items:
-            oneOf:
-            - type: string
-              minLength: 1
-              maxLength: 256
-            - $ref: '#/components/schemas/PhoneValidationRequest'
-        default_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Shared parsing context for national numbers.
-        expected_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Shared expected country or region for mismatch detection.
-        dialing_from_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Shared caller country or region for dialing guidance. Per-item objects can override it.
-        language:
-          $ref: '#/components/schemas/PhoneLanguageCode'
-          description: Shared language for offline location and original-carrier labels. Per-item objects can override it.
+        configured:
+          type: boolean
+        used:
+          type: boolean
+        persisted:
+          type: boolean
+          enum:
+          - false
     PhoneValidationResult:
       type: object
       required:
@@ -1078,6 +850,104 @@ components:
               type: string
               enum:
               - Google libphonenumber numbering plans
+    PhoneIntelligenceSource:
+      type: object
+      description: Offline library or downloaded official dataset that contributed to this result.
+      required:
+      - id
+      - name
+      - type
+      - url
+      properties:
+        id:
+          type: string
+          example: google_libphonenumber
+        name:
+          type: string
+          example: Google libphonenumber metadata
+        type:
+          type: string
+          enum:
+          - offline_metadata
+          - official_regulator_snapshot
+        version:
+          type:
+          - string
+          - 'null'
+          example: 9.0.34
+        updated_at:
+          type:
+          - string
+          - 'null'
+        retrieved_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        age_days:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          description: Age of an official regulator snapshot in whole days when its source date is known.
+        record_count:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          description: Number of normalized records loaded from this official source.
+        license:
+          type:
+          - string
+          - 'null'
+          example: Apache-2.0
+        license_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        url:
+          type: string
+          format: uri
+        attribution:
+          type:
+          - string
+          - 'null'
+    PhoneIntelligenceShortNumber:
+      type: object
+      description: Country-specific short-number metadata. Emergency behavior and cost classification depend on the dialing region.
+      required:
+      - region
+      - possible
+      - valid
+      - emergency
+      - connects_to_emergency
+      - sms_service
+      - carrier_specific
+      - expected_cost
+      properties:
+        region:
+          type: string
+          example: ES
+        possible:
+          type: boolean
+        valid:
+          type: boolean
+        emergency:
+          type: boolean
+        connects_to_emergency:
+          type: boolean
+        sms_service:
+          type: boolean
+        carrier_specific:
+          type: boolean
+        expected_cost:
+          type: string
+          enum:
+          - toll_free
+          - standard_rate
+          - premium_rate
+          - unknown
     PhoneLanguageCode:
       type: string
       minLength: 2
@@ -1085,48 +955,178 @@ components:
       pattern: ^[A-Za-z]{2,3}(?:[-_][A-Za-z]{2})?$
       example: es
       description: Preferred language for offline location and original-carrier labels. Accepts a two- or three-letter language code with an optional two-letter region, such as en, es, or zh-CN. Unsupported labels fall back safely in the enrichment engine.
-    PhoneIntelligenceLocation:
+    PhoneValidationBulkResponse:
       type: object
-      description: Offline numbering-plan location. This is never the device or subscriber current physical location.
       required:
-      - label
-      - country_name
-      - country
-      - language
-      - granularity
-      - current_physical_location
+      - total
+      - valid_count
+      - possible_only_count
+      - invalid_count
+      - validation_level
+      - results
+      - credits_used
       properties:
-        label:
-          type:
-          - string
-          - 'null'
-          example: Madrid
-          description: Localized area or country label when the prefix metadata has one.
-        country_name:
-          type:
-          - string
-          - 'null'
-          example: Spain
-        country:
-          type:
-          - string
-          - 'null'
-          example: ES
-          description: Resolved numbering-plan region.
-        language:
-          type: string
-          example: es
-        granularity:
+        total:
+          type: integer
+          minimum: 1
+          maximum: 100
+        valid_count:
+          type: integer
+          minimum: 0
+        possible_only_count:
+          type: integer
+          minimum: 0
+        invalid_count:
+          type: integer
+          minimum: 0
+        validation_level:
           type: string
           enum:
-          - numbering_plan_area
-          - country
-          description: Whether the label describes a numbering-plan area or only the numbering-plan country. It does not expose device coordinates.
-        current_physical_location:
+          - numbering_plan
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneValidationResult'
+        credits_used:
+          type: integer
+          minimum: 1
+          maximum: 100
+    PhoneIntelligenceDialing:
+      type: object
+      description: Offline dialing guidance. Caller-relative fields use dialing_from_country when supplied.
+      required:
+      - from_country
+      - international
+      - mobile
+      - internationally_diallable
+      properties:
+        from_country:
+          type:
+          - string
+          - 'null'
+          example: US
+        international:
+          type:
+          - string
+          - 'null'
+          example: 011 34 612 34 56 78
+        mobile:
+          type:
+          - string
+          - 'null'
+          example: +34 612 34 56 78
+        internationally_diallable:
           type: boolean
+    PhoneIntelligenceServiceSignals:
+      type: object
+      description: Numbering-plan service classification. These signals describe the prefix category and do not prove live service capabilities.
+      required:
+      - number_type
+      - geographical
+      - toll_free
+      - premium_rate
+      - shared_cost
+      - voip
+      - personal_number
+      - likely_sms_capable
+      properties:
+        number_type:
+          type: string
           enum:
-          - false
-          description: Always false. No live device-location lookup is performed.
+          - fixed_line
+          - mobile
+          - fixed_line_or_mobile
+          - toll_free
+          - premium_rate
+          - shared_cost
+          - voip
+          - personal_number
+          - pager
+          - uan
+          - voicemail
+          - unknown
+        geographical:
+          type: boolean
+        toll_free:
+          type: boolean
+        premium_rate:
+          type: boolean
+        shared_cost:
+          type: boolean
+        voip:
+          type: boolean
+        personal_number:
+          type: boolean
+        likely_sms_capable:
+          type:
+          - boolean
+          - 'null'
+          description: A numbering-plan inference for mobile categories, not an SMS reachability check.
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
   responses:
     PaymentRequired:
       description: Insufficient credits for this request
@@ -1146,6 +1146,18 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -1181,18 +1193,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
     BadRequest:
       description: Bad request - invalid parameters
       content:

@@ -622,319 +622,7 @@ paths:
         model: per_request
         default: 5
 components:
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   schemas:
-    FullReportResponse:
-      type: object
-      description: Comprehensive domain intelligence report
-      properties:
-        domain:
-          type: string
-        generated_at:
-          type: string
-          format: date-time
-        availability:
-          type: object
-        dns:
-          type: object
-        whois:
-          type: object
-        ssl:
-          type: object
-        tech_stack:
-          type: object
-        reputation:
-          type: object
-        email_auth:
-          type: object
-        valuation:
-          type: object
-        summary:
-          type: object
-          properties:
-            health_score:
-              type: integer
-            security_score:
-              type: integer
-            issues:
-              type: array
-              items:
-                type: string
-            recommendations:
-              type: array
-              items:
-                type: string
-    BulkLookupResponse:
-      type: object
-      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
-      required:
-      - results
-      - meta
-      properties:
-        results:
-          type: array
-          description: Results in the same order as the submitted inputs.
-          items:
-            oneOf:
-            - type: object
-              required:
-              - input
-              - data
-              properties:
-                input:
-                  type: string
-                data:
-                  type: object
-                  additionalProperties: true
-            - type: object
-              required:
-              - input
-              - error
-              properties:
-                input:
-                  type: string
-                error:
-                  type: object
-                  required:
-                  - code
-                  - message
-                  - status
-                  properties:
-                    code:
-                      type: string
-                    message:
-                      type: string
-                    status:
-                      type: integer
-                  additionalProperties: true
-        meta:
-          type: object
-          required:
-          - total
-          - succeeded
-          - failed
-          - max_items
-          - credits_per_item
-          - duration_ms
-          properties:
-            total:
-              type: integer
-              minimum: 1
-              maximum: 10
-            succeeded:
-              type: integer
-              minimum: 0
-              maximum: 10
-            failed:
-              type: integer
-              minimum: 0
-              maximum: 10
-            max_items:
-              type: integer
-              enum:
-              - 10
-            credits_per_item:
-              type: integer
-              minimum: 1
-            duration_ms:
-              type: integer
-              minimum: 0
-    SpfLookupTree:
-      type: object
-      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
-      properties:
-        root_domain:
-          type: string
-        node_count:
-          type: integer
-        max_depth:
-          type: integer
-        cycles_detected:
-          type: array
-          items:
-            type: string
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              domain:
-                type: string
-              depth:
-                type: integer
-              status:
-                type: string
-                enum:
-                - present
-                - missing
-                - cycle
-                - error
-                - limit_exceeded
-              direct_lookup_count:
-                type: integer
-              total_lookup_count:
-                type: integer
-              includes:
-                type: array
-                items:
-                  type: string
-              redirect:
-                type:
-                - string
-                - 'null'
-              mechanisms:
-                type: array
-                items:
-                  type: string
-              errors:
-                type: array
-                items:
-                  type: string
-        edges:
-          type: array
-          items:
-            type: object
-            properties:
-              from:
-                type: string
-              to:
-                type: string
-              type:
-                type: string
-                enum:
-                - include
-                - redirect
-    SimilarityResponse:
-      type: object
-      description: Domain similarity analysis
-      properties:
-        domain1:
-          type: string
-        domain2:
-          type: string
-        overall_similarity:
-          type: number
-          minimum: 0
-          maximum: 100
-        risk_level:
-          type: string
-          enum:
-          - none
-          - low
-          - medium
-          - high
-          - critical
-        analysis:
-          type: object
-          properties:
-            levenshtein_distance:
-              type: integer
-            levenshtein_similarity:
-              type: number
-              minimum: 0
-              maximum: 100
-            jaro_winkler_similarity:
-              type: number
-              minimum: 0
-              maximum: 100
-            visual_similarity:
-              type: number
-              minimum: 0
-              maximum: 100
-            keyboard_distance:
-              type: number
-            common_prefix_length:
-              type: integer
-            common_suffix_length:
-              type: integer
-        matching_methods:
-          type: array
-          items:
-            type: string
-        is_potential_typosquat:
-          type: boolean
-        checked_at:
-          type: string
-          format: date-time
-        meta:
-          type: object
-          additionalProperties: true
     EmailAuthResponse:
       type: object
       description: Email authentication (SPF/DKIM/DMARC) status with BIMI/VMC, MTA-STS, and TLS-RPT checks
@@ -1749,6 +1437,81 @@ components:
           type: array
           items:
             type: string
+    BulkLookupResponse:
+      type: object
+      description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
+      required:
+      - results
+      - meta
+      properties:
+        results:
+          type: array
+          description: Results in the same order as the submitted inputs.
+          items:
+            oneOf:
+            - type: object
+              required:
+              - input
+              - data
+              properties:
+                input:
+                  type: string
+                data:
+                  type: object
+                  additionalProperties: true
+            - type: object
+              required:
+              - input
+              - error
+              properties:
+                input:
+                  type: string
+                error:
+                  type: object
+                  required:
+                  - code
+                  - message
+                  - status
+                  properties:
+                    code:
+                      type: string
+                    message:
+                      type: string
+                    status:
+                      type: integer
+                  additionalProperties: true
+        meta:
+          type: object
+          required:
+          - total
+          - succeeded
+          - failed
+          - max_items
+          - credits_per_item
+          - duration_ms
+          properties:
+            total:
+              type: integer
+              minimum: 1
+              maximum: 10
+            succeeded:
+              type: integer
+              minimum: 0
+              maximum: 10
+            failed:
+              type: integer
+              minimum: 0
+              maximum: 10
+            max_items:
+              type: integer
+              enum:
+              - 10
+            credits_per_item:
+              type: integer
+              minimum: 1
+            duration_ms:
+              type: integer
+              minimum: 0
     MacInfoResponse:
       type: object
       description: MAC address vendor information
@@ -1812,6 +1575,61 @@ components:
             checked_at:
               type: string
               format: date-time
+        meta:
+          type: object
+          additionalProperties: true
+    SimilarityResponse:
+      type: object
+      description: Domain similarity analysis
+      properties:
+        domain1:
+          type: string
+        domain2:
+          type: string
+        overall_similarity:
+          type: number
+          minimum: 0
+          maximum: 100
+        risk_level:
+          type: string
+          enum:
+          - none
+          - low
+          - medium
+          - high
+          - critical
+        analysis:
+          type: object
+          properties:
+            levenshtein_distance:
+              type: integer
+            levenshtein_similarity:
+              type: number
+              minimum: 0
+              maximum: 100
+            jaro_winkler_similarity:
+              type: number
+              minimum: 0
+              maximum: 100
+            visual_similarity:
+              type: number
+              minimum: 0
+              maximum: 100
+            keyboard_distance:
+              type: number
+            common_prefix_length:
+              type: integer
+            common_suffix_length:
+              type: integer
+        matching_methods:
+          type: array
+          items:
+            type: string
+        is_potential_typosquat:
+          type: boolean
+        checked_at:
+          type: string
+          format: date-time
         meta:
           type: object
           additionalProperties: true
@@ -1880,6 +1698,188 @@ components:
           - retryable
           - request_id
           - docs_url
+    SpfLookupTree:
+      type: object
+      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
+      properties:
+        root_domain:
+          type: string
+        node_count:
+          type: integer
+        max_depth:
+          type: integer
+        cycles_detected:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              depth:
+                type: integer
+              status:
+                type: string
+                enum:
+                - present
+                - missing
+                - cycle
+                - error
+                - limit_exceeded
+              direct_lookup_count:
+                type: integer
+              total_lookup_count:
+                type: integer
+              includes:
+                type: array
+                items:
+                  type: string
+              redirect:
+                type:
+                - string
+                - 'null'
+              mechanisms:
+                type: array
+                items:
+                  type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              type:
+                type: string
+                enum:
+                - include
+                - redirect
+    FullReportResponse:
+      type: object
+      description: Comprehensive domain intelligence report
+      properties:
+        domain:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        availability:
+          type: object
+        dns:
+          type: object
+        whois:
+          type: object
+        ssl:
+          type: object
+        tech_stack:
+          type: object
+        reputation:
+          type: object
+        email_auth:
+          type: object
+        valuation:
+          type: object
+        summary:
+          type: object
+          properties:
+            health_score:
+              type: integer
+            security_score:
+              type: integer
+            issues:
+              type: array
+              items:
+                type: string
+            recommendations:
+              type: array
+              items:
+                type: string
+  responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

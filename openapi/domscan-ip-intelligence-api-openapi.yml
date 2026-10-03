@@ -141,6 +141,24 @@ paths:
         default: 1
 components:
   responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -176,24 +194,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -218,53 +218,6 @@ components:
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
   schemas:
-    IpIntelligenceSummary:
-      type: object
-      description: Compact source, confidence, ASN, security signal, and hosting-category summary for IP intelligence responses.
-      properties:
-        query_type:
-          type: string
-          enum:
-          - ip
-          - domain
-        domain_resolved:
-          type: boolean
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        data_source:
-          type: string
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        confidence_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-        asn_present:
-          type: boolean
-        organization_present:
-          type: boolean
-        country_present:
-          type: boolean
-        security_signal_count:
-          type: integer
-        risk_flags:
-          type: array
-          items:
-            type: string
-        hosting_category:
-          type: string
-          enum:
-          - cloud
-          - datacenter
-          - residential
-          - unknown
     IpInfoResponse:
       type: object
       description: IP geolocation and intelligence data. IP-intrinsic enrichment is cached independently from any caller-supplied domain; rDNS classification uses the returned PTR hostname.
@@ -443,6 +396,53 @@ components:
               - string
               - 'null'
               description: Reserved for partial non-critical enrichment warnings. Core IP dataset unavailability returns HTTP 503.
+    IpIntelligenceSummary:
+      type: object
+      description: Compact source, confidence, ASN, security signal, and hosting-category summary for IP intelligence responses.
+      properties:
+        query_type:
+          type: string
+          enum:
+          - ip
+          - domain
+        domain_resolved:
+          type: boolean
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        data_source:
+          type: string
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        confidence_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        asn_present:
+          type: boolean
+        organization_present:
+          type: boolean
+        country_present:
+          type: boolean
+        security_signal_count:
+          type: integer
+        risk_flags:
+          type: array
+          items:
+            type: string
+        hosting_category:
+          type: string
+          enum:
+          - cloud
+          - datacenter
+          - residential
+          - unknown
     ErrorResponse:
       type: object
       description: Standard error response format

@@ -220,140 +220,52 @@ paths:
         default: 0
 components:
   schemas:
-    TldsListResponse:
+    CompareDecisionSummary:
       type: object
-      description: List of supported TLDs
+      description: Additive domain comparison explanation for winner, runner-up, margin, and deciding factor.
       properties:
-        tlds:
-          type: array
-          items:
-            type: object
-            properties:
-              tld:
-                type: string
-                description: Effective public suffix used for comparison
-              type:
-                type: string
-                enum:
-                - gTLD
-                - ccTLD
-                - newTLD
-                - idn
-              name:
-                type: string
-              rdap_supported:
-                type: boolean
-              trust_tier:
-                type: string
-                enum:
-                - premium
-                - standard
-                - economy
-                - suspicious
-              popularity_rank:
-                type: integer
-              registration_usd:
-                type: number
-        total:
+        compared_count:
           type: integer
-        by_type:
-          type: object
-          properties:
-            gTLD:
-              type: integer
-            ccTLD:
-              type: integer
-            newTLD:
-              type: integer
-            idn:
-              type: integer
-        by_trust_tier:
-          type: object
-          properties:
-            premium:
-              type: integer
-            standard:
-              type: integer
-            economy:
-              type: integer
-        use_case:
-          type: string
-        meta:
-          type: object
-          additionalProperties: true
-    CoverageResponse:
-      type: object
-      description: TLD coverage information
-      required:
-      - gtlds
-      - cctlds
-      - total_tlds
-      - all_tlds
-      - rdap_health
-      - bootstrap_source
-      - bootstrap_last_updated
-      - meta
-      properties:
-        gtlds:
-          type: array
-          items:
-            type: string
-          description: Generic TLDs supported
-        cctlds:
-          type: array
-          items:
-            type: string
-          description: Country-code TLDs supported
-        total_tlds:
-          type: integer
-          description: Total TLDs supported
-        all_tlds:
-          type: array
-          items:
-            type: string
-        rdap_health:
-          type: array
-          items:
-            type: object
-            required:
-            - tld
-            - endpoint
-            - ok
-            - p50_ms
-            - error_rate
-            properties:
-              tld:
-                type: string
-              endpoint:
-                type: string
-                format: uri
-              ok:
-                type: boolean
-              p50_ms:
-                type: number
-              error_rate:
-                type: number
-        bootstrap_source:
-          type: string
+        best_overall:
+          type:
+          - string
+          - 'null'
+        best_available:
+          type:
+          - string
+          - 'null'
+        runner_up:
+          type:
+          - string
+          - 'null'
+        rank_margin:
+          type:
+          - integer
+          - 'null'
+        score_margin:
+          type:
+          - integer
+          - 'null'
+        value_margin_usd:
+          type:
+          - number
+          - 'null'
+        availability_used:
+          type: boolean
+        winning_factor:
+          type:
+          - string
+          - 'null'
           enum:
-          - iana
-          - fallback
-        bootstrap_last_updated:
-          type: string
-          format: date-time
-        meta:
-          type: object
-          required:
-          - served_by
-          - bootstrap_ttl_s
-          - live
-          properties:
-            served_by:
-              type: string
-            bootstrap_ttl_s:
-              type: integer
-            live:
-              type: boolean
+          - availability
+          - brand_score
+          - valuation
+          - tld_trust
+          - overall_rank
+        tie_breaker:
+          type:
+          - string
+          - 'null'
     CompareDomainsResponse:
       type: object
       description: Domain comparison results
@@ -480,6 +392,67 @@ components:
               type: integer
             total_ms:
               type: integer
+    TldsListResponse:
+      type: object
+      description: List of supported TLDs
+      properties:
+        tlds:
+          type: array
+          items:
+            type: object
+            properties:
+              tld:
+                type: string
+                description: Effective public suffix used for comparison
+              type:
+                type: string
+                enum:
+                - gTLD
+                - ccTLD
+                - newTLD
+                - idn
+              name:
+                type: string
+              rdap_supported:
+                type: boolean
+              trust_tier:
+                type: string
+                enum:
+                - premium
+                - standard
+                - economy
+                - suspicious
+              popularity_rank:
+                type: integer
+              registration_usd:
+                type: number
+        total:
+          type: integer
+        by_type:
+          type: object
+          properties:
+            gTLD:
+              type: integer
+            ccTLD:
+              type: integer
+            newTLD:
+              type: integer
+            idn:
+              type: integer
+        by_trust_tier:
+          type: object
+          properties:
+            premium:
+              type: integer
+            standard:
+              type: integer
+            economy:
+              type: integer
+        use_case:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
     TldDetailResponse:
       type: object
       description: Detailed TLD information
@@ -572,52 +545,6 @@ components:
         meta:
           type: object
           additionalProperties: true
-    CompareDecisionSummary:
-      type: object
-      description: Additive domain comparison explanation for winner, runner-up, margin, and deciding factor.
-      properties:
-        compared_count:
-          type: integer
-        best_overall:
-          type:
-          - string
-          - 'null'
-        best_available:
-          type:
-          - string
-          - 'null'
-        runner_up:
-          type:
-          - string
-          - 'null'
-        rank_margin:
-          type:
-          - integer
-          - 'null'
-        score_margin:
-          type:
-          - integer
-          - 'null'
-        value_margin_usd:
-          type:
-          - number
-          - 'null'
-        availability_used:
-          type: boolean
-        winning_factor:
-          type:
-          - string
-          - 'null'
-          enum:
-          - availability
-          - brand_score
-          - valuation
-          - tld_trust
-          - overall_rank
-        tie_breaker:
-          type:
-          - string
-          - 'null'
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -683,6 +610,79 @@ components:
           - retryable
           - request_id
           - docs_url
+    CoverageResponse:
+      type: object
+      description: TLD coverage information
+      required:
+      - gtlds
+      - cctlds
+      - total_tlds
+      - all_tlds
+      - rdap_health
+      - bootstrap_source
+      - bootstrap_last_updated
+      - meta
+      properties:
+        gtlds:
+          type: array
+          items:
+            type: string
+          description: Generic TLDs supported
+        cctlds:
+          type: array
+          items:
+            type: string
+          description: Country-code TLDs supported
+        total_tlds:
+          type: integer
+          description: Total TLDs supported
+        all_tlds:
+          type: array
+          items:
+            type: string
+        rdap_health:
+          type: array
+          items:
+            type: object
+            required:
+            - tld
+            - endpoint
+            - ok
+            - p50_ms
+            - error_rate
+            properties:
+              tld:
+                type: string
+              endpoint:
+                type: string
+                format: uri
+              ok:
+                type: boolean
+              p50_ms:
+                type: number
+              error_rate:
+                type: number
+        bootstrap_source:
+          type: string
+          enum:
+          - iana
+          - fallback
+        bootstrap_last_updated:
+          type: string
+          format: date-time
+        meta:
+          type: object
+          required:
+          - served_by
+          - bootstrap_ttl_s
+          - live
+          properties:
+            served_by:
+              type: string
+            bootstrap_ttl_s:
+              type: integer
+            live:
+              type: boolean
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.

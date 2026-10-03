@@ -754,7 +754,117 @@ paths:
         model: per_request
         default: 0
 components:
+  responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   schemas:
+    DnssecMismatchDetail:
+      type: object
+      description: DNSSEC DS/DNSKEY mismatch and validation-state details from resolver and authoritative evidence.
+      properties:
+        checked:
+          type: boolean
+        mismatch_detected:
+          type: boolean
+        reason:
+          type:
+          - string
+          - 'null'
+        ds_record_count:
+          type: integer
+        dnskey_record_count:
+          type: integer
+        rrsig_present:
+          type:
+          - boolean
+          - 'null'
+        validation_status:
+          type:
+          - string
+          - 'null'
+          enum:
+          - secure
+          - insecure
+          - bogus
+          - indeterminate
+        resolver:
+          type:
+          - string
+          - 'null'
     DnsServersResponse:
       type: object
       description: Configured public recursive DoH providers. These are global anycast services, not geographic probes.
@@ -798,36 +908,322 @@ components:
                 - dns-json
         total:
           type: integer
-    DnsRecord:
+    BulkDnsResponse:
       type: object
+      description: Bulk DNS lookup response
       properties:
-        type:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkDnsResult'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            nxdomain:
+              type: integer
+            errors:
+              type: integer
+            query_time_ms:
+              type: integer
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            record_type:
+              type: string
+    DnsResponse:
+      type: object
+      description: DNS record lookup response
+      properties:
+        domain:
           type: string
-          description: Record type (A, AAAA, MX, etc.)
-        name:
+        record_type:
           type: string
-          description: Record name
-        data:
-          type: string
-          description: Record data/value
-        ttl:
-          type: integer
-          description: Time to live in seconds
-        priority:
-          type: integer
-          description: Priority for MX/SRV records
-        classification:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsRecord'
+        status:
           type: string
           enum:
-          - spf
-          - dkim
-          - dmarc
-          - verification
-          - dnssec
-          - mta_sts
-          - tls_rpt
-          - other
-          description: Semantic classification of a TXT record. Only present for type=TXT records.
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+          description: Whether DNSSEC validation passed
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+    PropagationSummary:
+      type: object
+      description: Additive rollup for configured recursive-resolver convergence or expected-value matching. It is not a geographic propagation summary.
+      properties:
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        percentage_basis:
+          type: string
+          enum:
+          - expected_value_match
+          - resolver_convergence
+        resolver_count:
+          type: integer
+        successful_count:
+          type: integer
+        failed_count:
+          type: integer
+        propagation_percentage:
+          type: number
+          description: Uses the percentage_basis reported in the response.
+        fully_propagated:
+          type: boolean
+          description: True only when all configured resolvers match expected_value, or all converge when no expected value is supplied.
+        consistent:
+          type: boolean
+          description: Whether all configured resolvers succeeded with one normalized answer set.
+        unique_value_count:
+          type: integer
+        matching_expected_count:
+          type: integer
+        expected_value_present:
+          type:
+          - boolean
+          - 'null'
+        countries_checked:
+          type: integer
+          description: Count of country metadata labels. GLOBAL is one label and does not represent a geographic vantage point.
+        providers_checked:
+          type: integer
+        locations_checked:
+          type: integer
+          description: Count of resolver scope labels. Global anycast does not represent a geographic vantage point.
+        slowest_resolver:
+          type:
+          - string
+          - 'null'
+        slowest_response_ms:
+          type:
+          - integer
+          - 'null'
+        fastest_response_ms:
+          type:
+          - integer
+          - 'null'
+        disagreement_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          description: Confidence within the configured recursive-resolver sample only. It does not imply geographic or worldwide confidence.
+    SpfLookupTree:
+      type: object
+      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
+      properties:
+        root_domain:
+          type: string
+        node_count:
+          type: integer
+        max_depth:
+          type: integer
+        cycles_detected:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              depth:
+                type: integer
+              status:
+                type: string
+                enum:
+                - present
+                - missing
+                - cycle
+                - error
+                - limit_exceeded
+              direct_lookup_count:
+                type: integer
+              total_lookup_count:
+                type: integer
+              includes:
+                type: array
+                items:
+                  type: string
+              redirect:
+                type:
+                - string
+                - 'null'
+              mechanisms:
+                type: array
+                items:
+                  type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              type:
+                type: string
+                enum:
+                - include
+                - redirect
+    DnsPropagationResponse:
+      type: object
+      description: Answer comparison across configured public recursive resolvers. It does not represent geographic or worldwide DNS propagation.
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+          enum:
+          - A
+          - AAAA
+          - CNAME
+          - MX
+          - TXT
+          - NS
+          - SOA
+        expected_value:
+          type:
+          - string
+          - 'null'
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        percentage_basis:
+          type: string
+          enum:
+          - expected_value_match
+          - resolver_convergence
+        propagation_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: When expected_value is supplied, the percentage of all configured resolvers whose answer matches it. Otherwise, the percentage represented by the largest identical-answer cohort. Resolver failures remain in the denominator.
+        fully_propagated:
+          type: boolean
+          description: With expected_value, true only when every configured resolver returns that value. Without expected_value, true only when every configured resolver succeeds with the same answer set.
+        consistent:
+          type: boolean
+          description: True only when every configured resolver succeeds and returns the same normalized answer set. This is independent of expected_value matching.
+        unique_values:
+          type: array
+          items:
+            type: string
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              server:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  ip:
+                    type: string
+                  provider:
+                    type: string
+                  location:
+                    type: string
+                    enum:
+                    - Global anycast
+                  country:
+                    type: string
+                    enum:
+                    - GLOBAL
+                  scope:
+                    type: string
+                    enum:
+                    - global-anycast
+                  doh_endpoint:
+                    type: string
+                    format: uri
+                  documentation_url:
+                    type: string
+                    format: uri
+                  format:
+                    type: string
+                    enum:
+                    - dns-json
+              success:
+                type: boolean
+              records:
+                type: array
+                items:
+                  type: string
+              ttl:
+                type:
+                - integer
+                - 'null'
+              response_time_ms:
+                type: integer
+              error:
+                type:
+                - string
+                - 'null'
+        checked_at:
+          type: string
+          format: date-time
+        total_duration_ms:
+          type: integer
+        summary:
+          type: object
+          properties:
+            total_servers:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            matching_expected:
+              type: integer
+        propagation_summary:
+          $ref: '#/components/schemas/PropagationSummary'
+    DnsWarning:
+      type: object
+      description: Non-fatal signal about the DNS response (e.g. duplicate MX priority, private IP leak).
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum:
+          - info
+          - warning
     NameserverDriftSummary:
       type: object
       description: Compares public NS records against observed authoritative nameservers and serial consistency.
@@ -862,37 +1258,6 @@ components:
           type:
           - boolean
           - 'null'
-    DnsResponse:
-      type: object
-      description: DNS record lookup response
-      properties:
-        domain:
-          type: string
-        record_type:
-          type: string
-        records:
-          type: array
-          items:
-            $ref: '#/components/schemas/DnsRecord'
-        status:
-          type: string
-          enum:
-          - success
-          - nxdomain
-          - error
-        dnssec_validated:
-          type: boolean
-          description: Whether DNSSEC validation passed
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-        warnings:
-          type: array
-          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
-          items:
-            $ref: '#/components/schemas/DnsWarning'
     DnsSecurityResponse:
       type: object
       description: DNS security analysis
@@ -1646,177 +2011,6 @@ components:
           format: date-time
         check_duration_ms:
           type: integer
-    PropagationSummary:
-      type: object
-      description: Additive rollup for configured recursive-resolver convergence or expected-value matching. It is not a geographic propagation summary.
-      properties:
-        measurement_scope:
-          type: string
-          enum:
-          - configured_recursive_resolvers
-        percentage_basis:
-          type: string
-          enum:
-          - expected_value_match
-          - resolver_convergence
-        resolver_count:
-          type: integer
-        successful_count:
-          type: integer
-        failed_count:
-          type: integer
-        propagation_percentage:
-          type: number
-          description: Uses the percentage_basis reported in the response.
-        fully_propagated:
-          type: boolean
-          description: True only when all configured resolvers match expected_value, or all converge when no expected value is supplied.
-        consistent:
-          type: boolean
-          description: Whether all configured resolvers succeeded with one normalized answer set.
-        unique_value_count:
-          type: integer
-        matching_expected_count:
-          type: integer
-        expected_value_present:
-          type:
-          - boolean
-          - 'null'
-        countries_checked:
-          type: integer
-          description: Count of country metadata labels. GLOBAL is one label and does not represent a geographic vantage point.
-        providers_checked:
-          type: integer
-        locations_checked:
-          type: integer
-          description: Count of resolver scope labels. Global anycast does not represent a geographic vantage point.
-        slowest_resolver:
-          type:
-          - string
-          - 'null'
-        slowest_response_ms:
-          type:
-          - integer
-          - 'null'
-        fastest_response_ms:
-          type:
-          - integer
-          - 'null'
-        disagreement_count:
-          type: integer
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-          description: Confidence within the configured recursive-resolver sample only. It does not imply geographic or worldwide confidence.
-    DnsWarning:
-      type: object
-      description: Non-fatal signal about the DNS response (e.g. duplicate MX priority, private IP leak).
-      properties:
-        code:
-          type: string
-        message:
-          type: string
-        severity:
-          type: string
-          enum:
-          - info
-          - warning
-    BulkDnsResult:
-      type: object
-      description: Single result inside a bulk DNS lookup response
-      properties:
-        domain:
-          type: string
-        record_type:
-          type: string
-        records:
-          type: array
-          items:
-            $ref: '#/components/schemas/DnsRecord'
-        status:
-          type: string
-          enum:
-          - success
-          - nxdomain
-          - error
-        dnssec_validated:
-          type: boolean
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-    DnssecMismatchDetail:
-      type: object
-      description: DNSSEC DS/DNSKEY mismatch and validation-state details from resolver and authoritative evidence.
-      properties:
-        checked:
-          type: boolean
-        mismatch_detected:
-          type: boolean
-        reason:
-          type:
-          - string
-          - 'null'
-        ds_record_count:
-          type: integer
-        dnskey_record_count:
-          type: integer
-        rrsig_present:
-          type:
-          - boolean
-          - 'null'
-        validation_status:
-          type:
-          - string
-          - 'null'
-          enum:
-          - secure
-          - insecure
-          - bogus
-          - indeterminate
-        resolver:
-          type:
-          - string
-          - 'null'
-    BulkDnsResponse:
-      type: object
-      description: Bulk DNS lookup response
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/BulkDnsResult'
-        summary:
-          type: object
-          properties:
-            total:
-              type: integer
-            successful:
-              type: integer
-            nxdomain:
-              type: integer
-            errors:
-              type: integer
-            query_time_ms:
-              type: integer
-        meta:
-          type: object
-          properties:
-            served_by:
-              type: string
-            record_type:
-              type: string
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -1892,185 +2086,123 @@ components:
             duration_ms:
               type: integer
               minimum: 0
-    DnsPropagationResponse:
+    BulkDnsResult:
       type: object
-      description: Answer comparison across configured public recursive resolvers. It does not represent geographic or worldwide DNS propagation.
+      description: Single result inside a bulk DNS lookup response
       properties:
         domain:
           type: string
         record_type:
           type: string
-          enum:
-          - A
-          - AAAA
-          - CNAME
-          - MX
-          - TXT
-          - NS
-          - SOA
-        expected_value:
-          type:
-          - string
-          - 'null'
-        measurement_scope:
-          type: string
-          enum:
-          - configured_recursive_resolvers
-        percentage_basis:
-          type: string
-          enum:
-          - expected_value_match
-          - resolver_convergence
-        propagation_percentage:
-          type: number
-          minimum: 0
-          maximum: 100
-          description: When expected_value is supplied, the percentage of all configured resolvers whose answer matches it. Otherwise, the percentage represented by the largest identical-answer cohort. Resolver failures remain in the denominator.
-        fully_propagated:
-          type: boolean
-          description: With expected_value, true only when every configured resolver returns that value. Without expected_value, true only when every configured resolver succeeds with the same answer set.
-        consistent:
-          type: boolean
-          description: True only when every configured resolver succeeds and returns the same normalized answer set. This is independent of expected_value matching.
-        unique_values:
+        records:
           type: array
           items:
-            type: string
-        results:
-          type: array
-          items:
-            type: object
-            properties:
-              server:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  ip:
-                    type: string
-                  provider:
-                    type: string
-                  location:
-                    type: string
-                    enum:
-                    - Global anycast
-                  country:
-                    type: string
-                    enum:
-                    - GLOBAL
-                  scope:
-                    type: string
-                    enum:
-                    - global-anycast
-                  doh_endpoint:
-                    type: string
-                    format: uri
-                  documentation_url:
-                    type: string
-                    format: uri
-                  format:
-                    type: string
-                    enum:
-                    - dns-json
-              success:
-                type: boolean
-              records:
-                type: array
-                items:
-                  type: string
-              ttl:
-                type:
-                - integer
-                - 'null'
-              response_time_ms:
-                type: integer
-              error:
-                type:
-                - string
-                - 'null'
+            $ref: '#/components/schemas/DnsRecord'
+        status:
+          type: string
+          enum:
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+        query_time_ms:
+          type: integer
         checked_at:
           type: string
           format: date-time
-        total_duration_ms:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    DnsRecord:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Record type (A, AAAA, MX, etc.)
+        name:
+          type: string
+          description: Record name
+        data:
+          type: string
+          description: Record data/value
+        ttl:
           type: integer
+          description: Time to live in seconds
+        priority:
+          type: integer
+          description: Priority for MX/SRV records
+        classification:
+          type: string
+          enum:
+          - spf
+          - dkim
+          - dmarc
+          - verification
+          - dnssec
+          - mta_sts
+          - tls_rpt
+          - other
+          description: Semantic classification of a TXT record. Only present for type=TXT records.
+    DnsAllResponse:
+      type: object
+      description: All DNS records response
+      properties:
+        domain:
+          type: string
+        records:
+          type: object
+          description: Records grouped by type
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DnsRecord'
         summary:
           type: object
           properties:
-            total_servers:
-              type: integer
-            successful:
-              type: integer
-            failed:
-              type: integer
-            matching_expected:
-              type: integer
-        propagation_summary:
-          $ref: '#/components/schemas/PropagationSummary'
-    SpfLookupTree:
-      type: object
-      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
-      properties:
-        root_domain:
+            has_a:
+              type: boolean
+            has_aaaa:
+              type: boolean
+            has_ns:
+              type: boolean
+            has_mx:
+              type: boolean
+            has_txt:
+              type: boolean
+            has_https:
+              type: boolean
+            has_svcb:
+              type: boolean
+            ipv6_parity:
+              type: string
+              enum:
+              - full
+              - partial
+              - none
+              description: IPv6 parity hint derived from A/AAAA availability.
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+        wildcard:
+          type: object
+          description: Result of the optional wildcard-DNS probe. Only present when ?wildcard_probe=1 and a probe was performed.
+          properties:
+            suspected:
+              type: boolean
+            probe_label:
+              type: string
+        query_time_ms:
+          type: integer
+        checked_at:
           type: string
-        node_count:
-          type: integer
-        max_depth:
-          type: integer
-        cycles_detected:
-          type: array
-          items:
-            type: string
-        nodes:
-          type: array
-          items:
-            type: object
-            properties:
-              domain:
-                type: string
-              depth:
-                type: integer
-              status:
-                type: string
-                enum:
-                - present
-                - missing
-                - cycle
-                - error
-                - limit_exceeded
-              direct_lookup_count:
-                type: integer
-              total_lookup_count:
-                type: integer
-              includes:
-                type: array
-                items:
-                  type: string
-              redirect:
-                type:
-                - string
-                - 'null'
-              mechanisms:
-                type: array
-                items:
-                  type: string
-              errors:
-                type: array
-                items:
-                  type: string
-        edges:
-          type: array
-          items:
-            type: object
-            properties:
-              from:
-                type: string
-              to:
-                type: string
-              type:
-                type: string
-                enum:
-                - include
-                - redirect
+          format: date-time
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -2136,138 +2268,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    DnsAllResponse:
-      type: object
-      description: All DNS records response
-      properties:
-        domain:
-          type: string
-        records:
-          type: object
-          description: Records grouped by type
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/DnsRecord'
-        summary:
-          type: object
-          properties:
-            has_a:
-              type: boolean
-            has_aaaa:
-              type: boolean
-            has_ns:
-              type: boolean
-            has_mx:
-              type: boolean
-            has_txt:
-              type: boolean
-            has_https:
-              type: boolean
-            has_svcb:
-              type: boolean
-            ipv6_parity:
-              type: string
-              enum:
-              - full
-              - partial
-              - none
-              description: IPv6 parity hint derived from A/AAAA availability.
-        warnings:
-          type: array
-          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
-          items:
-            $ref: '#/components/schemas/DnsWarning'
-        wildcard:
-          type: object
-          description: Result of the optional wildcard-DNS probe. Only present when ?wildcard_probe=1 and a probe was performed.
-          properties:
-            suspected:
-              type: boolean
-            probe_label:
-              type: string
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-  responses:
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

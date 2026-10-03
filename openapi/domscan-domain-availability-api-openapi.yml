@@ -265,70 +265,6 @@ paths:
         note: Each word-TLD pair uses the normal /v1/status credit cost, currently 1 credit. Billing and any eligible item refunds follow /v1/status behavior.
 components:
   schemas:
-    StatusResponse:
-      type: object
-      description: Domain availability check response
-      properties:
-        name:
-          type: string
-          description: Base domain name (without TLD)
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/AvailabilityResult'
-        confidence_summary:
-          $ref: '#/components/schemas/AvailabilityConfidenceSummary'
-        meta:
-          type: object
-          properties:
-            total_checked:
-              type: integer
-              description: Number of TLDs checked
-            available_count:
-              type: integer
-              description: Number of available domains
-            duration_ms:
-              type: integer
-              description: Total check duration
-    AvailabilityResult:
-      type: object
-      description: Single domain availability result
-      properties:
-        domain:
-          type: string
-          description: Full domain name
-        tld:
-          type: string
-          description: Top-level domain
-        available:
-          type:
-          - boolean
-          - 'null'
-          description: Whether domain is available for registration. null when status cannot be determined (e.g. RDAP and WHOIS both unavailable)
-        source:
-          type: string
-          enum:
-          - rdap
-          - cache
-          - dns
-          - whois
-          description: Data source used for check
-        confidence:
-          type: string
-          enum:
-          - authoritative
-          - heuristic
-          description: Result confidence level. "authoritative" for RDAP registry data, "heuristic" for DNS/WHOIS/cache fallbacks. Heuristic results may have false positives (e.g. parked domains without NS records may appear available)
-        checked_at:
-          type: string
-          format: date-time
-          description: Timestamp of check
-        latency_ms:
-          type: integer
-          description: Check latency in milliseconds
-        error:
-          type: string
-          description: Error message if check failed
     BulkStatusResponse:
       type: object
       description: Bulk domain availability check response
@@ -422,6 +358,31 @@ components:
               - string
               - 'null'
               description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
+    StatusResponse:
+      type: object
+      description: Domain availability check response
+      properties:
+        name:
+          type: string
+          description: Base domain name (without TLD)
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityResult'
+        confidence_summary:
+          $ref: '#/components/schemas/AvailabilityConfidenceSummary'
+        meta:
+          type: object
+          properties:
+            total_checked:
+              type: integer
+              description: Number of TLDs checked
+            available_count:
+              type: integer
+              description: Number of available domains
+            duration_ms:
+              type: integer
+              description: Total check duration
     ApiBatchJob:
       type: object
       required:
@@ -684,7 +645,64 @@ components:
           - retryable
           - request_id
           - docs_url
+    AvailabilityResult:
+      type: object
+      description: Single domain availability result
+      properties:
+        domain:
+          type: string
+          description: Full domain name
+        tld:
+          type: string
+          description: Top-level domain
+        available:
+          type:
+          - boolean
+          - 'null'
+          description: Whether domain is available for registration. null when status cannot be determined (e.g. RDAP and WHOIS both unavailable)
+        source:
+          type: string
+          enum:
+          - rdap
+          - cache
+          - dns
+          - whois
+          description: Data source used for check
+        confidence:
+          type: string
+          enum:
+          - authoritative
+          - heuristic
+          description: Result confidence level. "authoritative" for RDAP registry data, "heuristic" for DNS/WHOIS/cache fallbacks. Heuristic results may have false positives (e.g. parked domains without NS records may appear available)
+        checked_at:
+          type: string
+          format: date-time
+          description: Timestamp of check
+        latency_ms:
+          type: integer
+          description: Check latency in milliseconds
+        error:
+          type: string
+          description: Error message if check failed
   responses:
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -720,24 +738,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:

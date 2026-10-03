@@ -106,100 +106,7 @@ paths:
         model: per_request
         default: 0
 components:
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
   schemas:
-    ApiPricingResponse:
-      type: object
-      description: API credit pricing information
-      properties:
-        currency:
-          type: string
-          example: credits
-        signup_bonus:
-          type: integer
-          description: Credits given on signup
-        monthly_refresh:
-          type: string
-          description: Monthly credit refresh policy
-        endpoints:
-          type: array
-          items:
-            type: object
-            properties:
-              endpoint:
-                type: string
-              method:
-                type: string
-                enum:
-                - GET
-                - POST
-                - PUT
-                - DELETE
-                - PATCH
-              credits:
-                type: integer
-              variants:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    parameter:
-                      type: string
-                    equals: {}
-                    credits:
-                      type: integer
-              bulk_pricing:
-                type: object
-                properties:
-                  per_item_rate:
-                    type: integer
-                  formula:
-                    type: string
-                  min_cost:
-                    type: integer
-              note:
-                type: string
-        free_endpoints:
-          type: array
-          items:
-            type: string
-        note:
-          type: string
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -265,6 +172,99 @@ components:
           - retryable
           - request_id
           - docs_url
+    ApiPricingResponse:
+      type: object
+      description: API credit pricing information
+      properties:
+        currency:
+          type: string
+          example: credits
+        signup_bonus:
+          type: integer
+          description: Credits given on signup
+        monthly_refresh:
+          type: string
+          description: Monthly credit refresh policy
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              endpoint:
+                type: string
+              method:
+                type: string
+                enum:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - PATCH
+              credits:
+                type: integer
+              variants:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    parameter:
+                      type: string
+                    equals: {}
+                    credits:
+                      type: integer
+              bulk_pricing:
+                type: object
+                properties:
+                  per_item_rate:
+                    type: integer
+                  formula:
+                    type: string
+                  min_cost:
+                    type: integer
+              note:
+                type: string
+        free_endpoints:
+          type: array
+          items:
+            type: string
+        note:
+          type: string
+  responses:
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
   securitySchemes:
     apiKey:
       type: apiKey
