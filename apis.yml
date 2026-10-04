@@ -674,6 +674,9 @@ x-enrichment:
   artifacts_added: 29
   pass: local-v2
 common:
+- type: CapabilityMap
+  url: capabilities/domscan-capability-edges.yml
+  name: DomScan Business Capability Map
 - type: MCPServer
   url: https://domscan.net/mcp
 - type: Website
