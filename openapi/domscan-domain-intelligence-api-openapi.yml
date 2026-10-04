@@ -243,6 +243,127 @@ paths:
         default: 1
 components:
   schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    OverviewComponentFreshnessEntry:
+      type: object
+      properties:
+        source:
+          type: string
+        state:
+          type: string
+          enum:
+          - fresh
+          - degraded
+        checked_at:
+          type: string
+          format: date-time
+        evidence_count:
+          type: integer
+          description: Number of populated or explicitly observed fields for this component.
+        reason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - upstream_unavailable
+          - partial_upstream_failure
+          - unsupported_tld
+          - legacy_cache_without_provenance
+    OverviewComponentFreshness:
+      type: object
+      description: Per-component observation status for health, DNS, registration, reputation, and popularity. Cache hits retain the state, timestamp, and reason recorded when the observation was made.
+      properties:
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        checked_at:
+          type: string
+          format: date-time
+        component_count:
+          type: integer
+        fresh_component_count:
+          type: integer
+        degraded_component_count:
+          type: integer
+        components:
+          type: object
+          properties:
+            health:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            dns:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            registration:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            reputation:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            popularity:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
     DomainPopularityObservation:
       type: object
       required:
@@ -291,62 +412,36 @@ components:
         checked_at:
           type: string
           format: date-time
-    OverviewComponentFreshness:
+    DomainPopularityHistoryResponse:
       type: object
-      description: Per-component observation status for health, DNS, registration, reputation, and popularity. Cache hits retain the state, timestamp, and reason recorded when the observation was made.
+      required:
+      - domain
+      - collection
+      - complete_daily_series
+      - result_count
+      - empty_result
+      - observations
       properties:
-        cache_status:
+        domain:
+          type: string
+        collection:
           type: string
           enum:
-          - hit
-          - miss
-        checked_at:
-          type: string
-          format: date-time
-        component_count:
-          type: integer
-        fresh_component_count:
-          type: integer
-        degraded_component_count:
-          type: integer
-        components:
-          type: object
-          properties:
-            health:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            dns:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            registration:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            reputation:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            popularity:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-    OverviewComponentFreshnessEntry:
-      type: object
-      properties:
-        source:
-          type: string
-        state:
-          type: string
+          - lookup_driven
+        complete_daily_series:
+          type: boolean
           enum:
-          - fresh
-          - degraded
-        checked_at:
-          type: string
-          format: date-time
-        evidence_count:
+          - false
+        result_count:
           type: integer
-          description: Number of populated or explicitly observed fields for this component.
-        reason:
-          type:
-          - string
-          - 'null'
-          enum:
-          - upstream_unavailable
-          - partial_upstream_failure
-          - unsupported_tld
-          - legacy_cache_without_provenance
+          minimum: 0
+          maximum: 365
+        empty_result:
+          type: boolean
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainPopularityObservation'
     DomainPopularityResponse:
       type: object
       required:
@@ -504,120 +599,7 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DomainPopularityObservation'
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    DomainPopularityHistoryResponse:
-      type: object
-      required:
-      - domain
-      - collection
-      - complete_daily_series
-      - result_count
-      - empty_result
-      - observations
-      properties:
-        domain:
-          type: string
-        collection:
-          type: string
-          enum:
-          - lookup_driven
-        complete_daily_series:
-          type: boolean
-          enum:
-          - false
-        result_count:
-          type: integer
-          minimum: 0
-          maximum: 365
-        empty_result:
-          type: boolean
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/DomainPopularityObservation'
   responses:
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -653,12 +635,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    InternalError:
-      description: Unexpected service error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -671,6 +647,30 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     BadRequest:
       description: Bad request - invalid parameters
       content:

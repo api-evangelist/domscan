@@ -353,138 +353,6 @@ paths:
         note: 4 credits by default; 5 credits when verify=true.
 components:
   schemas:
-    CertificateIntelligenceSummary:
-      type: object
-      description: Compact source, freshness, truncation, and certificate posture summary for CT search results.
-      properties:
-        data_source:
-          type: string
-        ct_log_sources:
-          type: array
-          items:
-            type: string
-        source_count:
-          type: integer
-        cache_status:
-          type: string
-          enum:
-          - live
-          - fresh_cache
-          - stale_cache
-          - partial_unavailable
-        returned_count:
-          type: integer
-        total_found:
-          type: integer
-        truncated:
-          type: boolean
-        limit:
-          type: integer
-        include_subdomains:
-          type: boolean
-        include_expired:
-          type: boolean
-        unique_name_count:
-          type: integer
-        unique_subdomains:
-          type: integer
-        issuer_count:
-          type: integer
-        wildcard_cert_count:
-          type: integer
-        active_cert_count:
-          type: integer
-        expired_cert_count:
-          type: integer
-        expiring_within_30_days_count:
-          type: integer
-        earliest_cert:
-          type:
-          - string
-          - 'null'
-        latest_cert:
-          type:
-          - string
-          - 'null'
-        latest_expiry:
-          type:
-          - string
-          - 'null'
-        has_more:
-          type: boolean
-        next_cursor:
-          type:
-          - string
-          - 'null'
-        warning_code:
-          type:
-          - string
-          - 'null'
-    SubdomainIntelligenceSummary:
-      type: object
-      description: Compact source, cache, truncation, wildcard, and optional DNS verification summary. Counts describe the best-effort response, not every subdomain that exists.
-      properties:
-        data_sources:
-          type: array
-          items:
-            type: string
-            enum:
-            - ct
-            - crtsh
-            - crtname
-            - hackertarget
-            - threatminer
-            - wayback
-            - certspotter
-        source_count:
-          type: integer
-        cache_status:
-          type: string
-          enum:
-          - live
-          - fresh_cache
-          - stale_cache
-        returned_count:
-          type: integer
-        total_found:
-          type: integer
-        truncated:
-          type: boolean
-        limit:
-          type: integer
-        verification_requested:
-          type: boolean
-          description: Whether DNS was checked for the returned concrete hostnames.
-        include_wildcards:
-          type: boolean
-          description: Whether wildcard certificate evidence was requested separately.
-        verified_count:
-          type: integer
-        verified_ratio:
-          type:
-          - number
-          - 'null'
-        live_dns_record_count:
-          type: integer
-          description: Returned hostnames with at least one A or CNAME verification record.
-        apex_included:
-          type: boolean
-        wildcard_suppressed_count:
-          type: integer
-        wildcard_returned_count:
-          type: integer
-        first_seen_oldest:
-          type:
-          - string
-          - 'null'
-          description: Oldest valid first_seen value among returned entries, or null.
-        first_seen_newest:
-          type:
-          - string
-          - 'null'
-          description: Newest valid first_seen value among returned entries, or null.
-        warning_count:
-          type: integer
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -550,68 +418,24 @@ components:
           - retryable
           - request_id
           - docs_url
-    CertificatesResponse:
+    CertificatePagination:
       type: object
-      description: Certificate transparency search results
+      description: Offset cursor pagination for certificate transparency results.
       properties:
-        domain:
-          type: string
-        certificates:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-              issuer:
-                type: object
-                additionalProperties: true
-              common_name:
-                type: string
-              san:
-                type: array
-                items:
-                  type: string
-              not_before:
-                type: string
-                format: date-time
-              not_after:
-                type: string
-                format: date-time
-              is_expired:
-                type: boolean
-              is_wildcard:
-                type: boolean
-              fingerprint_sha256:
-                type: string
-        summary:
-          type: object
-          properties:
-            total_found:
-              type: integer
-            returned:
-              type: integer
-            unique_subdomains:
-              type: integer
-            issuers:
-              type: array
-              items:
-                type: string
-            earliest_cert:
-              type:
-              - string
-              - 'null'
-            latest_cert:
-              type:
-              - string
-              - 'null'
-        pagination:
-          $ref: '#/components/schemas/CertificatePagination'
-        intelligence_summary:
-          $ref: '#/components/schemas/CertificateIntelligenceSummary'
-        meta:
-          type: object
-          additionalProperties: true
+        limit:
+          type: integer
+        offset:
+          type: integer
+        returned:
+          type: integer
+        total:
+          type: integer
+        has_more:
+          type: boolean
+        next_cursor:
+          type:
+          - string
+          - 'null'
     SubdomainsResponse:
       type: object
       description: Best-effort public hostname evidence. This response is not a complete inventory and can include the apex when a source returns it.
@@ -754,43 +578,201 @@ components:
               type: boolean
             stale:
               type: boolean
-    CertificatePagination:
+    SubdomainIntelligenceSummary:
       type: object
-      description: Offset cursor pagination for certificate transparency results.
+      description: Compact source, cache, truncation, wildcard, and optional DNS verification summary. Counts describe the best-effort response, not every subdomain that exists.
       properties:
+        data_sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - ct
+            - crtsh
+            - crtname
+            - hackertarget
+            - threatminer
+            - wayback
+            - certspotter
+        source_count:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - live
+          - fresh_cache
+          - stale_cache
+        returned_count:
+          type: integer
+        total_found:
+          type: integer
+        truncated:
+          type: boolean
         limit:
           type: integer
-        offset:
+        verification_requested:
+          type: boolean
+          description: Whether DNS was checked for the returned concrete hostnames.
+        include_wildcards:
+          type: boolean
+          description: Whether wildcard certificate evidence was requested separately.
+        verified_count:
           type: integer
-        returned:
+        verified_ratio:
+          type:
+          - number
+          - 'null'
+        live_dns_record_count:
           type: integer
-        total:
+          description: Returned hostnames with at least one A or CNAME verification record.
+        apex_included:
+          type: boolean
+        wildcard_suppressed_count:
           type: integer
+        wildcard_returned_count:
+          type: integer
+        first_seen_oldest:
+          type:
+          - string
+          - 'null'
+          description: Oldest valid first_seen value among returned entries, or null.
+        first_seen_newest:
+          type:
+          - string
+          - 'null'
+          description: Newest valid first_seen value among returned entries, or null.
+        warning_count:
+          type: integer
+    CertificatesResponse:
+      type: object
+      description: Certificate transparency search results
+      properties:
+        domain:
+          type: string
+        certificates:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              issuer:
+                type: object
+                additionalProperties: true
+              common_name:
+                type: string
+              san:
+                type: array
+                items:
+                  type: string
+              not_before:
+                type: string
+                format: date-time
+              not_after:
+                type: string
+                format: date-time
+              is_expired:
+                type: boolean
+              is_wildcard:
+                type: boolean
+              fingerprint_sha256:
+                type: string
+        summary:
+          type: object
+          properties:
+            total_found:
+              type: integer
+            returned:
+              type: integer
+            unique_subdomains:
+              type: integer
+            issuers:
+              type: array
+              items:
+                type: string
+            earliest_cert:
+              type:
+              - string
+              - 'null'
+            latest_cert:
+              type:
+              - string
+              - 'null'
+        pagination:
+          $ref: '#/components/schemas/CertificatePagination'
+        intelligence_summary:
+          $ref: '#/components/schemas/CertificateIntelligenceSummary'
+        meta:
+          type: object
+          additionalProperties: true
+    CertificateIntelligenceSummary:
+      type: object
+      description: Compact source, freshness, truncation, and certificate posture summary for CT search results.
+      properties:
+        data_source:
+          type: string
+        ct_log_sources:
+          type: array
+          items:
+            type: string
+        source_count:
+          type: integer
+        cache_status:
+          type: string
+          enum:
+          - live
+          - fresh_cache
+          - stale_cache
+          - partial_unavailable
+        returned_count:
+          type: integer
+        total_found:
+          type: integer
+        truncated:
+          type: boolean
+        limit:
+          type: integer
+        include_subdomains:
+          type: boolean
+        include_expired:
+          type: boolean
+        unique_name_count:
+          type: integer
+        unique_subdomains:
+          type: integer
+        issuer_count:
+          type: integer
+        wildcard_cert_count:
+          type: integer
+        active_cert_count:
+          type: integer
+        expired_cert_count:
+          type: integer
+        expiring_within_30_days_count:
+          type: integer
+        earliest_cert:
+          type:
+          - string
+          - 'null'
+        latest_cert:
+          type:
+          - string
+          - 'null'
+        latest_expiry:
+          type:
+          - string
+          - 'null'
         has_more:
           type: boolean
         next_cursor:
           type:
           - string
           - 'null'
+        warning_code:
+          type:
+          - string
+          - 'null'
   responses:
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -826,6 +808,24 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:

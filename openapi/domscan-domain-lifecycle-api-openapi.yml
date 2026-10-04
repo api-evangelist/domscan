@@ -87,63 +87,6 @@ paths:
         default: 2
 components:
   schemas:
-    LifecycleResponse:
-      type: object
-      description: Domain lifecycle information
-      properties:
-        domain:
-          type: string
-          description: Domain checked
-        tld:
-          type: string
-          description: Effective suffix or public suffix for the registrable domain
-        registered:
-          type: string
-          format: date-time
-          description: Registration date
-        expires:
-          type: string
-          format: date-time
-          description: Expiration date
-        updated:
-          type: string
-          format: date-time
-          description: Last updated date
-        age_days:
-          type: integer
-          description: Domain age in days
-        expires_in_days:
-          type: integer
-          description: Days until expiration
-        phase:
-          type: string
-          enum:
-          - available
-          - active
-          - expiring
-          - deleting
-          - reserved
-          - unknown
-          description: Current lifecycle phase
-        status_flags:
-          type: array
-          items:
-            type: string
-          description: Fastly-style status flags from registry
-        status:
-          type: string
-          description: Space-separated lifecycle flags
-        events:
-          type: array
-          items:
-            type: object
-            properties:
-              action:
-                type: string
-              date:
-                type: string
-                format: date-time
-          description: Registry events timeline
     ErrorResponse:
       type: object
       description: Standard error response format
@@ -209,6 +152,63 @@ components:
           - retryable
           - request_id
           - docs_url
+    LifecycleResponse:
+      type: object
+      description: Domain lifecycle information
+      properties:
+        domain:
+          type: string
+          description: Domain checked
+        tld:
+          type: string
+          description: Effective suffix or public suffix for the registrable domain
+        registered:
+          type: string
+          format: date-time
+          description: Registration date
+        expires:
+          type: string
+          format: date-time
+          description: Expiration date
+        updated:
+          type: string
+          format: date-time
+          description: Last updated date
+        age_days:
+          type: integer
+          description: Domain age in days
+        expires_in_days:
+          type: integer
+          description: Days until expiration
+        phase:
+          type: string
+          enum:
+          - available
+          - active
+          - expiring
+          - deleting
+          - reserved
+          - unknown
+          description: Current lifecycle phase
+        status_flags:
+          type: array
+          items:
+            type: string
+          description: Fastly-style status flags from registry
+        status:
+          type: string
+          description: Space-separated lifecycle flags
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              action:
+                type: string
+              date:
+                type: string
+                format: date-time
+          description: Registry events timeline
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.

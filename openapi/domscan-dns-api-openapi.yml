@@ -754,219 +754,72 @@ paths:
         model: per_request
         default: 0
 components:
-  responses:
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   schemas:
-    DnssecMismatchDetail:
+    ErrorResponse:
       type: object
-      description: DNSSEC DS/DNSKEY mismatch and validation-state details from resolver and authoritative evidence.
+      description: Standard error response format
       properties:
-        checked:
-          type: boolean
-        mismatch_detected:
-          type: boolean
-        reason:
-          type:
-          - string
-          - 'null'
-        ds_record_count:
-          type: integer
-        dnskey_record_count:
-          type: integer
-        rrsig_present:
-          type:
-          - boolean
-          - 'null'
-        validation_status:
-          type:
-          - string
-          - 'null'
-          enum:
-          - secure
-          - insecure
-          - bogus
-          - indeterminate
-        resolver:
-          type:
-          - string
-          - 'null'
-    DnsServersResponse:
-      type: object
-      description: Configured public recursive DoH providers. These are global anycast services, not geographic probes.
-      properties:
-        measurement_scope:
-          type: string
-          enum:
-          - configured_recursive_resolvers
-        geographic_vantage:
-          type: boolean
-          enum:
-          - false
-        servers:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              location:
-                type: string
-              country:
-                type: string
-              ip:
-                type: string
-              provider:
-                type: string
-              scope:
-                type: string
-                enum:
-                - global-anycast
-              doh_endpoint:
-                type: string
-                format: uri
-              documentation_url:
-                type: string
-                format: uri
-              format:
-                type: string
-                enum:
-                - dns-json
-        total:
-          type: integer
-    BulkDnsResponse:
-      type: object
-      description: Bulk DNS lookup response
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/BulkDnsResult'
-        summary:
+        error:
           type: object
           properties:
-            total:
-              type: integer
-            successful:
-              type: integer
-            nxdomain:
-              type: integer
-            errors:
-              type: integer
-            query_time_ms:
-              type: integer
-        meta:
-          type: object
-          properties:
-            served_by:
+            code:
               type: string
-            record_type:
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
               type: string
-    DnsResponse:
-      type: object
-      description: DNS record lookup response
-      properties:
-        domain:
-          type: string
-        record_type:
-          type: string
-        records:
-          type: array
-          items:
-            $ref: '#/components/schemas/DnsRecord'
-        status:
-          type: string
-          enum:
-          - success
-          - nxdomain
-          - error
-        dnssec_validated:
-          type: boolean
-          description: Whether DNSSEC validation passed
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-        warnings:
-          type: array
-          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
-          items:
-            $ref: '#/components/schemas/DnsWarning'
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
     PropagationSummary:
       type: object
       description: Additive rollup for configured recursive-resolver convergence or expected-value matching. It is not a geographic propagation summary.
@@ -1032,71 +885,40 @@ components:
           - medium
           - low
           description: Confidence within the configured recursive-resolver sample only. It does not imply geographic or worldwide confidence.
-    SpfLookupTree:
+    NameserverDriftSummary:
       type: object
-      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
+      description: Compares public NS records against observed authoritative nameservers and serial consistency.
       properties:
-        root_domain:
-          type: string
-        node_count:
-          type: integer
-        max_depth:
-          type: integer
-        cycles_detected:
+        checked:
+          type: boolean
+        drift_detected:
+          type:
+          - boolean
+          - 'null'
+        public_nameservers:
           type: array
           items:
             type: string
-        nodes:
+        authoritative_nameservers:
           type: array
           items:
-            type: object
-            properties:
-              domain:
-                type: string
-              depth:
-                type: integer
-              status:
-                type: string
-                enum:
-                - present
-                - missing
-                - cycle
-                - error
-                - limit_exceeded
-              direct_lookup_count:
-                type: integer
-              total_lookup_count:
-                type: integer
-              includes:
-                type: array
-                items:
-                  type: string
-              redirect:
-                type:
-                - string
-                - 'null'
-              mechanisms:
-                type: array
-                items:
-                  type: string
-              errors:
-                type: array
-                items:
-                  type: string
-        edges:
+            type: string
+        missing_from_authority:
           type: array
           items:
-            type: object
-            properties:
-              from:
-                type: string
-              to:
-                type: string
-              type:
-                type: string
-                enum:
-                - include
-                - redirect
+            type: string
+        extra_at_authority:
+          type: array
+          items:
+            type: string
+        inconsistent_nameservers:
+          type: array
+          items:
+            type: string
+        serial_mismatch_detected:
+          type:
+          - boolean
+          - 'null'
     DnsPropagationResponse:
       type: object
       description: Answer comparison across configured public recursive resolvers. It does not represent geographic or worldwide DNS propagation.
@@ -1224,40 +1046,132 @@ components:
           enum:
           - info
           - warning
-    NameserverDriftSummary:
+    DnssecMismatchDetail:
       type: object
-      description: Compares public NS records against observed authoritative nameservers and serial consistency.
+      description: DNSSEC DS/DNSKEY mismatch and validation-state details from resolver and authoritative evidence.
       properties:
         checked:
           type: boolean
-        drift_detected:
+        mismatch_detected:
+          type: boolean
+        reason:
+          type:
+          - string
+          - 'null'
+        ds_record_count:
+          type: integer
+        dnskey_record_count:
+          type: integer
+        rrsig_present:
           type:
           - boolean
           - 'null'
-        public_nameservers:
-          type: array
-          items:
-            type: string
-        authoritative_nameservers:
-          type: array
-          items:
-            type: string
-        missing_from_authority:
-          type: array
-          items:
-            type: string
-        extra_at_authority:
-          type: array
-          items:
-            type: string
-        inconsistent_nameservers:
-          type: array
-          items:
-            type: string
-        serial_mismatch_detected:
+        validation_status:
           type:
-          - boolean
+          - string
           - 'null'
+          enum:
+          - secure
+          - insecure
+          - bogus
+          - indeterminate
+        resolver:
+          type:
+          - string
+          - 'null'
+    SpfLookupTree:
+      type: object
+      description: Recursive SPF lookup graph with per-node status, includes, redirects, and cycle/limit visibility.
+      properties:
+        root_domain:
+          type: string
+        node_count:
+          type: integer
+        max_depth:
+          type: integer
+        cycles_detected:
+          type: array
+          items:
+            type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              depth:
+                type: integer
+              status:
+                type: string
+                enum:
+                - present
+                - missing
+                - cycle
+                - error
+                - limit_exceeded
+              direct_lookup_count:
+                type: integer
+              total_lookup_count:
+                type: integer
+              includes:
+                type: array
+                items:
+                  type: string
+              redirect:
+                type:
+                - string
+                - 'null'
+              mechanisms:
+                type: array
+                items:
+                  type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              type:
+                type: string
+                enum:
+                - include
+                - redirect
+    BulkDnsResponse:
+      type: object
+      description: Bulk DNS lookup response
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkDnsResult'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            nxdomain:
+              type: integer
+            errors:
+              type: integer
+            query_time_ms:
+              type: integer
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            record_type:
+              type: string
     DnsSecurityResponse:
       type: object
       description: DNS security analysis
@@ -2011,6 +1925,197 @@ components:
           format: date-time
         check_duration_ms:
           type: integer
+    DnsRecord:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Record type (A, AAAA, MX, etc.)
+        name:
+          type: string
+          description: Record name
+        data:
+          type: string
+          description: Record data/value
+        ttl:
+          type: integer
+          description: Time to live in seconds
+        priority:
+          type: integer
+          description: Priority for MX/SRV records
+        classification:
+          type: string
+          enum:
+          - spf
+          - dkim
+          - dmarc
+          - verification
+          - dnssec
+          - mta_sts
+          - tls_rpt
+          - other
+          description: Semantic classification of a TXT record. Only present for type=TXT records.
+    BulkDnsResult:
+      type: object
+      description: Single result inside a bulk DNS lookup response
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsRecord'
+        status:
+          type: string
+          enum:
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    DnsAllResponse:
+      type: object
+      description: All DNS records response
+      properties:
+        domain:
+          type: string
+        records:
+          type: object
+          description: Records grouped by type
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DnsRecord'
+        summary:
+          type: object
+          properties:
+            has_a:
+              type: boolean
+            has_aaaa:
+              type: boolean
+            has_ns:
+              type: boolean
+            has_mx:
+              type: boolean
+            has_txt:
+              type: boolean
+            has_https:
+              type: boolean
+            has_svcb:
+              type: boolean
+            ipv6_parity:
+              type: string
+              enum:
+              - full
+              - partial
+              - none
+              description: IPv6 parity hint derived from A/AAAA availability.
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+        wildcard:
+          type: object
+          description: Result of the optional wildcard-DNS probe. Only present when ?wildcard_probe=1 and a probe was performed.
+          properties:
+            suspected:
+              type: boolean
+            probe_label:
+              type: string
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+    DnsResponse:
+      type: object
+      description: DNS record lookup response
+      properties:
+        domain:
+          type: string
+        record_type:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/DnsRecord'
+        status:
+          type: string
+          enum:
+          - success
+          - nxdomain
+          - error
+        dnssec_validated:
+          type: boolean
+          description: Whether DNSSEC validation passed
+        query_time_ms:
+          type: integer
+        checked_at:
+          type: string
+          format: date-time
+        warnings:
+          type: array
+          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
+          items:
+            $ref: '#/components/schemas/DnsWarning'
+    DnsServersResponse:
+      type: object
+      description: Configured public recursive DoH providers. These are global anycast services, not geographic probes.
+      properties:
+        measurement_scope:
+          type: string
+          enum:
+          - configured_recursive_resolvers
+        geographic_vantage:
+          type: boolean
+          enum:
+          - false
+        servers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              location:
+                type: string
+              country:
+                type: string
+              ip:
+                type: string
+              provider:
+                type: string
+              scope:
+                type: string
+                enum:
+                - global-anycast
+              doh_endpoint:
+                type: string
+                format: uri
+              documentation_url:
+                type: string
+                format: uri
+              format:
+                type: string
+                enum:
+                - dns-json
+        total:
+          type: integer
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -2086,188 +2191,83 @@ components:
             duration_ms:
               type: integer
               minimum: 0
-    BulkDnsResult:
-      type: object
-      description: Single result inside a bulk DNS lookup response
-      properties:
-        domain:
-          type: string
-        record_type:
-          type: string
-        records:
-          type: array
-          items:
-            $ref: '#/components/schemas/DnsRecord'
-        status:
-          type: string
-          enum:
-          - success
-          - nxdomain
-          - error
-        dnssec_validated:
-          type: boolean
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-    DnsRecord:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Record type (A, AAAA, MX, etc.)
-        name:
-          type: string
-          description: Record name
-        data:
-          type: string
-          description: Record data/value
-        ttl:
-          type: integer
-          description: Time to live in seconds
-        priority:
-          type: integer
-          description: Priority for MX/SRV records
-        classification:
-          type: string
-          enum:
-          - spf
-          - dkim
-          - dmarc
-          - verification
-          - dnssec
-          - mta_sts
-          - tls_rpt
-          - other
-          description: Semantic classification of a TXT record. Only present for type=TXT records.
-    DnsAllResponse:
-      type: object
-      description: All DNS records response
-      properties:
-        domain:
-          type: string
-        records:
-          type: object
-          description: Records grouped by type
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/DnsRecord'
-        summary:
-          type: object
-          properties:
-            has_a:
-              type: boolean
-            has_aaaa:
-              type: boolean
-            has_ns:
-              type: boolean
-            has_mx:
-              type: boolean
-            has_txt:
-              type: boolean
-            has_https:
-              type: boolean
-            has_svcb:
-              type: boolean
-            ipv6_parity:
-              type: string
-              enum:
-              - full
-              - partial
-              - none
-              description: IPv6 parity hint derived from A/AAAA availability.
-        warnings:
-          type: array
-          description: Optional additive signals (MX priority sanity, private-IP leaks). Only present when non-empty.
-          items:
-            $ref: '#/components/schemas/DnsWarning'
-        wildcard:
-          type: object
-          description: Result of the optional wildcard-DNS probe. Only present when ?wildcard_probe=1 and a probe was performed.
-          properties:
-            suspected:
-              type: boolean
-            probe_label:
-              type: string
-        query_time_ms:
-          type: integer
-        checked_at:
-          type: string
-          format: date-time
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
+  responses:
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
   securitySchemes:
     apiKey:
       type: apiKey

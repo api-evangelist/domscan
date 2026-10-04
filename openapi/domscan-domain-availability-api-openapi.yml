@@ -265,10 +265,117 @@ paths:
         note: Each word-TLD pair uses the normal /v1/status credit cost, currently 1 credit. Billing and any eligible item refunds follow /v1/status behavior.
 components:
   schemas:
-    BulkStatusResponse:
+    ErrorResponse:
       type: object
-      description: Bulk domain availability check response
+      description: Standard error response format
       properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    AvailabilityResult:
+      type: object
+      description: Single domain availability result
+      properties:
+        domain:
+          type: string
+          description: Full domain name
+        tld:
+          type: string
+          description: Top-level domain
+        available:
+          type:
+          - boolean
+          - 'null'
+          description: Whether domain is available for registration. null when status cannot be determined (e.g. RDAP and WHOIS both unavailable)
+        source:
+          type: string
+          enum:
+          - rdap
+          - cache
+          - dns
+          - whois
+          description: Data source used for check
+        confidence:
+          type: string
+          enum:
+          - authoritative
+          - heuristic
+          description: Result confidence level. "authoritative" for RDAP registry data, "heuristic" for DNS/WHOIS/cache fallbacks. Heuristic results may have false positives (e.g. parked domains without NS records may appear available)
+        checked_at:
+          type: string
+          format: date-time
+          description: Timestamp of check
+        latency_ms:
+          type: integer
+          description: Check latency in milliseconds
+        error:
+          type: string
+          description: Error message if check failed
+    StatusResponse:
+      type: object
+      description: Domain availability check response
+      properties:
+        name:
+          type: string
+          description: Base domain name (without TLD)
         results:
           type: array
           items:
@@ -280,10 +387,13 @@ components:
           properties:
             total_checked:
               type: integer
+              description: Number of TLDs checked
             available_count:
               type: integer
+              description: Number of available domains
             duration_ms:
               type: integer
+              description: Total check duration
     DomainDiscoveryJobResponse:
       type: object
       required:
@@ -358,13 +468,82 @@ components:
               - string
               - 'null'
               description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
-    StatusResponse:
+    AvailabilityConfidenceSummary:
       type: object
-      description: Domain availability check response
+      description: Additive availability confidence rollup showing source mix, cache state, fallback chain, and ambiguity.
       properties:
-        name:
+        scope:
           type: string
-          description: Base domain name (without TLD)
+          enum:
+          - precise
+          - estimate
+        requested_count:
+          type: integer
+        result_count:
+          type: integer
+        invalid_count:
+          type: integer
+        available_count:
+          type: integer
+        registered_count:
+          type: integer
+        authoritative_count:
+          type: integer
+        heuristic_count:
+          type: integer
+        cached_count:
+          type: integer
+        error_count:
+          type: integer
+        ambiguous_count:
+          type: integer
+        source_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        primary_source:
+          type:
+          - string
+          - 'null'
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+          - mixed
+          - none
+        rdap_calls:
+          type: integer
+        refreshes:
+          type: integer
+        cache_preference_misses:
+          type: integer
+        fallback_chain:
+          type: array
+          items:
+            type: string
+        confidence_level:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        determinacy_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+        ambiguity_reason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - errors_present
+          - heuristic_dns_fallback
+          - unknown_status
+    BulkStatusResponse:
+      type: object
+      description: Bulk domain availability check response
+      properties:
         results:
           type: array
           items:
@@ -376,13 +555,10 @@ components:
           properties:
             total_checked:
               type: integer
-              description: Number of TLDs checked
             available_count:
               type: integer
-              description: Number of available domains
             duration_ms:
               type: integer
-              description: Total check duration
     ApiBatchJob:
       type: object
       required:
@@ -508,201 +684,7 @@ components:
         results_expires_at:
           type: string
           format: date-time
-    AvailabilityConfidenceSummary:
-      type: object
-      description: Additive availability confidence rollup showing source mix, cache state, fallback chain, and ambiguity.
-      properties:
-        scope:
-          type: string
-          enum:
-          - precise
-          - estimate
-        requested_count:
-          type: integer
-        result_count:
-          type: integer
-        invalid_count:
-          type: integer
-        available_count:
-          type: integer
-        registered_count:
-          type: integer
-        authoritative_count:
-          type: integer
-        heuristic_count:
-          type: integer
-        cached_count:
-          type: integer
-        error_count:
-          type: integer
-        ambiguous_count:
-          type: integer
-        source_counts:
-          type: object
-          additionalProperties:
-            type: integer
-        primary_source:
-          type:
-          - string
-          - 'null'
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-          - mixed
-          - none
-        rdap_calls:
-          type: integer
-        refreshes:
-          type: integer
-        cache_preference_misses:
-          type: integer
-        fallback_chain:
-          type: array
-          items:
-            type: string
-        confidence_level:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        determinacy_rate:
-          type: number
-          minimum: 0
-          maximum: 1
-        ambiguity_reason:
-          type:
-          - string
-          - 'null'
-          enum:
-          - errors_present
-          - heuristic_dns_fallback
-          - unknown_status
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    AvailabilityResult:
-      type: object
-      description: Single domain availability result
-      properties:
-        domain:
-          type: string
-          description: Full domain name
-        tld:
-          type: string
-          description: Top-level domain
-        available:
-          type:
-          - boolean
-          - 'null'
-          description: Whether domain is available for registration. null when status cannot be determined (e.g. RDAP and WHOIS both unavailable)
-        source:
-          type: string
-          enum:
-          - rdap
-          - cache
-          - dns
-          - whois
-          description: Data source used for check
-        confidence:
-          type: string
-          enum:
-          - authoritative
-          - heuristic
-          description: Result confidence level. "authoritative" for RDAP registry data, "heuristic" for DNS/WHOIS/cache fallbacks. Heuristic results may have false positives (e.g. parked domains without NS records may appear available)
-        checked_at:
-          type: string
-          format: date-time
-          description: Timestamp of check
-        latency_ms:
-          type: integer
-          description: Check latency in milliseconds
-        error:
-          type: string
-          description: Error message if check failed
   responses:
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -738,6 +720,24 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:

@@ -553,6 +553,72 @@ paths:
         model: per_request
         default: 2
 components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -630,72 +696,6 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
-  schemas:
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
   securitySchemes:
     apiKey:
       type: apiKey

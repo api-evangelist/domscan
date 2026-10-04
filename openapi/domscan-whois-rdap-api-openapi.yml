@@ -711,11 +711,137 @@ paths:
         default: 3
 components:
   schemas:
-    DomainProfileSourceSummary:
+    ErrorResponse:
       type: object
-      description: Additive profile provenance summary showing RDAP, WHOIS fallback, or cache source coverage.
+      description: Standard error response format
       properties:
-        source:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code for programmatic handling
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Link to relevant documentation
+              example: /docs#parameters
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    WhoisContact:
+      type:
+      - object
+      - 'null'
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        organization:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        phone:
+          type:
+          - string
+          - 'null'
+        fax:
+          type:
+          - string
+          - 'null'
+        address:
+          type: object
+          properties:
+            street:
+              type:
+              - string
+              - 'null'
+            city:
+              type:
+              - string
+              - 'null'
+            state:
+              type:
+              - string
+              - 'null'
+            postal_code:
+              type:
+              - string
+              - 'null'
+            country:
+              type:
+              - string
+              - 'null'
+        role:
+          type: string
+    WhoisEdgeSummary:
+      type: object
+      description: Compact source and confidence summary for WHOIS responses, including fallback evidence.
+      properties:
+        relay_configured:
+          type: boolean
+        data_sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - rdap
+            - whois
+            - dns
+            - cache
+        authoritative_source:
           type: string
           enum:
           - rdap
@@ -723,40 +849,58 @@ components:
           - dns
           - cache
           - unknown
-        authoritative_source:
-          type: string
-          enum:
-          - rdap
-          - whois
-          - dns
-          - unknown
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        fallback_used:
+        relay_whois_used:
           type: boolean
-        relay_configured:
+        raw_whois_available:
           type: boolean
+        parse_error_count:
+          type:
+          - integer
+          - 'null'
         registered:
           type:
           - boolean
           - 'null'
-        status_count:
-          type: integer
+        available:
+          type:
+          - boolean
+          - 'null'
+        registration_age_days:
+          type:
+          - integer
+          - 'null'
+        days_until_expiry:
+          type:
+          - integer
+          - 'null'
+        expires_within_30_days:
+          type:
+          - boolean
+          - 'null'
+        transfer_locked:
+          type:
+          - boolean
+          - 'null'
+        privacy_protected:
+          type:
+          - boolean
+          - 'null'
+        dnssec:
+          type:
+          - boolean
+          - 'null'
         nameserver_count:
           type: integer
-        event_count:
-          type: integer
-        date_fields_present:
+        contact_roles_available:
           type: array
           items:
             type: string
-        contact_field_count:
-          type: integer
-        privacy_detected:
+        abuse_contact_available:
           type: boolean
+        registrar_whois_server:
+          type:
+          - string
+          - 'null'
     DomainProfileResponse:
       type: object
       description: Normalized domain profile
@@ -864,6 +1008,19 @@ components:
         meta:
           type: object
           additionalProperties: true
+    WhoisPrivacyInfo:
+      type: object
+      properties:
+        is_private:
+          type: boolean
+        privacy_service:
+          type:
+          - string
+          - 'null'
+        detected_patterns:
+          type: array
+          items:
+            type: string
     RdapResponse:
       type: object
       description: RDAP lookup response wrapper
@@ -932,35 +1089,95 @@ components:
           type: integer
         redacted_role_count:
           type: integer
-    WhoisPrivacyInfo:
-      type: object
+    RdapEntityContact:
+      type:
+      - object
+      - 'null'
       properties:
-        is_private:
-          type: boolean
-        privacy_service:
+        handle:
           type:
           - string
           - 'null'
-        detected_patterns:
+        name:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+        roles:
           type: array
           items:
             type: string
-    WhoisEdgeSummary:
+        public_field_count:
+          type: integer
+    RdapLookupSummary:
       type: object
-      description: Compact source and confidence summary for WHOIS responses, including fallback evidence.
+      description: Compact source and fallback summary for RDAP responses, including WHOIS and DNS fallback evidence.
       properties:
         relay_configured:
           type: boolean
-        data_sources:
+        query_type:
+          type: string
+          enum:
+          - domain
+          - ip
+          - autnum
+        status:
+          type: string
+        data_source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns_fallback
+        relay_whois_used:
+          type: boolean
+        dns_fallback_used:
+          type: boolean
+        rdap_object_class:
+          type:
+          - string
+          - 'null'
+        event_count:
+          type:
+          - integer
+          - 'null'
+        entity_count:
+          type:
+          - integer
+          - 'null'
+        nameserver_count:
+          type:
+          - integer
+          - 'null'
+        port43_available:
+          type:
+          - boolean
+          - 'null'
+    BulkWhoisResponse:
+      type: object
+      description: Bulk WHOIS lookup response
+      properties:
+        results:
           type: array
           items:
-            type: string
-            enum:
-            - rdap
-            - whois
-            - dns
-            - cache
-        authoritative_source:
+            $ref: '#/components/schemas/WhoisResponse'
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            duration_ms:
+              type: integer
+    DomainProfileSourceSummary:
+      type: object
+      description: Additive profile provenance summary showing RDAP, WHOIS fallback, or cache source coverage.
+      properties:
+        source:
           type: string
           enum:
           - rdap
@@ -968,58 +1185,40 @@ components:
           - dns
           - cache
           - unknown
-        relay_whois_used:
+        authoritative_source:
+          type: string
+          enum:
+          - rdap
+          - whois
+          - dns
+          - unknown
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        fallback_used:
           type: boolean
-        raw_whois_available:
+        relay_configured:
           type: boolean
-        parse_error_count:
-          type:
-          - integer
-          - 'null'
         registered:
           type:
           - boolean
           - 'null'
-        available:
-          type:
-          - boolean
-          - 'null'
-        registration_age_days:
-          type:
-          - integer
-          - 'null'
-        days_until_expiry:
-          type:
-          - integer
-          - 'null'
-        expires_within_30_days:
-          type:
-          - boolean
-          - 'null'
-        transfer_locked:
-          type:
-          - boolean
-          - 'null'
-        privacy_protected:
-          type:
-          - boolean
-          - 'null'
-        dnssec:
-          type:
-          - boolean
-          - 'null'
+        status_count:
+          type: integer
         nameserver_count:
           type: integer
-        contact_roles_available:
+        event_count:
+          type: integer
+        date_fields_present:
           type: array
           items:
             type: string
-        abuse_contact_available:
+        contact_field_count:
+          type: integer
+        privacy_detected:
           type: boolean
-        registrar_whois_server:
-          type:
-          - string
-          - 'null'
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -1095,50 +1294,6 @@ components:
             duration_ms:
               type: integer
               minimum: 0
-    RdapLookupSummary:
-      type: object
-      description: Compact source and fallback summary for RDAP responses, including WHOIS and DNS fallback evidence.
-      properties:
-        relay_configured:
-          type: boolean
-        query_type:
-          type: string
-          enum:
-          - domain
-          - ip
-          - autnum
-        status:
-          type: string
-        data_source:
-          type: string
-          enum:
-          - rdap
-          - whois
-          - dns_fallback
-        relay_whois_used:
-          type: boolean
-        dns_fallback_used:
-          type: boolean
-        rdap_object_class:
-          type:
-          - string
-          - 'null'
-        event_count:
-          type:
-          - integer
-          - 'null'
-        entity_count:
-          type:
-          - integer
-          - 'null'
-        nameserver_count:
-          type:
-          - integer
-          - 'null'
-        port43_available:
-          type:
-          - boolean
-          - 'null'
     WhoisResponse:
       type: object
       description: WHOIS lookup response
@@ -1272,162 +1427,40 @@ components:
         meta:
           type: object
           additionalProperties: true
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    RdapEntityContact:
-      type:
-      - object
-      - 'null'
-      properties:
-        handle:
-          type:
-          - string
-          - 'null'
-        name:
-          type:
-          - string
-          - 'null'
-        email:
-          type:
-          - string
-          - 'null'
-        roles:
-          type: array
-          items:
-            type: string
-        public_field_count:
-          type: integer
-    BulkWhoisResponse:
-      type: object
-      description: Bulk WHOIS lookup response
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/WhoisResponse'
-        meta:
-          type: object
-          properties:
-            total:
-              type: integer
-            successful:
-              type: integer
-            duration_ms:
-              type: integer
-    WhoisContact:
-      type:
-      - object
-      - 'null'
-      properties:
-        name:
-          type:
-          - string
-          - 'null'
-        organization:
-          type:
-          - string
-          - 'null'
-        email:
-          type:
-          - string
-          - 'null'
-        phone:
-          type:
-          - string
-          - 'null'
-        fax:
-          type:
-          - string
-          - 'null'
-        address:
-          type: object
-          properties:
-            street:
-              type:
-              - string
-              - 'null'
-            city:
-              type:
-              - string
-              - 'null'
-            state:
-              type:
-              - string
-              - 'null'
-            postal_code:
-              type:
-              - string
-              - 'null'
-            country:
-              type:
-              - string
-              - 'null'
-        role:
-          type: string
   responses:
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -1481,39 +1514,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadGateway:
-      description: The public website could not be fetched or returned an unusable response.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: FETCH_ERROR
-              message: Failed to fetch website
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey
