@@ -27,7 +27,7 @@ description: Domain intelligence API for domain availability, DNS, WHOIS/RDAP, v
   MCP server, and llms.txt.
 url: https://raw.githubusercontent.com/api-evangelist/domscan/refs/heads/main/apis.yml
 created: '2026-07-12'
-modified: '2026-09-03'
+modified: '2026-10-06'
 specificationVersion: '0.23'
 tags:
 - Domains
@@ -674,6 +674,8 @@ x-enrichment:
   artifacts_added: 29
   pass: local-v2
 common:
+- url: https://domscan.net/blog/rss.xml
+  type: BlogRSS
 - type: CapabilityMap
   url: capabilities/domscan-capability-edges.yml
   name: DomScan Business Capability Map
