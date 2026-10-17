@@ -308,140 +308,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    OverviewComponentFreshnessEntry:
-      type: object
-      properties:
-        source:
-          type: string
-        state:
-          type: string
-          enum:
-          - fresh
-          - degraded
-        checked_at:
-          type: string
-          format: date-time
-        evidence_count:
-          type: integer
-          description: Number of populated or explicitly observed fields for this component.
-        reason:
-          type:
-          - string
-          - 'null'
-          enum:
-          - upstream_unavailable
-          - partial_upstream_failure
-          - unsupported_tld
-          - legacy_cache_without_provenance
-    OverviewComponentFreshness:
-      type: object
-      description: Per-component observation status for health, DNS, registration, reputation, and popularity. Cache hits retain the state, timestamp, and reason recorded when the observation was made.
-      properties:
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        checked_at:
-          type: string
-          format: date-time
-        component_count:
-          type: integer
-        fresh_component_count:
-          type: integer
-        degraded_component_count:
-          type: integer
-        components:
-          type: object
-          properties:
-            health:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            dns:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            registration:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            reputation:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-            popularity:
-              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
-    DomainPopularityObservation:
-      type: object
-      required:
-      - domain
-      - rank
-      - bucket
-      - status
-      - source
-      - list_date
-      - observed_on
-      - checked_at
-      properties:
-        domain:
-          type: string
-        rank:
-          type:
-          - integer
-          - 'null'
-          minimum: 1
-        bucket:
-          type: string
-          enum:
-          - top-100
-          - top-1k
-          - top-10k
-          - top-100k
-          - top-1m
-          - unranked
-        status:
-          type: string
-          enum:
-          - ranked
-          - unranked
-        source:
-          type: string
-          enum:
-          - tranco
-        list_date:
-          type:
-          - string
-          - 'null'
-          format: date
-        observed_on:
-          type: string
-          format: date
-        checked_at:
-          type: string
-          format: date-time
-    DomainPopularityHistoryResponse:
-      type: object
-      required:
-      - domain
-      - collection
-      - complete_daily_series
-      - result_count
-      - empty_result
-      - observations
-      properties:
-        domain:
-          type: string
-        collection:
-          type: string
-          enum:
-          - lookup_driven
-        complete_daily_series:
-          type: boolean
-          enum:
-          - false
-        result_count:
-          type: integer
-          minimum: 0
-          maximum: 365
-        empty_result:
-          type: boolean
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/DomainPopularityObservation'
     DomainPopularityResponse:
       type: object
       required:
@@ -599,6 +465,140 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DomainPopularityObservation'
+    DomainPopularityObservation:
+      type: object
+      required:
+      - domain
+      - rank
+      - bucket
+      - status
+      - source
+      - list_date
+      - observed_on
+      - checked_at
+      properties:
+        domain:
+          type: string
+        rank:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        bucket:
+          type: string
+          enum:
+          - top-100
+          - top-1k
+          - top-10k
+          - top-100k
+          - top-1m
+          - unranked
+        status:
+          type: string
+          enum:
+          - ranked
+          - unranked
+        source:
+          type: string
+          enum:
+          - tranco
+        list_date:
+          type:
+          - string
+          - 'null'
+          format: date
+        observed_on:
+          type: string
+          format: date
+        checked_at:
+          type: string
+          format: date-time
+    DomainPopularityHistoryResponse:
+      type: object
+      required:
+      - domain
+      - collection
+      - complete_daily_series
+      - result_count
+      - empty_result
+      - observations
+      properties:
+        domain:
+          type: string
+        collection:
+          type: string
+          enum:
+          - lookup_driven
+        complete_daily_series:
+          type: boolean
+          enum:
+          - false
+        result_count:
+          type: integer
+          minimum: 0
+          maximum: 365
+        empty_result:
+          type: boolean
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainPopularityObservation'
+    OverviewComponentFreshness:
+      type: object
+      description: Per-component observation status for health, DNS, registration, reputation, and popularity. Cache hits retain the state, timestamp, and reason recorded when the observation was made.
+      properties:
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        checked_at:
+          type: string
+          format: date-time
+        component_count:
+          type: integer
+        fresh_component_count:
+          type: integer
+        degraded_component_count:
+          type: integer
+        components:
+          type: object
+          properties:
+            health:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            dns:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            registration:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            reputation:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+            popularity:
+              $ref: '#/components/schemas/OverviewComponentFreshnessEntry'
+    OverviewComponentFreshnessEntry:
+      type: object
+      properties:
+        source:
+          type: string
+        state:
+          type: string
+          enum:
+          - fresh
+          - degraded
+        checked_at:
+          type: string
+          format: date-time
+        evidence_count:
+          type: integer
+          description: Number of populated or explicitly observed fields for this component.
+        reason:
+          type:
+          - string
+          - 'null'
+          enum:
+          - upstream_unavailable
+          - partial_upstream_failure
+          - unsupported_tld
+          - legacy_cache_without_provenance
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -647,6 +647,23 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -665,23 +682,6 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
-    InternalError:
-      description: Unexpected service error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

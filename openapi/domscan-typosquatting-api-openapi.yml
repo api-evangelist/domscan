@@ -396,6 +396,219 @@ components:
           - retryable
           - request_id
           - docs_url
+    TypoPermutation:
+      type: object
+      properties:
+        domain:
+          type: string
+          description: Typo domain
+        type:
+          type: string
+          description: Permutation type (char_swap, extra_char, etc.)
+        risk:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+        registered:
+          type: boolean
+          description: Whether the typo is registered
+        checked_at:
+          type: string
+          format: date-time
+    BrandProtectionReportResponse:
+      type: object
+      required:
+      - domain
+      - generated_at
+      - executive_summary
+      - threat_analysis
+      - estimated_risk_exposure
+      properties:
+        domain:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        executive_summary:
+          type: object
+          properties:
+            threat_level:
+              type: string
+            protection_grade:
+              type: string
+            active_threats:
+              type: integer
+            registered_typos:
+              type: integer
+            immediate_action_required:
+              type: boolean
+        threat_analysis:
+          $ref: '#/components/schemas/TyposThreatAnalysisResponse'
+        defensive_registration_priority:
+          type: object
+        monitoring_recommendations:
+          type: array
+          items:
+            type: string
+        estimated_risk_exposure:
+          type: string
+          enum:
+          - minimal
+          - low
+          - moderate
+          - high
+          - severe
+        meta:
+          type: object
+    TyposThreatDomain:
+      type: object
+      required:
+      - domain
+      - type
+      - risk
+      - dns_active
+      - has_website
+      - threat_indicators
+      - threat_score
+      properties:
+        domain:
+          type: string
+        type:
+          type: string
+        risk:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+        description:
+          type: string
+        dns_active:
+          type: boolean
+        has_website:
+          type: boolean
+        has_mx:
+          type: boolean
+        infrastructure:
+          type: object
+        threat_indicators:
+          type: array
+          items:
+            type: string
+        threat_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+    ProtectionScoreResponse:
+      type: object
+      description: Typosquatting protection score
+      properties:
+        domain:
+          type: string
+        name:
+          type: string
+        tld:
+          type: string
+        protection:
+          type: object
+          properties:
+            score:
+              type: integer
+              minimum: 0
+              maximum: 100
+            grade:
+              type: string
+              enum:
+              - A
+              - B
+              - C
+              - D
+              - F
+            factors:
+              type: object
+            recommendations:
+              type: array
+              items:
+                type: string
+        protection_gap_summary:
+          $ref: '#/components/schemas/ProtectionGapSummary'
+        registered_typos_checked:
+          type: integer
+        availability_coverage:
+          type: object
+          properties:
+            requested:
+              type: integer
+            definitive:
+              type: integer
+            unknown:
+              type: integer
+            omitted:
+              type: integer
+        checked_at:
+          type: string
+          format: date-time
+    PermutationsResponse:
+      type: object
+      description: Typo permutations without registration check
+      properties:
+        domain:
+          type: string
+        name:
+          type: string
+        tld:
+          type: string
+        permutations_count:
+          type: integer
+        permutations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TypoPermutation'
+        by_type:
+          type: object
+          description: Permutations grouped by type
+        family_summary:
+          $ref: '#/components/schemas/TypoFamilySummary'
+        meta:
+          type: object
+          properties:
+            generation_ms:
+              type: integer
+    ProtectionGapSummary:
+      type: object
+      description: Additive protection-gap summary by variant family, risk, and defensive TLD focus.
+      properties:
+        tld_tier:
+          type: string
+          enum:
+          - high_value
+          - medium_value
+          - standard
+        priority_families:
+          type: array
+          items:
+            type: object
+            properties:
+              family:
+                type: string
+              generated_count:
+                type: integer
+              registered_count:
+                type: integer
+        critical_or_high_generated_count:
+          type: integer
+        vulnerability_count:
+          type: integer
+        defensive_tlds:
+          type: array
+          items:
+            type: string
+        recommendation_focus:
+          type: string
     TypoFamilySummary:
       type: object
       description: Additive typo family and risk rollup for generated, checked, available, and registered variants.
@@ -442,147 +655,6 @@ components:
           type: boolean
         requested_limit:
           type: integer
-    PermutationsResponse:
-      type: object
-      description: Typo permutations without registration check
-      properties:
-        domain:
-          type: string
-        name:
-          type: string
-        tld:
-          type: string
-        permutations_count:
-          type: integer
-        permutations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TypoPermutation'
-        by_type:
-          type: object
-          description: Permutations grouped by type
-        family_summary:
-          $ref: '#/components/schemas/TypoFamilySummary'
-        meta:
-          type: object
-          properties:
-            generation_ms:
-              type: integer
-    TyposThreatDomain:
-      type: object
-      required:
-      - domain
-      - type
-      - risk
-      - dns_active
-      - has_website
-      - threat_indicators
-      - threat_score
-      properties:
-        domain:
-          type: string
-        type:
-          type: string
-        risk:
-          type: string
-          enum:
-          - critical
-          - high
-          - medium
-          - low
-        description:
-          type: string
-        dns_active:
-          type: boolean
-        has_website:
-          type: boolean
-        has_mx:
-          type: boolean
-        infrastructure:
-          type: object
-        threat_indicators:
-          type: array
-          items:
-            type: string
-        threat_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-    TyposResponse:
-      type: object
-      description: Typosquatting detection results
-      properties:
-        domain:
-          type: string
-          description: Domain analyzed
-        name:
-          type: string
-          description: Domain name without TLD
-        tld:
-          type: string
-          description: TLD
-        permutations_generated:
-          type: integer
-          description: Number of permutations generated
-        permutations_checked:
-          type: integer
-          description: Number actually checked
-        registered_typos:
-          type: array
-          description: Registered typo domains found
-          items:
-            $ref: '#/components/schemas/TypoPermutation'
-        available_typos:
-          type: integer
-          description: Number of available typo domains
-        unknown_typos:
-          type: integer
-        risk_summary:
-          type: object
-          properties:
-            critical:
-              type: integer
-            high:
-              type: integer
-            medium:
-              type: integer
-            low:
-              type: integer
-        threat_level:
-          type: string
-          enum:
-          - none
-          - low
-          - medium
-          - high
-          - critical
-        family_summary:
-          $ref: '#/components/schemas/TypoFamilySummary'
-        checked_at:
-          type: string
-          format: date-time
-    TypoPermutation:
-      type: object
-      properties:
-        domain:
-          type: string
-          description: Typo domain
-        type:
-          type: string
-          description: Permutation type (char_swap, extra_char, etc.)
-        risk:
-          type: string
-          enum:
-          - critical
-          - high
-          - medium
-          - low
-        registered:
-          type: boolean
-          description: Whether the typo is registered
-        checked_at:
-          type: string
-          format: date-time
     QuickTyposResponse:
       type: object
       required:
@@ -645,55 +717,6 @@ components:
           type: integer
         meta:
           type: object
-    ProtectionScoreResponse:
-      type: object
-      description: Typosquatting protection score
-      properties:
-        domain:
-          type: string
-        name:
-          type: string
-        tld:
-          type: string
-        protection:
-          type: object
-          properties:
-            score:
-              type: integer
-              minimum: 0
-              maximum: 100
-            grade:
-              type: string
-              enum:
-              - A
-              - B
-              - C
-              - D
-              - F
-            factors:
-              type: object
-            recommendations:
-              type: array
-              items:
-                type: string
-        protection_gap_summary:
-          $ref: '#/components/schemas/ProtectionGapSummary'
-        registered_typos_checked:
-          type: integer
-        availability_coverage:
-          type: object
-          properties:
-            requested:
-              type: integer
-            definitive:
-              type: integer
-            unknown:
-              type: integer
-            omitted:
-              type: integer
-        checked_at:
-          type: string
-          format: date-time
     TyposThreatAnalysisResponse:
       type: object
       description: Live registration and DNS analysis across generated typo variants.
@@ -772,82 +795,59 @@ components:
           type: integer
         meta:
           type: object
-    ProtectionGapSummary:
+    TyposResponse:
       type: object
-      description: Additive protection-gap summary by variant family, risk, and defensive TLD focus.
-      properties:
-        tld_tier:
-          type: string
-          enum:
-          - high_value
-          - medium_value
-          - standard
-        priority_families:
-          type: array
-          items:
-            type: object
-            properties:
-              family:
-                type: string
-              generated_count:
-                type: integer
-              registered_count:
-                type: integer
-        critical_or_high_generated_count:
-          type: integer
-        vulnerability_count:
-          type: integer
-        defensive_tlds:
-          type: array
-          items:
-            type: string
-        recommendation_focus:
-          type: string
-    BrandProtectionReportResponse:
-      type: object
-      required:
-      - domain
-      - generated_at
-      - executive_summary
-      - threat_analysis
-      - estimated_risk_exposure
+      description: Typosquatting detection results
       properties:
         domain:
           type: string
-        generated_at:
+          description: Domain analyzed
+        name:
           type: string
-          format: date-time
-        executive_summary:
+          description: Domain name without TLD
+        tld:
+          type: string
+          description: TLD
+        permutations_generated:
+          type: integer
+          description: Number of permutations generated
+        permutations_checked:
+          type: integer
+          description: Number actually checked
+        registered_typos:
+          type: array
+          description: Registered typo domains found
+          items:
+            $ref: '#/components/schemas/TypoPermutation'
+        available_typos:
+          type: integer
+          description: Number of available typo domains
+        unknown_typos:
+          type: integer
+        risk_summary:
           type: object
           properties:
-            threat_level:
-              type: string
-            protection_grade:
-              type: string
-            active_threats:
+            critical:
               type: integer
-            registered_typos:
+            high:
               type: integer
-            immediate_action_required:
-              type: boolean
-        threat_analysis:
-          $ref: '#/components/schemas/TyposThreatAnalysisResponse'
-        defensive_registration_priority:
-          type: object
-        monitoring_recommendations:
-          type: array
-          items:
-            type: string
-        estimated_risk_exposure:
+            medium:
+              type: integer
+            low:
+              type: integer
+        threat_level:
           type: string
           enum:
-          - minimal
+          - none
           - low
-          - moderate
+          - medium
           - high
-          - severe
-        meta:
-          type: object
+          - critical
+        family_summary:
+          $ref: '#/components/schemas/TypoFamilySummary'
+        checked_at:
+          type: string
+          format: date-time
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -896,6 +896,17 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -914,17 +925,6 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

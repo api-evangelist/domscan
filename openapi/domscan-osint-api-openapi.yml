@@ -1542,6 +1542,72 @@ components:
           type: array
           items:
             type: string
+    MacInfoResponse:
+      type: object
+      description: MAC address vendor information
+      properties:
+        mac:
+          type: string
+        input:
+          type: string
+        type:
+          type: string
+          enum:
+          - eui-48
+          - eui-64
+        oui:
+          type: string
+          description: Organizationally Unique Identifier
+        device_id:
+          type: string
+        flags:
+          type: object
+          properties:
+            multicast:
+              type: boolean
+            locally_administered:
+              type: boolean
+            broadcast:
+              type: boolean
+        vendor:
+          type: object
+          properties:
+            name:
+              type:
+              - string
+              - 'null'
+            found:
+              type: boolean
+            organization:
+              type:
+              - string
+              - 'null'
+            address:
+              type:
+              - string
+              - 'null'
+            country:
+              type:
+              - string
+              - 'null'
+            device_type:
+              type:
+              - string
+              - 'null'
+            source:
+              type: string
+            cached:
+              type: boolean
+            cache_age_s:
+              type:
+              - integer
+              - 'null'
+            checked_at:
+              type: string
+              format: date-time
+        meta:
+          type: object
+          additionalProperties: true
     SimilarityResponse:
       type: object
       description: Domain similarity analysis
@@ -1662,72 +1728,6 @@ components:
                 enum:
                 - include
                 - redirect
-    MacInfoResponse:
-      type: object
-      description: MAC address vendor information
-      properties:
-        mac:
-          type: string
-        input:
-          type: string
-        type:
-          type: string
-          enum:
-          - eui-48
-          - eui-64
-        oui:
-          type: string
-          description: Organizationally Unique Identifier
-        device_id:
-          type: string
-        flags:
-          type: object
-          properties:
-            multicast:
-              type: boolean
-            locally_administered:
-              type: boolean
-            broadcast:
-              type: boolean
-        vendor:
-          type: object
-          properties:
-            name:
-              type:
-              - string
-              - 'null'
-            found:
-              type: boolean
-            organization:
-              type:
-              - string
-              - 'null'
-            address:
-              type:
-              - string
-              - 'null'
-            country:
-              type:
-              - string
-              - 'null'
-            device_type:
-              type:
-              - string
-              - 'null'
-            source:
-              type: string
-            cached:
-              type: boolean
-            cache_age_s:
-              type:
-              - integer
-              - 'null'
-            checked_at:
-              type: string
-              format: date-time
-        meta:
-          type: object
-          additionalProperties: true
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -1839,24 +1839,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -1880,6 +1862,24 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
   securitySchemes:
     apiKey:
       type: apiKey

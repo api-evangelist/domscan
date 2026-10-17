@@ -604,87 +604,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    SocialBulkResponse:
-      type: object
-      description: Bulk social handle availability response for up to 10 handles. Results preserve request order and isolate per-handle failures.
-      properties:
-        results:
-          type: array
-          description: One result per requested handle, in request order. Invalid handles and isolated processing failures contain an error object.
-          items:
-            oneOf:
-            - $ref: '#/components/schemas/SocialResponse'
-            - type: object
-              properties:
-                handle:
-                  type:
-                  - string
-                  - 'null'
-                error:
-                  type: object
-                  properties:
-                    code:
-                      type: string
-                      enum:
-                      - INVALID_HANDLE
-                      - INTERNAL
-                    message:
-                      type: string
-                  required:
-                  - code
-                  - message
-              required:
-              - handle
-              - error
-        summary:
-          type: object
-          description: Counts for all requested handles and their per-item outcomes.
-          properties:
-            total:
-              type: integer
-              description: Number of submitted handles.
-            succeeded:
-              type: integer
-              description: Handles with availability results.
-            failed:
-              type: integer
-              description: Handles returned with per-item errors.
-          required:
-          - total
-          - succeeded
-          - failed
-        beta_notice:
-          type: string
-        meta:
-          type: object
-          properties:
-            served_by:
-              type: string
-            platforms:
-              type: array
-              items:
-                type: string
-            resources:
-              type: array
-              items:
-                type: string
-            max_handles:
-              type: integer
-              example: 10
-            credits_per_handle:
-              type: integer
-              example: 2
-            credits_required:
-              type: integer
-              description: Total credit cost for valid handles in this request. There is no bulk discount.
-              example: 4
-            latency_ms:
-              type: integer
-      required:
-      - results
-      - summary
-      - beta_notice
-      - meta
     SocialPlatformSummary:
       type: object
       description: Additive social checker rollup for requested platforms, confidence, cache, checker methods, and beta-limited outcomes.
@@ -1007,6 +926,87 @@ components:
       - unknown_count
       - cached_count
       - determinacy_rate
+    SocialBulkResponse:
+      type: object
+      description: Bulk social handle availability response for up to 10 handles. Results preserve request order and isolate per-handle failures.
+      properties:
+        results:
+          type: array
+          description: One result per requested handle, in request order. Invalid handles and isolated processing failures contain an error object.
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SocialResponse'
+            - type: object
+              properties:
+                handle:
+                  type:
+                  - string
+                  - 'null'
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      enum:
+                      - INVALID_HANDLE
+                      - INTERNAL
+                    message:
+                      type: string
+                  required:
+                  - code
+                  - message
+              required:
+              - handle
+              - error
+        summary:
+          type: object
+          description: Counts for all requested handles and their per-item outcomes.
+          properties:
+            total:
+              type: integer
+              description: Number of submitted handles.
+            succeeded:
+              type: integer
+              description: Handles with availability results.
+            failed:
+              type: integer
+              description: Handles returned with per-item errors.
+          required:
+          - total
+          - succeeded
+          - failed
+        beta_notice:
+          type: string
+        meta:
+          type: object
+          properties:
+            served_by:
+              type: string
+            platforms:
+              type: array
+              items:
+                type: string
+            resources:
+              type: array
+              items:
+                type: string
+            max_handles:
+              type: integer
+              example: 10
+            credits_per_handle:
+              type: integer
+              example: 2
+            credits_required:
+              type: integer
+              description: Total credit cost for valid handles in this request. There is no bulk discount.
+              example: 4
+            latency_ms:
+              type: integer
+      required:
+      - results
+      - summary
+      - beta_notice
+      - meta
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -1043,17 +1043,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -1084,6 +1073,17 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

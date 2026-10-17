@@ -437,167 +437,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    DomainDiscoveryJobResponse:
-      type: object
-      required:
-      - job
-      - discovery
-      properties:
-        job:
-          $ref: '#/components/schemas/ApiBatchJob'
-        discovery:
-          type: object
-          required:
-          - corpus
-          - corpus_version
-          - total_matching_words
-          - page_offset
-          - page_words
-          - domain_checks
-          - tlds
-          - filters
-          - credits_per_domain
-          - next_cursor
-          properties:
-            corpus:
-              type: string
-              enum:
-              - iannuttall/unclaimed
-            corpus_version:
-              type: string
-            total_matching_words:
-              type: integer
-              minimum: 1
-            page_offset:
-              type: integer
-              minimum: 0
-            page_words:
-              type: integer
-              minimum: 1
-              maximum: 100
-            domain_checks:
-              type: integer
-              minimum: 1
-              maximum: 100
-            tlds:
-              type: array
-              minItems: 1
-              maxItems: 5
-              items:
-                type: string
-            filters:
-              type: object
-              required:
-              - min_length
-              - max_length
-              - singular_only
-              properties:
-                min_length:
-                  type: integer
-                  minimum: 1
-                  maximum: 63
-                max_length:
-                  type: integer
-                  minimum: 1
-                  maximum: 63
-                singular_only:
-                  type: boolean
-            credits_per_domain:
-              type: integer
-              minimum: 0
-              description: Normal /v1/status cost at job creation time.
-            next_cursor:
-              type:
-              - string
-              - 'null'
-              description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
-    ApiBatchResultsResponse:
-      type: object
-      required:
-      - job
-      - results
-      - next_after
-      properties:
-        job:
-          $ref: '#/components/schemas/ApiBatchJob'
-        results:
-          type: array
-          items:
-            type: object
-            required:
-            - position
-            - request
-            - status
-            - attempts
-            - http_status
-            - result
-            - error
-            - billing
-            properties:
-              position:
-                type: integer
-                minimum: 0
-              reference:
-                type:
-                - string
-                - 'null'
-              request:
-                type: object
-                required:
-                - method
-                - path
-                - query
-                properties:
-                  method:
-                    type: string
-                    enum:
-                    - GET
-                  path:
-                    type: string
-                  query:
-                    type: object
-                    additionalProperties: true
-              status:
-                type: string
-                enum:
-                - pending
-                - processing
-                - succeeded
-                - failed
-                - cancelled
-              attempts:
-                type: integer
-              http_status:
-                type:
-                - integer
-                - 'null'
-              result:
-                type:
-                - object
-                - 'null'
-                additionalProperties: true
-              error:
-                type:
-                - object
-                - 'null'
-                additionalProperties: true
-              billing:
-                type: object
-                additionalProperties: true
-              started_at:
-                type:
-                - string
-                - 'null'
-                format: date-time
-              completed_at:
-                type:
-                - string
-                - 'null'
-                format: date-time
-        next_after:
-          type:
-          - integer
-          - 'null'
     ApiBatchJob:
       type: object
       required:
@@ -723,6 +562,93 @@ components:
         results_expires_at:
           type: string
           format: date-time
+    ApiBatchResultsResponse:
+      type: object
+      required:
+      - job
+      - results
+      - next_after
+      properties:
+        job:
+          $ref: '#/components/schemas/ApiBatchJob'
+        results:
+          type: array
+          items:
+            type: object
+            required:
+            - position
+            - request
+            - status
+            - attempts
+            - http_status
+            - result
+            - error
+            - billing
+            properties:
+              position:
+                type: integer
+                minimum: 0
+              reference:
+                type:
+                - string
+                - 'null'
+              request:
+                type: object
+                required:
+                - method
+                - path
+                - query
+                properties:
+                  method:
+                    type: string
+                    enum:
+                    - GET
+                  path:
+                    type: string
+                  query:
+                    type: object
+                    additionalProperties: true
+              status:
+                type: string
+                enum:
+                - pending
+                - processing
+                - succeeded
+                - failed
+                - cancelled
+              attempts:
+                type: integer
+              http_status:
+                type:
+                - integer
+                - 'null'
+              result:
+                type:
+                - object
+                - 'null'
+                additionalProperties: true
+              error:
+                type:
+                - object
+                - 'null'
+                additionalProperties: true
+              billing:
+                type: object
+                additionalProperties: true
+              started_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              completed_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+        next_after:
+          type:
+          - integer
+          - 'null'
     ApiBatchRequestItem:
       type: object
       required:
@@ -754,19 +680,81 @@ components:
         reference:
           type: string
           maxLength: 128
+    DomainDiscoveryJobResponse:
+      type: object
+      required:
+      - job
+      - discovery
+      properties:
+        job:
+          $ref: '#/components/schemas/ApiBatchJob'
+        discovery:
+          type: object
+          required:
+          - corpus
+          - corpus_version
+          - total_matching_words
+          - page_offset
+          - page_words
+          - domain_checks
+          - tlds
+          - filters
+          - credits_per_domain
+          - next_cursor
+          properties:
+            corpus:
+              type: string
+              enum:
+              - iannuttall/unclaimed
+            corpus_version:
+              type: string
+            total_matching_words:
+              type: integer
+              minimum: 1
+            page_offset:
+              type: integer
+              minimum: 0
+            page_words:
+              type: integer
+              minimum: 1
+              maximum: 100
+            domain_checks:
+              type: integer
+              minimum: 1
+              maximum: 100
+            tlds:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: string
+            filters:
+              type: object
+              required:
+              - min_length
+              - max_length
+              - singular_only
+              properties:
+                min_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                max_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                singular_only:
+                  type: boolean
+            credits_per_domain:
+              type: integer
+              minimum: 0
+              description: Normal /v1/status cost at job creation time.
+            next_cursor:
+              type:
+              - string
+              - 'null'
+              description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
   responses:
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -814,6 +802,12 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    Conflict:
+      description: The requested account change conflicts with current account state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -843,6 +837,12 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
+    NotFound:
+      description: The requested account resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   securitySchemes:
     apiKey:
       type: apiKey

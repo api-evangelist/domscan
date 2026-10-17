@@ -331,6 +331,15 @@ components:
           type:
           - string
           - 'null'
+    ScoreDimensionDriver:
+      type: object
+      properties:
+        dimension:
+          type: string
+        score:
+          type: number
+        weight:
+          type: number
     ScoreResponse:
       type: object
       description: Brand name scoring response
@@ -387,15 +396,6 @@ components:
           items:
             type: string
           description: Improvement suggestions
-    ScoreDimensionDriver:
-      type: object
-      properties:
-        dimension:
-          type: string
-        score:
-          type: number
-        weight:
-          type: number
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -432,17 +432,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -455,6 +444,17 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
     PaymentRequired:
       description: Insufficient credits for this request
       headers:

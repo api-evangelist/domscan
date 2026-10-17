@@ -139,23 +139,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    AgentReadinessFoundation:
-      type: object
-      required:
-      - state
-      - evidence
-      properties:
-        state:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-        evidence:
-          type: array
-          items:
-            type: string
     AgentReadinessSignal:
       type: object
       required:
@@ -199,6 +182,129 @@ components:
           items:
             type: string
         caveats:
+          type: array
+          items:
+            type: string
+    AgentReadinessCheck:
+      type: object
+      required:
+      - id
+      - dimension
+      - state
+      - weight
+      - method
+      - checked_url
+      - http_status
+      - evidence
+      - caveats
+      - reference
+      - maturity
+      properties:
+        id:
+          type: string
+        dimension:
+          type: string
+          enum:
+          - discoverability
+          - content
+          - access_policy
+          - capabilities
+        state:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+          - not_applicable
+        weight:
+          type: integer
+          minimum: 1
+          maximum: 3
+        method:
+          type: string
+        checked_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        http_status:
+          type:
+          - integer
+          - 'null'
+        evidence:
+          type: array
+          items:
+            type: string
+        caveats:
+          type: array
+          items:
+            type: string
+        reference:
+          type: string
+        maturity:
+          type: string
+          enum:
+          - standard
+          - specification
+          - proposal
+          - draft
+          - practice
+    AgentReadinessDimensionScore:
+      type: object
+      required:
+      - score
+      - confidence
+      - passed
+      - warned
+      - failed
+      - unknown
+      - not_applicable
+      - checks
+      properties:
+        score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        passed:
+          type: integer
+          minimum: 0
+        warned:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+        unknown:
+          type: integer
+          minimum: 0
+        not_applicable:
+          type: integer
+          minimum: 0
+        checks:
+          type: array
+          items:
+            type: string
+    AgentReadinessFoundation:
+      type: object
+      required:
+      - state
+      - evidence
+      properties:
+        state:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+        evidence:
           type: array
           items:
             type: string
@@ -429,123 +535,7 @@ components:
             max_probes:
               type: integer
               minimum: 1
-    AgentReadinessDimensionScore:
-      type: object
-      required:
-      - score
-      - confidence
-      - passed
-      - warned
-      - failed
-      - unknown
-      - not_applicable
-      - checks
-      properties:
-        score:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 100
-        confidence:
-          type: integer
-          minimum: 0
-          maximum: 100
-        passed:
-          type: integer
-          minimum: 0
-        warned:
-          type: integer
-          minimum: 0
-        failed:
-          type: integer
-          minimum: 0
-        unknown:
-          type: integer
-          minimum: 0
-        not_applicable:
-          type: integer
-          minimum: 0
-        checks:
-          type: array
-          items:
-            type: string
-    AgentReadinessCheck:
-      type: object
-      required:
-      - id
-      - dimension
-      - state
-      - weight
-      - method
-      - checked_url
-      - http_status
-      - evidence
-      - caveats
-      - reference
-      - maturity
-      properties:
-        id:
-          type: string
-        dimension:
-          type: string
-          enum:
-          - discoverability
-          - content
-          - access_policy
-          - capabilities
-        state:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-          - not_applicable
-        weight:
-          type: integer
-          minimum: 1
-          maximum: 3
-        method:
-          type: string
-        checked_url:
-          type:
-          - string
-          - 'null'
-          format: uri
-        http_status:
-          type:
-          - integer
-          - 'null'
-        evidence:
-          type: array
-          items:
-            type: string
-        caveats:
-          type: array
-          items:
-            type: string
-        reference:
-          type: string
-        maturity:
-          type: string
-          enum:
-          - standard
-          - specification
-          - proposal
-          - draft
-          - practice
   responses:
-    BadGateway:
-      description: The public website could not be fetched or returned an unusable response.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: FETCH_ERROR
-              message: Failed to fetch website
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
@@ -581,24 +571,6 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
       content:
@@ -622,6 +594,34 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
+    PaymentRequired:
+      description: Insufficient credits for this request
+      headers:
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on your API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
   securitySchemes:
     apiKey:
       type: apiKey

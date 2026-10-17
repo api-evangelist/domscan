@@ -351,69 +351,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    QuickHealthConfidence:
-      type: object
-      description: Additive quick-health confidence object for DNS and HTTPS checks.
-      properties:
-        checks_run:
-          type: array
-          items:
-            type: string
-            enum:
-            - dns
-            - https
-        passed_count:
-          type: integer
-        failed_count:
-          type: integer
-        unknown_count:
-          type: integer
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        dns_ok:
-          type:
-          - boolean
-          - 'null'
-        https_ok:
-          type:
-          - boolean
-          - 'null'
-    BulkHealthResponse:
-      type: object
-      description: Bulk health check results
-      properties:
-        results:
-          type: array
-          items:
-            type: object
-            properties:
-              domain:
-                type: string
-              health_score:
-                type: integer
-              grade:
-                type: string
-              checks:
-                type: object
-              warnings:
-                type: array
-                items:
-                  type: string
-              error:
-                type: string
-        meta:
-          type: object
-          properties:
-            total:
-              type: integer
-            successful:
-              type: integer
-            check_duration_ms:
-              type: integer
     QuickHealthResponse:
       type: object
       description: Quick health check (DNS + SSL only)
@@ -760,6 +697,69 @@ components:
           type: array
           items:
             type: string
+    BulkHealthResponse:
+      type: object
+      description: Bulk health check results
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              domain:
+                type: string
+              health_score:
+                type: integer
+              grade:
+                type: string
+              checks:
+                type: object
+              warnings:
+                type: array
+                items:
+                  type: string
+              error:
+                type: string
+        meta:
+          type: object
+          properties:
+            total:
+              type: integer
+            successful:
+              type: integer
+            check_duration_ms:
+              type: integer
+    QuickHealthConfidence:
+      type: object
+      description: Additive quick-health confidence object for DNS and HTTPS checks.
+      properties:
+        checks_run:
+          type: array
+          items:
+            type: string
+            enum:
+            - dns
+            - https
+        passed_count:
+          type: integer
+        failed_count:
+          type: integer
+        unknown_count:
+          type: integer
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        dns_ok:
+          type:
+          - boolean
+          - 'null'
+        https_ok:
+          type:
+          - boolean
+          - 'null'
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -808,6 +808,23 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    InternalError:
+      description: Unexpected service error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -826,23 +843,6 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
-    InternalError:
-      description: Unexpected service error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey

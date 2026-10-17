@@ -206,53 +206,6 @@ components:
           - retryable
           - request_id
           - docs_url
-    IpIntelligenceSummary:
-      type: object
-      description: Compact source, confidence, ASN, security signal, and hosting-category summary for IP intelligence responses.
-      properties:
-        query_type:
-          type: string
-          enum:
-          - ip
-          - domain
-        domain_resolved:
-          type: boolean
-        cache_status:
-          type: string
-          enum:
-          - hit
-          - miss
-        data_source:
-          type: string
-        confidence:
-          type: string
-          enum:
-          - high
-          - medium
-          - low
-        confidence_score:
-          type: integer
-          minimum: 0
-          maximum: 100
-        asn_present:
-          type: boolean
-        organization_present:
-          type: boolean
-        country_present:
-          type: boolean
-        security_signal_count:
-          type: integer
-        risk_flags:
-          type: array
-          items:
-            type: string
-        hosting_category:
-          type: string
-          enum:
-          - cloud
-          - datacenter
-          - residential
-          - unknown
     IpInfoResponse:
       type: object
       description: IP geolocation and intelligence data. IP-intrinsic enrichment is cached independently from any caller-supplied domain; rDNS classification uses the returned PTR hostname.
@@ -431,6 +384,53 @@ components:
               - string
               - 'null'
               description: Reserved for partial non-critical enrichment warnings. Core IP dataset unavailability returns HTTP 503.
+    IpIntelligenceSummary:
+      type: object
+      description: Compact source, confidence, ASN, security signal, and hosting-category summary for IP intelligence responses.
+      properties:
+        query_type:
+          type: string
+          enum:
+          - ip
+          - domain
+        domain_resolved:
+          type: boolean
+        cache_status:
+          type: string
+          enum:
+          - hit
+          - miss
+        data_source:
+          type: string
+        confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        confidence_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        asn_present:
+          type: boolean
+        organization_present:
+          type: boolean
+        country_present:
+          type: boolean
+        security_signal_count:
+          type: integer
+        risk_flags:
+          type: array
+          items:
+            type: string
+        hosting_category:
+          type: string
+          enum:
+          - cloud
+          - datacenter
+          - residential
+          - unknown
   responses:
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
@@ -479,6 +479,17 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
     PaymentRequired:
       description: Insufficient credits for this request
       headers:
@@ -497,17 +508,6 @@ components:
               credits_remaining: 0
               credits_required: 2
               purchase_url: https://domscan.net/billing
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
   securitySchemes:
     apiKey:
       type: apiKey
