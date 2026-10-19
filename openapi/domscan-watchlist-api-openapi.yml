@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan Watchlist API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -20,6 +53,306 @@ tags:
 - name: Watchlist
   description: Domain monitoring for expiration and availability (requires login)
 paths:
+  /v1/watchlist/alerts:
+    get:
+      tags:
+      - Watchlist
+      summary: List watchlist alert subscriptions
+      description: List your opt-in alert subscriptions on watched items with their latest observed evidence and check status, plus the event catalog per subscription type, the check schedule and the alert price. Works with an API key or a signed-in session.
+      operationId: listWatchlistAlerts
+      responses:
+        '200':
+          description: Alert subscriptions, event catalog and policy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - subscriptions
+                - total
+                - available_types
+                - policy
+                properties:
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WatchlistAlertSubscription'
+                  total:
+                    type: integer
+                    minimum: 0
+                  available_types:
+                    type: object
+                    description: Event types each subscription type can opt in to.
+                    required:
+                    - ssl
+                    - price
+                    - dns
+                    - typosquat
+                    properties:
+                      ssl:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                          - ssl.expiring
+                          - ssl.expired
+                          - ssl.changed
+                      price:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                          - price.dropped
+                      dns:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                          - dns.changed
+                      typosquat:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                          - typosquat.detected
+                  policy:
+                    $ref: '#/components/schemas/WatchlistAlertPolicy'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+    post:
+      tags:
+      - Watchlist
+      summary: Create watchlist alert subscription
+      description: Subscribe one watched item to alert events. `ssl` watches the certificate a hostname serves (ssl.expiring within `ssl_expiring_days`, ssl.expired, and ssl.changed when a new fingerprint is confirmed on two consecutive checks). `price` watches a TLD registration or renewal price, optionally at one registrar, in the daily pricing snapshot (price.dropped when it falls by at least `drop_percent` from the highest price since the last alert, or reaches `target_price` or below). `dns` watches the A, AAAA, MX, NS, TXT and CNAME records of any hostname (dns.changed after the same new answer on two consecutive confirmed lookups). `typosquat` watches newly registered lookalikes of a brand domain, confirmed by an authoritative registration lookup. Failed, blocked or timed-out checks are unknown and never emit an event. Creating a subscription and running its checks is free; each alert delivered to a signed webhook endpoint with a 2xx response costs 2 credits.
+      operationId: createWatchlistAlert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchlistAlertCreateRequest'
+            example:
+              type: ssl
+              domain: shop.example.com
+              events:
+              - ssl.expiring
+              - ssl.changed
+              ssl_expiring_days: 14
+      responses:
+        '201':
+          description: Subscription created. The first check runs within a few minutes and sets the baseline.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - subscription
+                properties:
+                  subscription:
+                    $ref: '#/components/schemas/WatchlistAlertSubscription'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+        note: Creating a subscription and running its checks is free. Each alert delivered to a webhook endpoint with a 2xx response costs 2 credits. Failed deliveries and unknown checks are never charged.
+  /v1/watchlist/alerts/{subscription_id}:
+    parameters:
+    - name: subscription_id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^mas_[a-f0-9]{32}$
+    get:
+      tags:
+      - Watchlist
+      summary: Get watchlist alert subscription
+      description: Get one alert subscription with its latest observed evidence, check status and up to 20 recent events, newest first.
+      operationId: getWatchlistAlert
+      responses:
+        '200':
+          description: Subscription and recent events
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - subscription
+                - events
+                properties:
+                  subscription:
+                    $ref: '#/components/schemas/WatchlistAlertSubscription'
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WatchlistAlertEvent'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+    patch:
+      tags:
+      - Watchlist
+      summary: Update watchlist alert subscription
+      description: 'Pause (`{"enabled": false}`) or resume a subscription, change its events, or adjust `ssl_expiring_days`, `drop_percent`, `target_price` or `record_types`. The watched item and the subscription type cannot change. A new target price only alerts on a later price movement.'
+      operationId: updateWatchlistAlert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchlistAlertUpdateRequest'
+            example:
+              enabled: true
+              events:
+              - ssl.expiring
+              - ssl.expired
+              - ssl.changed
+      responses:
+        '200':
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - subscription
+                properties:
+                  subscription:
+                    $ref: '#/components/schemas/WatchlistAlertSubscription'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+    delete:
+      tags:
+      - Watchlist
+      summary: Delete watchlist alert subscription
+      description: Delete a subscription. Events it has not sent yet are dropped and never charged.
+      operationId: deleteWatchlistAlert
+      responses:
+        '200':
+          description: Subscription deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - deleted
+                properties:
+                  id:
+                    type: string
+                  deleted:
+                    type: boolean
+                    enum:
+                    - true
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
   /v1/watchlist:
     get:
       tags:
@@ -44,12 +377,37 @@ paths:
                   last_checked: '2024-01-15T12:00:00Z'
                 total: 1
                 updated_at: '2024-01-15T12:00:00Z'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/PageLimit'
+      - $ref: '#/components/parameters/Cursor'
+      x-domscan-pagination:
+        default_limit: null
+        max_limit: 100
+        billing: per_page
       x-domscan-credits:
         model: per_request
         default: 1
@@ -78,6 +436,9 @@ paths:
                   type: string
                   format: email
                   description: Email for notifications (optional)
+            example:
+              domain: example.org
+              notify_email: alerts@example.com
       responses:
         '201':
           description: Domain added to watchlist
@@ -85,14 +446,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WatchlistAddResponse'
+              example:
+                success: true
+                message: Added example.org to watchlist
+                watchlist:
+                - domain: example.com
+                  added_at: '2026-06-02T09:12:00.000Z'
+                  last_checked: '2026-10-09T03:00:12.000Z'
+                  status: expiring_soon
+                  expiry_date: '2026-12-18T14:22:08Z'
+                  days_until_expiry: 70
+                  notify_email: alerts@example.com
+                - domain: example.org
+                  added_at: '2026-10-09T10:15:30.000Z'
+                  status: unknown
+                  notify_email: alerts@example.com
+                total: 2
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_request
         default: 1
@@ -125,6 +526,27 @@ paths:
                     type: string
                   domain:
                     type: string
+                  watchlist:
+                    type: array
+                    description: Domains remaining in the watchlist after the removal.
+                    items:
+                      $ref: '#/components/schemas/WatchedDomain'
+                  total:
+                    type: integer
+                    description: Number of domains remaining in the watchlist.
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
@@ -150,12 +572,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WatchlistCheckResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 1
@@ -177,6 +616,11 @@ paths:
           default: 90
           minimum: 1
           maximum: 365
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/PageLimit'
+      - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: Expiring domains
@@ -184,12 +628,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExpiringDomainsResponse'
+              example:
+                expiring_domains:
+                - domain: example.com
+                  added_at: '2026-06-02T09:12:00.000Z'
+                  last_checked: '2026-10-09T03:00:12.000Z'
+                  status: expiring_soon
+                  expiry_date: '2026-12-18T14:22:08Z'
+                  days_until_expiry: 70
+                  notify_email: alerts@example.com
+                total: 1
+                threshold_days: 90
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      x-domscan-pagination:
+        default_limit: null
+        max_limit: 100
+        billing: per_page
       x-domscan-credits:
         model: per_request
         default: 1
@@ -209,27 +683,389 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AvailableDomainsResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/PageLimit'
+      - $ref: '#/components/parameters/Cursor'
+      x-domscan-pagination:
+        default_limit: null
+        max_limit: 100
+        billing: per_page
       x-domscan-credits:
         model: per_request
         default: 1
 components:
   schemas:
+    WatchlistAlertUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        enabled:
+          type: boolean
+          description: false pauses checks, true resumes them.
+        events:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WatchlistAlertEventType'
+        ssl_expiring_days:
+          type: integer
+          enum:
+          - 30
+          - 14
+          - 7
+          - 1
+        drop_percent:
+          type:
+          - number
+          - 'null'
+          minimum: 1
+          maximum: 95
+        target_price:
+          type:
+          - number
+          - 'null'
+          minimum: 0.01
+          maximum: 100000
+        record_types:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/WatchlistAlertRecordType'
+    WatchlistAlertEventType:
+      type: string
+      enum:
+      - ssl.expiring
+      - ssl.expired
+      - ssl.changed
+      - price.dropped
+      - dns.changed
+      - typosquat.detected
+    WatchlistAlertEvent:
+      type: object
+      required:
+      - id
+      - event_type
+      - detected_at
+      - published_at
+      - data
+      properties:
+        id:
+          type: string
+          description: Webhook event id (X-DomScan-Event-Id).
+        event_type:
+          $ref: '#/components/schemas/WatchlistAlertEventType'
+        detected_at:
+          type: string
+          format: date-time
+        published_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        data:
+          type: object
+          additionalProperties: true
+    WatchlistCheckResponse:
+      type: object
+      description: Watchlist check results
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            available:
+              type: integer
+            expiring_soon:
+              type: integer
+            registered:
+              type: integer
+        alerts:
+          type: object
+          properties:
+            newly_available:
+              type: array
+              items:
+                type: string
+            expiring_soon:
+              type: array
+              items:
+                type: object
+        checked_at:
+          type: string
+          format: date-time
+    WatchedDomain:
+      type: object
+      properties:
+        domain:
+          type: string
+        added_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+          - registered
+          - available
+          - expiring_soon
+          - unknown
+        last_checked:
+          type: string
+          format: date-time
+        expiry_date:
+          type: string
+          format: date-time
+        days_until_expiry:
+          type: integer
+        notify_email:
+          type: string
+          format: email
+        check_count:
+          type: integer
+          minimum: 0
+          description: Number of completed watchlist checks for this domain
+    AvailableDomainsResponse:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+          description: True when another page exists after this one.
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          description: Pass as `cursor` to get the next page; null on the last page.
+        available_domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        total:
+          type: integer
+        message:
+          type: string
+    WatchlistAlertType:
+      type: string
+      enum:
+      - ssl
+      - price
+      - dns
+      - typosquat
+      description: 'ssl: certificate served by a hostname. price: TLD price in the daily pricing snapshot. dns: DNS records of any hostname. typosquat: lookalike registrations of a brand domain.'
+    WatchlistAlertRecordType:
+      type: string
+      enum:
+      - A
+      - AAAA
+      - MX
+      - NS
+      - TXT
+      - CNAME
+    WatchlistAlertCreateRequest:
+      type: object
+      required:
+      - type
+      properties:
+        type:
+          $ref: '#/components/schemas/WatchlistAlertType'
+        domain:
+          type: string
+          maxLength: 253
+          description: Hostname to watch (ssl, dns) or brand domain (typosquat, registrable domain only).
+        tld:
+          type: string
+          maxLength: 127
+          description: TLD to watch (price), for example "com".
+        registrar:
+          type:
+          - string
+          - 'null'
+          description: Registrar id from /v1/prices/registrars (price). Omit to watch the cheapest registrar.
+        events:
+          type: array
+          minItems: 1
+          description: Events to opt in to. Defaults to every event of the type.
+          items:
+            $ref: '#/components/schemas/WatchlistAlertEventType'
+        ssl_expiring_days:
+          type: integer
+          enum:
+          - 30
+          - 14
+          - 7
+          - 1
+          default: 14
+          description: ssl.expiring fires when the certificate expires within this many days.
+        price_type:
+          type: string
+          enum:
+          - registration
+          - renewal
+          default: registration
+        drop_percent:
+          type:
+          - number
+          - 'null'
+          minimum: 1
+          maximum: 95
+          description: Alert when the price falls by at least this percentage from the highest price since the last alert.
+        target_price:
+          type:
+          - number
+          - 'null'
+          minimum: 0.01
+          maximum: 100000
+          description: Alert when the price reaches this USD amount or less. drop_percent or target_price is required for price.
+        record_types:
+          type: array
+          minItems: 1
+          description: DNS record types to watch (dns). Defaults to all six.
+          items:
+            $ref: '#/components/schemas/WatchlistAlertRecordType'
+    ExpiringDomainsResponse:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+          description: True when another page exists after this one.
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          description: Pass as `cursor` to get the next page; null on the last page.
+        expiring_domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        total:
+          type: integer
+        threshold_days:
+          type: integer
+    WatchlistResponse:
+      type: object
+      description: User watchlist
+      properties:
+        has_more:
+          type: boolean
+          description: True when another page exists after this one.
+        next_cursor:
+          type:
+          - string
+          - 'null'
+          description: Pass as `cursor` to get the next page; null on the last page.
+        watchlist:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        total:
+          type: integer
+        updated_at:
+          type: string
+          format: date-time
+    WatchlistAlertPolicy:
+      type: object
+      required:
+      - credits_per_delivered_alert
+      - check_credits
+      - unknown_checks_charged
+      - max_subscriptions
+      - check_interval_minutes
+      properties:
+        credits_per_delivered_alert:
+          type: integer
+          enum:
+          - 2
+        check_credits:
+          type: integer
+          enum:
+          - 0
+        unknown_checks_charged:
+          type: boolean
+          enum:
+          - false
+        max_subscriptions:
+          type: integer
+        max_typosquat_subscriptions:
+          type: integer
+        ssl_expiring_days:
+          type: array
+          items:
+            type: integer
+        default_ssl_expiring_days:
+          type: integer
+        record_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchlistAlertRecordType'
+        price_types:
+          type: array
+          items:
+            type: string
+            enum:
+            - registration
+            - renewal
+        check_interval_minutes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Normal minutes between checks per subscription type.
+        confirmation_checks:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Consecutive confirmed checks required before a change event.
+    WatchlistAddResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        watchlist:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchedDomain'
+        total:
+          type: integer
     ErrorResponse:
       type: object
-      description: Standard error response format
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
       properties:
         error:
           type: object
+          additionalProperties: true
           properties:
             code:
               type: string
-              description: Error code for programmatic handling
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
               example: INVALID_DOMAIN
             type:
               type: string
@@ -275,8 +1111,8 @@ components:
               example: 300
             docs_url:
               type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
           required:
           - type
           - code
@@ -285,117 +1121,409 @@ components:
           - retryable
           - request_id
           - docs_url
-    AvailableDomainsResponse:
+    WatchlistAlertSubscription:
       type: object
+      required:
+      - id
+      - type
+      - target
+      - registrar
+      - events
+      - status
+      - ssl_expiring_days
+      - price_type
+      - drop_percent
+      - target_price
+      - currency
+      - record_types
+      - observed
+      - last_check_at
+      - last_check_status
+      - last_error
+      - next_check_at
+      - created_at
+      - updated_at
       properties:
-        available_domains:
+        id:
+          type: string
+          pattern: ^mas_[a-f0-9]{32}$
+        type:
+          $ref: '#/components/schemas/WatchlistAlertType'
+        target:
+          type: string
+          description: Watched hostname, brand domain or TLD.
+        registrar:
+          type:
+          - string
+          - 'null'
+        events:
           type: array
           items:
-            $ref: '#/components/schemas/WatchedDomain'
-        total:
-          type: integer
-        message:
-          type: string
-    WatchlistAddResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-        message:
-          type: string
-        watchlist:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        total:
-          type: integer
-    ExpiringDomainsResponse:
-      type: object
-      properties:
-        expiring_domains:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        total:
-          type: integer
-        threshold_days:
-          type: integer
-    WatchlistCheckResponse:
-      type: object
-      description: Watchlist check results
-      properties:
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        summary:
-          type: object
-          properties:
-            total:
-              type: integer
-            available:
-              type: integer
-            expiring_soon:
-              type: integer
-            registered:
-              type: integer
-        alerts:
-          type: object
-          properties:
-            newly_available:
-              type: array
-              items:
-                type: string
-            expiring_soon:
-              type: array
-              items:
-                type: object
-        checked_at:
-          type: string
-          format: date-time
-    WatchlistResponse:
-      type: object
-      description: User watchlist
-      properties:
-        watchlist:
-          type: array
-          items:
-            $ref: '#/components/schemas/WatchedDomain'
-        total:
-          type: integer
-        updated_at:
-          type: string
-          format: date-time
-    WatchedDomain:
-      type: object
-      properties:
-        domain:
-          type: string
-        added_at:
-          type: string
-          format: date-time
+            $ref: '#/components/schemas/WatchlistAlertEventType'
         status:
           type: string
           enum:
-          - registered
-          - available
-          - expiring_soon
+          - active
+          - paused
+        ssl_expiring_days:
+          type:
+          - integer
+          - 'null'
+          enum:
+          - 30
+          - 14
+          - 7
+          - 1
+          - null
+        price_type:
+          type:
+          - string
+          - 'null'
+          enum:
+          - registration
+          - renewal
+          - null
+        drop_percent:
+          type:
+          - number
+          - 'null'
+        target_price:
+          type:
+          - number
+          - 'null'
+        currency:
+          type:
+          - string
+          - 'null'
+          enum:
+          - USD
+          - null
+        record_types:
+          type:
+          - array
+          - 'null'
+          items:
+            $ref: '#/components/schemas/WatchlistAlertRecordType'
+        observed:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+          description: 'Last confirmed evidence: the certificate, the current and reference price, the DNS records, or the lookalike scan progress. Null before the first confirmed check.'
+        last_check_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        last_check_status:
+          type:
+          - string
+          - 'null'
+          enum:
+          - baseline
+          - ok
+          - pending_confirmation
           - unknown
-        last_checked:
+          - null
+          description: unknown means the last check found no exact evidence (for example a failed TLS handshake or DNS lookup); it never emits an event.
+        last_error:
+          type:
+          - string
+          - 'null'
+        next_check_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        created_at:
           type: string
           format: date-time
-        expiry_date:
+        updated_at:
           type: string
           format: date-time
-        days_until_expiry:
-          type: integer
-        notify_email:
-          type: string
-          format: email
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: The `next_cursor` of the previous page. Cursors are opaque, signed, and only valid for the same account and query; anything else is a 400 INVALID_CURSOR.
+      schema:
+        type: string
+        maxLength: 512
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    PageLimit:
+      name: limit
+      in: query
+      required: false
+      description: Items per page, from 1 to 100. Without it the whole list is returned, as before.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 'Optional client-chosen key (1 to 255 printable ASCII characters, for example a UUID). Retrying with the same key, API key and identical request within 24 hours returns the stored response with `Idempotent-Replayed: true` and charges nothing again. Responses larger than 1 MiB, and refunded errors, are not stored, so a retry runs normally. Reusing a key for a different request returns 422 IDEMPOTENCY_KEY_REUSED; a duplicate sent while the first is still running returns 409 IDEMPOTENCY_IN_PROGRESS.'
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    IdempotentReplayed:
+      description: Present and `true` when this response is a stored replay for a repeated Idempotency-Key. A replay charges nothing.
+      schema:
+        type: string
+        enum:
+        - 'true'
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
   responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    IdempotencyInProgress:
+      description: A request with the same Idempotency-Key is still running. Retry after Retry-After seconds to receive its stored response. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_IN_PROGRESS
+              message: A request with this Idempotency-Key is still being processed. Retry shortly to receive its result.
+              type: conflict_error
+              status: 409
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+              retry_after: 1
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
+    Conflict:
+      description: The requested change conflicts with the current state.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: CONFLICT
+              message: The request conflicts with the current state.
+              type: conflict_error
+              status: 409
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+    NotFound:
+      description: The requested resource was not found.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found.
+              type: not_found_error
+              status: 404
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
         Retry-After:
           schema:
             type: integer
@@ -407,15 +1535,6 @@ components:
             - free
             - paid
           description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
         X-RateLimit-Policy:
           schema:
             type: string
@@ -428,8 +1547,59 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    IdempotencyKeyReused:
+      description: The Idempotency-Key was already used by this API key for a different request (method, path, query or body) in the last 24 hours. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_KEY_REUSED
+              message: This Idempotency-Key was already used with a different request. Use a new key for a new request.
+              type: validation_error
+              status: 422
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -440,35 +1610,11 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
   securitySchemes:
     apiKey:
       type: apiKey
@@ -509,11 +1655,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -521,11 +2124,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.

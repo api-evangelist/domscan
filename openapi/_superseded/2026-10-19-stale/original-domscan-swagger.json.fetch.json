@@ -1,0 +1,12 @@
+{
+ "url": "https://domscan.net/v1/openapi.json",
+ "requested_url": "https://domscan.net/v1/openapi.json",
+ "status": 200,
+ "content_type": "application/json",
+ "bytes": 1256980,
+ "sha256": "6e209153574a159a466e1afc4f785ffac5a34c03aa754ee116d96d4b984a8402",
+ "fetched_at": "2026-10-04",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "equivalent",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the provider's current document describes the same operations (Jaccard 1.0), but the bytes differ, so the archive is an earlier or reformatted copy."
+}

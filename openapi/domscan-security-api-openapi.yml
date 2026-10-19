@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan Security API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -67,14 +100,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkLookupResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 2
@@ -125,14 +183,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkLookupResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 4
@@ -184,14 +267,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkLookupResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 3
@@ -200,7 +308,7 @@ paths:
       tags:
       - Security
       summary: Scan exposed software for known vulnerabilities
-      description: Run a passive, evidence-first vulnerability snapshot for a public URL or domain. DomScan correlates exposed technology versions with authoritative public advisories and exploitation-priority data, and reports deterministic response-header misconfigurations separately. Deep mode adds one isolated JavaScript-rendered page. The scan sends no exploit payloads, preserves unknown coverage, and never treats a versionless fingerprint as a detected vulnerability.
+      description: Run a passive, evidence-first vulnerability snapshot for a public URL or domain. DomScan correlates exposed technology versions with authoritative public advisories and exploitation-priority data, and reports deterministic response-header misconfigurations separately. Deep mode adds one isolated JavaScript-rendered page. The scan sends no exploit payloads, preserves unknown coverage, and never treats a versionless fingerprint as a detected vulnerability. If the target page is unavailable, the response is partial with unknown target coverage, does not infer findings from missing evidence, and refunds the request credits.
       operationId: getVulnerabilities
       x-required-any-of:
       - - url
@@ -233,6 +341,9 @@ paths:
           - standard
           - deep
           default: standard
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Passive vulnerability intelligence result with explicit evidence and coverage limits.
@@ -646,6 +757,156 @@ paths:
                   _meta:
                     type: object
                     additionalProperties: true
+              example:
+                target:
+                  requested_url: https://www.example.com/
+                  final_url: https://www.example.com/
+                  hostname: www.example.com
+                scan:
+                  mode: standard
+                  status: complete
+                  checked_at: '2026-10-09T10:15:30.000Z'
+                  duration_ms: 3120
+                  disclaimer: A clean result means DomScan did not detect an issue within the documented scan coverage. Automated scanning cannot prove that an application is vulnerability-free or replace an authorized penetration test.
+                summary:
+                  posture: review
+                  risk_level: medium
+                  finding_count: 2
+                  version_affected_count: 0
+                  misconfiguration_count: 2
+                  urgent_count: 0
+                  severity_counts:
+                    critical: 0
+                    high: 0
+                    medium: 1
+                    low: 1
+                    info: 0
+                    unknown: 0
+                findings:
+                - fingerprint: configuration:content-security-policy:www.example.com
+                  classification: security_misconfiguration
+                  severity: medium
+                  priority: elevated
+                  title: Content Security Policy is not advertised
+                  summary: The observed response did not include a Content-Security-Policy header.
+                  evidence:
+                    confidence: high
+                    observed:
+                    - Public response did not include the expected content-security-policy protection.
+                    limitations:
+                    - header_policy_can_vary_by_path_or_response_status
+                  remediation:
+                    summary: Deploy a restrictive Content Security Policy in report-only mode first, then enforce it.
+                    fixed_versions: []
+                  sources:
+                  - target_response
+                - fingerprint: configuration:referrer-policy:www.example.com
+                  classification: security_misconfiguration
+                  severity: low
+                  priority: normal
+                  title: Referrer Policy is not advertised
+                  summary: The response did not include an explicit Referrer-Policy header.
+                  evidence:
+                    confidence: high
+                    observed:
+                    - Public response did not include the expected referrer-policy protection.
+                    limitations:
+                    - header_policy_can_vary_by_path_or_response_status
+                  remediation:
+                    summary: Choose and deploy a Referrer-Policy that matches the application privacy and analytics requirements.
+                    fixed_versions: []
+                  sources:
+                  - target_response
+                components:
+                - technology_id: jquery
+                  name: jQuery
+                  detected_version: 3.7.1
+                  version_kind: asset
+                  confidence: high
+                  advisory_status: checked
+                  matched_advisories: 0
+                - technology_id: cloudflare
+                  name: Cloudflare
+                  detected_version: null
+                  version_kind: null
+                  confidence: high
+                  advisory_status: mapping_unavailable
+                  matched_advisories: 0
+                coverage:
+                  target_response: checked
+                  technology_detection: checked
+                  package_advisories: checked
+                  known_exploitation: not_requested
+                  exploitation_probability: not_requested
+                  detected_components: 2
+                  versioned_components: 1
+                  advisory_eligible_components: 1
+                  advisory_checked_components: 1
+                  advisory_deferred_components: 0
+                  advisory_query_limit: 20
+                  relay_used: true
+                  limitations:
+                  - Only exact reviewed technology-to-package mappings are checked against OSV.
+                  - Versionless or semantically incompatible detections are not reported as vulnerable.
+                  - This passive scan does not send exploit payloads or prove exploitability.
+                  - Response headers and exposed versions can vary by path, edge location, or authentication state.
+                sources:
+                - id: target_response
+                  name: Observed public response
+                  owner: Target website
+                  url: https://domscan.net/tech-stack-api
+                  status: checked
+                  retrieved_at: '2026-10-09T10:15:30.000Z'
+                  cache_hit: false
+                  expected_freshness: Live at scan time
+                  fallback_behavior: Unavailable signals remain unknown and never imply that the target is unaffected
+                  cost: none
+                - id: osv
+                  name: OSV
+                  owner: Google Open Source Security Team
+                  url: https://google.github.io/osv.dev/
+                  status: checked
+                  retrieved_at: '2026-10-09T10:15:29.000Z'
+                  cache_hit: false
+                  expected_freshness: OSV targets advisory freshness within 15 minutes
+                  fallback_behavior: Use a fresh cached result when available; otherwise mark the component advisory check unknown
+                  cost: none
+                - id: cisa_kev
+                  name: CISA Known Exploited Vulnerabilities Catalog
+                  owner: Cybersecurity and Infrastructure Security Agency
+                  url: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+                  status: not_requested
+                  retrieved_at: null
+                  cache_hit: false
+                  expected_freshness: Catalog changes are checked hourly
+                  fallback_behavior: Use a fresh cached catalog when available; otherwise leave exploitation status unknown
+                  cost: none
+                - id: first_epss
+                  name: Exploit Prediction Scoring System
+                  owner: FIRST
+                  url: https://www.first.org/epss/
+                  status: not_requested
+                  retrieved_at: null
+                  cache_hit: false
+                  expected_freshness: Scores are generated daily
+                  fallback_behavior: Return the advisory without an EPSS value and mark exploitation probability unknown
+                  cost: none
+                _meta:
+                  served_by: pop=MAD country=ES
+                  analysis_status: complete
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -664,73 +925,993 @@ paths:
           equals: deep
           credits: 12
         note: Standard passive scans cost 8 credits. Deep scans add isolated JavaScript rendering and cost 12 credits.
+  /v1/security-rating:
+    get:
+      tags:
+      - Security
+      summary: Domain security rating
+      description: 'One weighted, explainable security rating for a domain, built from passive checks DomScan already runs: TLS and certificate grade, HTTP security headers, SPF and DMARC, DNSSEC and CAA, domain blocklists and security.txt. They run in parallel within a 25-second budget. Each category has a 0-100 score, a weight and coded findings; a category whose check gave no evidence (a timeout, a challenge page, a blocklist that did not answer) is unknown and left out of the score instead of counting against it, and score_confidence shows how much weight was covered. A critical finding (an expired, revoked or invalid certificate, or a blocklist listing) caps the grade at F. Passive and non-intrusive: not a penetration test. 5 credits; refunded when no category could be scored.'
+      operationId: getSecurityRating
+      parameters:
+      - name: domain
+        in: query
+        required: true
+        description: Domain or host name. A pasted URL is reduced to its host.
+        schema:
+          type: string
+        example: github.com
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: Security rating
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityRatingResponse'
+              example:
+                domain: github.com
+                status: partial
+                score: 81
+                grade: B
+                checks_unknown: 1
+                score_confidence: medium
+                weight_covered: 85
+                capped_by_critical_finding: false
+                categories:
+                - id: tls
+                  status: scored
+                  score: 85
+                  weight: 30
+                  unknown_reason: null
+                  findings: []
+                - id: http_headers
+                  status: scored
+                  score: 85
+                  weight: 20
+                  unknown_reason: null
+                  findings:
+                  - code: header_permissions_policy_missing
+                    severity: info
+                  - code: header_cross_origin_opener_policy_missing
+                    severity: info
+                  - code: header_cross_origin_resource_policy_missing
+                    severity: info
+                - id: email_authentication
+                  status: scored
+                  score: 85
+                  weight: 20
+                  unknown_reason: null
+                  findings: []
+                - id: dns
+                  status: scored
+                  score: 40
+                  weight: 10
+                  unknown_reason: null
+                  findings:
+                  - code: dnssec_not_enabled
+                    severity: low
+                - id: reputation
+                  status: unknown
+                  score: null
+                  weight: 15
+                  unknown_reason: no_evidence
+                  findings: []
+                - id: disclosure
+                  status: scored
+                  score: 100
+                  weight: 5
+                  unknown_reason: null
+                  findings: []
+                findings:
+                - category: dns
+                  code: dnssec_not_enabled
+                  severity: low
+                - category: http_headers
+                  code: header_permissions_policy_missing
+                  severity: info
+                - category: http_headers
+                  code: header_cross_origin_opener_policy_missing
+                  severity: info
+                - category: http_headers
+                  code: header_cross_origin_resource_policy_missing
+                  severity: info
+                sources:
+                  tls:
+                    grade: A
+                    score: 85
+                    checked_at: '2026-10-18T04:14:57.278Z'
+                  http_headers:
+                    status: ok
+                    grade: B
+                    score: 85
+                    final_url: https://github.com/
+                    http_status: 200
+                  dns_security:
+                    score: 70
+                    grade: B
+                    checks_unknown: 0
+                    blocklists_checked: 3
+                    blocklists_unknown: 1
+                  security_txt:
+                    status: valid
+                    location: well_known
+                checked_at: '2026-10-18T04:14:58.507Z'
+                duration_ms: 2114
+                rating_version: 2026-10-18.1
+                caveats:
+                - passive_checks_only
+                - not_a_penetration_test
+                - tls_protocols_inferred
+                - unknown_categories_excluded_from_score
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 5
+  /v1/headers:
+    get:
+      tags:
+      - Security
+      summary: Audit HTTP security headers
+      description: 'Fetch one public page and audit its HTTP security headers: HSTS, Content-Security-Policy, clickjacking protection, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, cross-origin opener, embedder and resource policies, version disclosure and cookie flags. Returns 11 per-check results, a deterministic 0-100 score, an A+ to F grade and prioritized recommendation codes. A 4xx, 5xx or challenge response is analysed but not graded (`status: partial`). When no response is received the result is `unknown` and refunded. Cookie values are never returned.'
+      operationId: getSecurityHeadersAudit
+      x-required-any-of:
+      - - url
+      - - domain
+      parameters:
+      - name: url
+        description: Page URL to audit. Without a scheme https:// is used; an explicit http:// URL is honoured and caps the grade at D. Takes precedence over domain.
+        in: query
+        schema:
+          type: string
+          maxLength: 2048
+        example: https://example.com
+      - name: domain
+        description: Hostname to audit as https://<domain>/ when url is omitted.
+        in: query
+        schema:
+          type: string
+          maxLength: 253
+        example: example.com
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: Security header checks, score, grade, cookie flags, recommendations and fetch evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityHeadersAuditResponse'
+              example:
+                url: https://example.com/
+                domain: example.com
+                status: ok
+                checked_at: '2026-10-09T10:15:30.000Z'
+                final_url: https://www.example.com/
+                http_status: 200
+                redirect_count: 1
+                https: true
+                score: 75
+                grade: C
+                summary:
+                  passed: 6
+                  warned: 2
+                  failed: 0
+                  missing: 2
+                  not_applicable: 1
+                  hsts_preload_ready: false
+                  csp_strict: false
+                checks:
+                - id: strict_transport_security
+                  status: pass
+                  value: max-age=31536000
+                  detail_code: enabled
+                  issues:
+                  - include_subdomains_missing
+                  - preload_missing
+                  weight: 20
+                - id: content_security_policy
+                  status: warn
+                  value: default-src 'self'; script-src 'self' 'unsafe-inline'
+                  detail_code: unsafe_inline
+                  issues:
+                  - missing_object_src
+                  - missing_base_uri
+                  - unsafe_inline
+                  weight: 25
+                - id: clickjacking
+                  status: pass
+                  value: SAMEORIGIN
+                  detail_code: x_frame_options_sameorigin
+                  issues: []
+                  weight: 10
+                - id: x_content_type_options
+                  status: pass
+                  value: nosniff
+                  detail_code: nosniff
+                  issues: []
+                  weight: 10
+                - id: referrer_policy
+                  status: pass
+                  value: strict-origin-when-cross-origin
+                  detail_code: strict_origin_when_cross_origin
+                  issues: []
+                  weight: 10
+                - id: permissions_policy
+                  status: missing
+                  value: null
+                  detail_code: header_missing
+                  issues: []
+                  weight: 5
+                - id: cross_origin_opener_policy
+                  status: pass
+                  value: same-origin
+                  detail_code: same_origin
+                  issues: []
+                  weight: 5
+                - id: cross_origin_embedder_policy
+                  status: not_applicable
+                  value: null
+                  detail_code: not_set_informational
+                  issues: []
+                  weight: 0
+                - id: cross_origin_resource_policy
+                  status: missing
+                  value: null
+                  detail_code: header_missing
+                  issues: []
+                  weight: 5
+                - id: information_disclosure
+                  status: warn
+                  value: 'server: nginx/1.25.3'
+                  detail_code: version_disclosed
+                  issues:
+                  - server_version_disclosed
+                  weight: 5
+                - id: cookies
+                  status: pass
+                  value: session
+                  detail_code: all_flags_set
+                  issues: []
+                  weight: 5
+                cookies:
+                - name: session
+                  secure: true
+                  http_only: true
+                  same_site: lax
+                  issues: []
+                headers_raw:
+                  strict-transport-security: max-age=31536000
+                  content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'
+                  x-frame-options: SAMEORIGIN
+                  x-content-type-options: nosniff
+                  referrer-policy: strict-origin-when-cross-origin
+                  cross-origin-opener-policy: same-origin
+                  server: nginx/1.25.3
+                recommendations:
+                - remove_csp_unsafe_inline
+                - add_csp_object_src_none
+                - add_csp_base_uri
+                - add_hsts_include_subdomains
+                - add_hsts_preload
+                - add_permissions_policy
+                - add_cross_origin_resource_policy
+                - hide_server_version
+                fetch:
+                  checked_url: https://example.com/
+                  http_status: 200
+                  final_url: https://www.example.com/
+                  via_proxy: true
+                  redirect_count: 1
+                  unknown_reason: null
+                caveats:
+                - set_cookie_visibility_limited
+                - meta_csp_not_evaluated
+                rubric_version: 2026-10-09.1
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/security-txt:
+    get:
+      tags:
+      - Security
+      summary: Validate security.txt
+      description: Fetch and validate the security.txt of a domain under RFC 9116 from /.well-known/security.txt, trying the legacy /security.txt only after an exact 404 or 410. Returns parsed Contact, Expires, Encryption, Acknowledgments, Preferred-Languages, Canonical, Policy, Hiring and CSAF fields, whether an OpenPGP cleartext signature is present (signatures are not verified), and machine-coded errors and warnings. Status is `valid`, `invalid`, `not_found` or `unknown`; an unknown result is refunded.
+      operationId: getSecurityTxt
+      x-required-any-of:
+      - - domain
+      - - url
+      parameters:
+      - name: domain
+        description: Domain or URL to check. Only the host is used. Takes precedence over url.
+        in: query
+        schema:
+          type: string
+          maxLength: 253
+        example: example.com
+      - name: url
+        description: Alias for domain; the host is extracted from the URL.
+        in: query
+        schema:
+          type: string
+          maxLength: 2048
+        example: https://example.com
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: security.txt status, parsed fields, issues, caveats and fetch evidence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityTxtResponse'
+              example:
+                domain: example.com
+                status: valid
+                location: well_known
+                checked_at: '2026-10-09T10:00:00.000Z'
+                fetch:
+                - location: well_known
+                  checked_url: https://example.com/.well-known/security.txt
+                  http_status: 200
+                  final_url: https://example.com/.well-known/security.txt
+                  via_proxy: true
+                  content_type: text/plain; charset=utf-8
+                  bytes: 279
+                  truncated: false
+                  outcome: found
+                  error: null
+                fields:
+                  contact:
+                  - mailto:security@example.com
+                  - https://example.com/report
+                  expires: '2027-01-01T00:00:00.000Z'
+                  expires_in_days: 83
+                  encryption:
+                  - https://example.com/pgp-key.txt
+                  acknowledgments: []
+                  preferred_languages:
+                  - en
+                  - es
+                  canonical:
+                  - https://example.com/.well-known/security.txt
+                  policy:
+                  - https://example.com/security-policy
+                  hiring: []
+                  csaf: []
+                  other_fields: []
+                signed: false
+                issues: []
+                caveats: []
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+      x-domscan-credits:
+        model: per_request
+        default: 1
+  /v1/idn:
+    get:
+      tags:
+      - Security
+      summary: Analyze IDN and homograph risk
+      description: 'Convert a domain between Unicode and punycode (UTS #46) and analyse each label: Unicode scripts, mixed-script use, invisible characters and lookalike (confusable) characters, plus a confusable skeleton of the whole name and a homograph risk level with reasons. Pure computation with no outbound requests. Uses a curated subset of Unicode confusables, so the absence of a flag is not proof of safety. Names that cannot be converted return 400; label or name length violations return 200 with `valid: false`.'
+      operationId: getIdnAnalysis
+      parameters:
+      - name: domain
+        description: Unicode or punycode domain name. Case-insensitive; one trailing dot is removed. No scheme, path, port or whitespace.
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 512
+          example: xn--80ak6aa92e.com
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: Unicode and ASCII forms, per-label script analysis, skeleton and risk
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdnAnalysisResponse'
+              example:
+                input: xn--80ak6aa92e.com
+                outcome: analyzed
+                unicode: аррӏе.com
+                ascii: xn--80ak6aa92e.com
+                is_idn: true
+                valid: true
+                errors: []
+                labels:
+                - unicode: аррӏе
+                  ascii: xn--80ak6aa92e
+                  is_idn: true
+                  scripts:
+                  - Cyrillic
+                  mixed_script: false
+                  has_invisible: false
+                  confusable_characters:
+                  - char: а
+                    codepoint: U+0430
+                    script: Cyrillic
+                    looks_like: a
+                  - char: р
+                    codepoint: U+0440
+                    script: Cyrillic
+                    looks_like: p
+                  - char: р
+                    codepoint: U+0440
+                    script: Cyrillic
+                    looks_like: p
+                  - char: ӏ
+                    codepoint: U+04CF
+                    script: Cyrillic
+                    looks_like: l
+                  - char: е
+                    codepoint: U+0435
+                    script: Cyrillic
+                    looks_like: e
+                - unicode: com
+                  ascii: com
+                  is_idn: false
+                  scripts:
+                  - Latin
+                  mixed_script: false
+                  has_invisible: false
+                  confusable_characters: []
+                skeleton: apple.com
+                risk:
+                  level: high
+                  reasons:
+                  - whole_script_confusable
+                  - idn_label
+                tld:
+                  label: com
+                  ascii: com
+                  is_idn: false
+                checked_at: '2026-10-09T10:15:30.000Z'
+                caveats:
+                - partial_confusable_table
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 1
 components:
   schemas:
-    ErrorResponse:
+    IdnAnalysisResponse:
       type: object
-      description: Standard error response format
+      required:
+      - input
+      - outcome
+      - unicode
+      - ascii
+      - is_idn
+      - valid
+      - errors
+      - labels
+      - skeleton
+      - risk
+      - tld
+      - checked_at
+      - caveats
       properties:
-        error:
+        input:
+          type: string
+        outcome:
+          type: string
+          enum:
+          - analyzed
+          - invalid
+        unicode:
+          type: string
+        ascii:
+          type: string
+        is_idn:
+          type: boolean
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+            enum:
+            - label_too_long
+            - name_too_long
+            - empty_label
+            - invalid_punycode_label
+        labels:
+          type: array
+          items:
+            type: object
+            required:
+            - unicode
+            - ascii
+            - is_idn
+            - scripts
+            - mixed_script
+            - has_invisible
+            - confusable_characters
+            properties:
+              unicode:
+                type: string
+              ascii:
+                type: string
+              is_idn:
+                type: boolean
+              scripts:
+                type: array
+                items:
+                  type: string
+              mixed_script:
+                type: boolean
+              has_invisible:
+                type: boolean
+              confusable_characters:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - char
+                  - codepoint
+                  - script
+                  - looks_like
+                  properties:
+                    char:
+                      type: string
+                    codepoint:
+                      type: string
+                      pattern: ^U\+[0-9A-F]{4,6}$
+                    script:
+                      type: string
+                    looks_like:
+                      type: string
+        skeleton:
+          type: string
+          description: Lowercased name with invisible characters dropped and lookalikes mapped to ASCII.
+        risk:
           type: object
+          required:
+          - level
+          - reasons
           properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
+            level:
               type: string
               enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
+              - none
+              - low
+              - medium
+              - high
+            reasons:
+              type: array
+              items:
+                type: string
+                enum:
+                - invisible_characters
+                - mixed_latin_and_lookalike_script
+                - mixed_script
+                - whole_script_confusable
+                - confusable_characters
+                - idn_label
+                - fullwidth_characters
+        tld:
+          type:
+          - object
+          - 'null'
           required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
+          - label
+          - ascii
+          - is_idn
+          properties:
+            label:
+              type: string
+            ascii:
+              type: string
+            is_idn:
+              type: boolean
+        checked_at:
+          type: string
+          format: date-time
+        caveats:
+          type: array
+          items:
+            type: string
+            enum:
+            - partial_confusable_table
+            - trailing_dot_removed
+    SecurityRatingResponse:
+      type: object
+      required:
+      - domain
+      - status
+      - score
+      - grade
+      - checks_unknown
+      - score_confidence
+      - weight_covered
+      - capped_by_critical_finding
+      - categories
+      - findings
+      - sources
+      - checked_at
+      - duration_ms
+      - rating_version
+      - caveats
+      properties:
+        domain:
+          type: string
+        status:
+          type: string
+          enum:
+          - ok
+          - partial
+          - unknown
+          description: 'ok: every category was scored. partial: some categories were unknown and left out of the score. unknown: no category could be scored; score and grade are null and the request is refunded.'
+        score:
+          type:
+          - integer
+          - 'null'
+          description: Weighted average (0-100) of the scored categories. A critical finding caps it at 59. Null when nothing was scored.
+        grade:
+          type:
+          - string
+          - 'null'
+          enum:
+          - A
+          - B
+          - C
+          - D
+          - F
+          - null
+          description: A 90+, B 80+, C 70+, D 60+, otherwise F.
+        checks_unknown:
+          type: integer
+          description: Categories left out of the score.
+        score_confidence:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+          description: high when at least 90% of the weight was scored, medium at 60%, otherwise low.
+        weight_covered:
+          type: integer
+          description: Share of the total weight that was scored, 0-100.
+        capped_by_critical_finding:
+          type: boolean
+        categories:
+          type: array
+          description: 'Fixed order. Weights: tls 30, http_headers 20, email_authentication 20, dns 10, reputation 15, disclosure 5.'
+          items:
+            type: object
+            required:
+            - id
+            - status
+            - score
+            - weight
+            - unknown_reason
+            - findings
+            properties:
+              id:
+                type: string
+                enum:
+                - tls
+                - http_headers
+                - email_authentication
+                - dns
+                - reputation
+                - disclosure
+              status:
+                type: string
+                enum:
+                - scored
+                - unknown
+              score:
+                type:
+                - integer
+                - 'null'
+              weight:
+                type: integer
+              unknown_reason:
+                type:
+                - string
+                - 'null'
+                enum:
+                - timeout
+                - check_failed
+                - no_evidence
+                - not_received
+                - partial_response
+                - null
+                description: 'Why the category was not scored. partial_response: the site answered with a challenge or error page. no_evidence includes a blocklist that did not answer, which is never treated as clean.'
+              findings:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - code
+                  - severity
+                  properties:
+                    code:
+                      type: string
+                      description: 'Stable finding code: certificate_expired, certificate_expires_within_7_days, certificate_expires_within_30_days, certificate_chain_invalid, certificate_revoked, ssl3_enabled, legacy_tls_enabled, tls13_not_supported, tls_critical_issue, site_not_served_over_https, header_<check>_missing or header_<check>_fail (for example header_content_security_policy_missing), spf_missing, spf_invalid, spf_permissive_all, spf_lookup_limit_exceeded, dmarc_missing, dmarc_invalid, dmarc_policy_none, dmarc_partial_enforcement, dnssec_bogus, dnssec_not_enabled, dnssec_not_validated, caa_missing, domain_blocklisted, security_txt_missing, security_txt_invalid or security_txt_expired.'
+                    severity:
+                      type: string
+                      enum:
+                      - critical
+                      - high
+                      - medium
+                      - low
+                      - info
+        findings:
+          type: array
+          description: All findings, most severe first.
+          items:
+            type: object
+            required:
+            - category
+            - code
+            - severity
+            properties:
+              category:
+                type: string
+                enum:
+                - tls
+                - http_headers
+                - email_authentication
+                - dns
+                - reputation
+                - disclosure
+              code:
+                type: string
+                description: 'Stable finding code: certificate_expired, certificate_expires_within_7_days, certificate_expires_within_30_days, certificate_chain_invalid, certificate_revoked, ssl3_enabled, legacy_tls_enabled, tls13_not_supported, tls_critical_issue, site_not_served_over_https, header_<check>_missing or header_<check>_fail (for example header_content_security_policy_missing), spf_missing, spf_invalid, spf_permissive_all, spf_lookup_limit_exceeded, dmarc_missing, dmarc_invalid, dmarc_policy_none, dmarc_partial_enforcement, dnssec_bogus, dnssec_not_enabled, dnssec_not_validated, caa_missing, domain_blocklisted, security_txt_missing, security_txt_invalid or security_txt_expired.'
+              severity:
+                type: string
+                enum:
+                - critical
+                - high
+                - medium
+                - low
+                - info
+        sources:
+          type: object
+          required:
+          - tls
+          - http_headers
+          - dns_security
+          - security_txt
+          properties:
+            tls:
+              type:
+              - object
+              - 'null'
+              required:
+              - grade
+              - score
+              - checked_at
+              properties:
+                grade:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - A+
+                  - A
+                  - B
+                  - C
+                  - D
+                  - F
+                  - null
+                score:
+                  type:
+                  - integer
+                  - 'null'
+                checked_at:
+                  type: string
+              description: Summary of /v1/ssl/grade; null when the check failed or timed out.
+            http_headers:
+              type:
+              - object
+              - 'null'
+              required:
+              - status
+              - grade
+              - score
+              - final_url
+              - http_status
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - ok
+                  - partial
+                  - unknown
+                grade:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - A+
+                  - A
+                  - B
+                  - C
+                  - D
+                  - F
+                  - null
+                score:
+                  type:
+                  - integer
+                  - 'null'
+                final_url:
+                  type:
+                  - string
+                  - 'null'
+                http_status:
+                  type:
+                  - integer
+                  - 'null'
+              description: Summary of /v1/headers; null when the check failed or timed out.
+            dns_security:
+              type:
+              - object
+              - 'null'
+              required:
+              - score
+              - grade
+              - checks_unknown
+              - blocklists_checked
+              - blocklists_unknown
+              properties:
+                score:
+                  type:
+                  - integer
+                  - 'null'
+                grade:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - A+
+                  - A
+                  - B
+                  - C
+                  - D
+                  - F
+                  - null
+                checks_unknown:
+                  type: integer
+                blocklists_checked:
+                  type: integer
+                blocklists_unknown:
+                  type: integer
+              description: Summary of /v1/dns/security; null when the check failed or timed out.
+            security_txt:
+              type:
+              - object
+              - 'null'
+              required:
+              - status
+              - location
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - valid
+                  - invalid
+                  - not_found
+                  - unknown
+                location:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - well_known
+                  - legacy
+                  - null
+              description: Summary of /v1/security-txt; null when the check failed or timed out.
+          description: The underlying checks, for drilling down with their own endpoints.
+        checked_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+        rating_version:
+          type: string
+        caveats:
+          type: array
+          items:
+            type: string
+            enum:
+            - passive_checks_only
+            - not_a_penetration_test
+            - tls_protocols_inferred
+            - unknown_categories_excluded_from_score
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -806,10 +1987,761 @@ components:
             duration_ms:
               type: integer
               minimum: 0
+    ClassificationEvidence:
+      type: object
+      description: 'Where a classification came from: the source that answered, the method used, when it was observed and an optional machine-readable detail.'
+      properties:
+        source:
+          type: string
+          description: Source that produced the observation, for example rdap, dns, http or cache.
+          example: rdap
+        method:
+          type: string
+          description: Check method used, for example rdap_lookup, txt_lookup or http_get.
+          example: rdap_lookup
+        observed_at:
+          type: string
+          format: date-time
+          description: When the evidence was observed. Earlier than checked_at for cached results.
+        detail:
+          type: string
+          description: Optional machine-readable detail such as http_404, nxdomain or taken.
+      required:
+      - source
+      - method
+      - observed_at
+    ClassificationStatus:
+      type: object
+      description: Shared present/absent/unknown classification. present and absent are returned only from exact authoritative evidence. Blocked, rate-limited, timed-out, failed and ambiguous checks are unknown with a reason, never absent.
+      properties:
+        status:
+          type: string
+          enum:
+          - present
+          - absent
+          - unknown
+          description: present, absent or unknown.
+        reason:
+          type: string
+          enum:
+          - blocked
+          - rate_limited
+          - timeout
+          - ambiguous
+          - upstream_error
+          - unsupported
+          description: Why the result is unknown. Returned only when status is unknown.
+        evidence:
+          $ref: '#/components/schemas/ClassificationEvidence'
+        checked_at:
+          type: string
+          format: date-time
+          description: When DomScan produced this classification.
+      required:
+      - status
+      - evidence
+      - checked_at
+    SecurityHeadersAuditResponse:
+      type: object
+      required:
+      - url
+      - domain
+      - status
+      - checked_at
+      - final_url
+      - http_status
+      - redirect_count
+      - https
+      - score
+      - grade
+      - summary
+      - checks
+      - cookies
+      - headers_raw
+      - recommendations
+      - fetch
+      - caveats
+      - rubric_version
+      properties:
+        classification:
+          $ref: '#/components/schemas/ClassificationStatus'
+        url:
+          type: string
+          format: uri
+        domain:
+          type: string
+        status:
+          type: string
+          enum:
+          - ok
+          - partial
+          - unknown
+          description: 'ok: a 2xx or final 3xx response was graded. partial: a 4xx, 5xx or challenge response was analysed but not graded. unknown: no response was received; refunded.'
+        checked_at:
+          type: string
+          format: date-time
+        final_url:
+          type:
+          - string
+          - 'null'
+        http_status:
+          type:
+          - integer
+          - 'null'
+        redirect_count:
+          type:
+          - integer
+          - 'null'
+        https:
+          type:
+          - boolean
+          - 'null'
+        score:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+          maximum: 100
+          description: Weighted score. Null unless status is ok.
+        grade:
+          type:
+          - string
+          - 'null'
+          enum:
+          - A+
+          - A
+          - B
+          - C
+          - D
+          - F
+          - null
+          description: Null unless status is ok. Capped at D when the final URL is not https.
+        summary:
+          type:
+          - object
+          - 'null'
+          required:
+          - passed
+          - warned
+          - failed
+          - missing
+          - not_applicable
+          - hsts_preload_ready
+          - csp_strict
+          properties:
+            passed:
+              type: integer
+              minimum: 0
+            warned:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            missing:
+              type: integer
+              minimum: 0
+            not_applicable:
+              type: integer
+              minimum: 0
+            hsts_preload_ready:
+              type: boolean
+            csp_strict:
+              type: boolean
+        checks:
+          type: array
+          description: 11 checks in a fixed order; empty when status is unknown.
+          items:
+            type: object
+            required:
+            - id
+            - status
+            - value
+            - detail_code
+            - issues
+            - weight
+            properties:
+              id:
+                type: string
+                enum:
+                - strict_transport_security
+                - content_security_policy
+                - clickjacking
+                - x_content_type_options
+                - referrer_policy
+                - permissions_policy
+                - cross_origin_opener_policy
+                - cross_origin_embedder_policy
+                - cross_origin_resource_policy
+                - information_disclosure
+                - cookies
+              status:
+                type: string
+                enum:
+                - pass
+                - warn
+                - fail
+                - missing
+                - not_applicable
+              value:
+                type:
+                - string
+                - 'null'
+                description: Observed value, truncated to 512 characters. Cookie checks list names only.
+              detail_code:
+                type: string
+              issues:
+                type: array
+                items:
+                  type: string
+              weight:
+                type: integer
+                minimum: 0
+              classification:
+                $ref: '#/components/schemas/ClassificationStatus'
+        cookies:
+          type: array
+          description: Observed cookies (max 25). Values are never returned.
+          items:
+            type: object
+            required:
+            - name
+            - secure
+            - http_only
+            - same_site
+            - issues
+            properties:
+              name:
+                type: string
+              secure:
+                type: boolean
+              http_only:
+                type: boolean
+              same_site:
+                type:
+                - string
+                - 'null'
+                enum:
+                - strict
+                - lax
+                - none
+                - invalid
+                - null
+              issues:
+                type: array
+                items:
+                  type: string
+        headers_raw:
+          type: object
+          additionalProperties:
+            type: string
+          description: Security-relevant response headers that were present, with lowercase names. Never includes set-cookie.
+        recommendations:
+          type: array
+          items:
+            type: string
+          description: Triggered recommendation codes in fixed priority order.
+        fetch:
+          type: object
+          required:
+          - checked_url
+          - http_status
+          - final_url
+          - via_proxy
+          - redirect_count
+          - unknown_reason
+          properties:
+            checked_url:
+              type: string
+              format: uri
+            http_status:
+              type:
+              - integer
+              - 'null'
+            final_url:
+              type:
+              - string
+              - 'null'
+            via_proxy:
+              type:
+              - boolean
+              - 'null'
+            redirect_count:
+              type:
+              - integer
+              - 'null'
+            unknown_reason:
+              type:
+              - string
+              - 'null'
+              enum:
+              - timeout
+              - dns_error
+              - network_error
+              - malformed_response
+              - redirect_limit
+              - proxy_unavailable
+              - null
+        caveats:
+          type: array
+          items:
+            type: string
+        rubric_version:
+          type: string
+    SecurityTxtResponse:
+      type: object
+      required:
+      - domain
+      - status
+      - location
+      - checked_at
+      - fetch
+      - fields
+      - signed
+      - issues
+      - caveats
+      properties:
+        classification:
+          $ref: '#/components/schemas/ClassificationStatus'
+        domain:
+          type: string
+        status:
+          type: string
+          enum:
+          - valid
+          - invalid
+          - not_found
+          - unknown
+          description: 'valid: found with no error-severity issues. invalid: found with errors, or an HTML page was served. not_found: both locations returned an exact 404 or 410. unknown: blocked, rate-limited, server-error or failed fetch; refunded.'
+        location:
+          type:
+          - string
+          - 'null'
+          enum:
+          - well_known
+          - legacy
+          - null
+        checked_at:
+          type: string
+          format: date-time
+        fetch:
+          type: array
+          description: One entry per attempt (1 or 2).
+          items:
+            type: object
+            required:
+            - location
+            - checked_url
+            - http_status
+            - final_url
+            - via_proxy
+            - content_type
+            - bytes
+            - truncated
+            - outcome
+            - error
+            properties:
+              location:
+                type: string
+                enum:
+                - well_known
+                - legacy
+              checked_url:
+                type: string
+                format: uri
+              http_status:
+                type:
+                - integer
+                - 'null'
+              final_url:
+                type:
+                - string
+                - 'null'
+              via_proxy:
+                type:
+                - boolean
+                - 'null'
+              content_type:
+                type:
+                - string
+                - 'null'
+              bytes:
+                type:
+                - integer
+                - 'null'
+              truncated:
+                type: boolean
+              outcome:
+                type: string
+                enum:
+                - found
+                - not_found
+                - unknown
+              error:
+                type:
+                - string
+                - 'null'
+                description: timeout, network_error, dns_error, blocked_response, malformed_response or http_<status>.
+        fields:
+          type: object
+          required:
+          - contact
+          - expires
+          - expires_in_days
+          - encryption
+          - acknowledgments
+          - preferred_languages
+          - canonical
+          - policy
+          - hiring
+          - csaf
+          - other_fields
+          properties:
+            contact:
+              type: array
+              items:
+                type: string
+            expires:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            expires_in_days:
+              type:
+              - integer
+              - 'null'
+              description: Whole days until expiry; negative when expired.
+            encryption:
+              type: array
+              items:
+                type: string
+            acknowledgments:
+              type: array
+              items:
+                type: string
+            preferred_languages:
+              type: array
+              items:
+                type: string
+            canonical:
+              type: array
+              items:
+                type: string
+            policy:
+              type: array
+              items:
+                type: string
+            hiring:
+              type: array
+              items:
+                type: string
+            csaf:
+              type: array
+              items:
+                type: string
+            other_fields:
+              type: array
+              items:
+                type: object
+                required:
+                - name
+                - value
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+        signed:
+          type: boolean
+          description: OpenPGP cleartext signature present. The signature is not verified.
+        issues:
+          type: array
+          items:
+            type: object
+            required:
+            - code
+            - severity
+            - field
+            properties:
+              code:
+                type: string
+              severity:
+                type: string
+                enum:
+                - error
+                - warning
+              field:
+                type:
+                - string
+                - 'null'
+        caveats:
+          type: array
+          items:
+            type: string
+            enum:
+            - signature_not_verified
+            - body_truncated
+            - legacy_location_unknown
+    ErrorResponse:
+      type: object
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    IdempotentReplayed:
+      description: Present and `true` when this response is a stored replay for a repeated Idempotency-Key. A replay charges nothing.
+      schema:
+        type: string
+        enum:
+        - 'true'
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
   responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    IdempotencyInProgress:
+      description: A request with the same Idempotency-Key is still running. Retry after Retry-After seconds to receive its stored response. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_IN_PROGRESS
+              message: A request with this Idempotency-Key is still being processed. Retry shortly to receive its result.
+              type: conflict_error
+              status: 409
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+              retry_after: 1
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
+    BadGateway:
+      description: The public website could not be fetched or returned an unusable response.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FETCH_ERROR
+              message: Failed to fetch website
+              type: upstream_error
+              status: 502
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
         Retry-After:
           schema:
             type: integer
@@ -821,15 +2753,6 @@ components:
             - free
             - paid
           description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
         X-RateLimit-Policy:
           schema:
             type: string
@@ -842,8 +2765,59 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    IdempotencyKeyReused:
+      description: The Idempotency-Key was already used by this API key for a different request (method, path, query or body) in the last 24 hours. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_KEY_REUSED
+              message: This Idempotency-Key was already used with a different request. Use a new key for a new request.
+              type: validation_error
+              status: 422
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -854,37 +2828,28 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
     TechServiceUnavailable:
       description: DomScan could not perform the requested detection work. The request charge is refund-eligible. Target HTTP errors, blocks, empty responses, and target network failures are returned as billable 200 responses with partial analysis metadata instead.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -893,6 +2858,64 @@ components:
             error:
               code: UPSTREAM_UNAVAILABLE
               message: Failed to fetch website
+              type: upstream_error
+              status: 503
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+  parameters:
+    DryRun:
+      name: dry_run
+      in: query
+      required: false
+      description: 'Set to `true` to return the credit estimate for this exact request instead of running it. Nothing is executed, no source is called and 0 credits are charged. The response has the same shape as POST /v1/estimate plus `dry_run: true`.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+      example: 'true'
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 'Optional client-chosen key (1 to 255 printable ASCII characters, for example a UUID). Retrying with the same key, API key and identical request within 24 hours returns the stored response with `Idempotent-Replayed: true` and charges nothing again. Responses larger than 1 MiB, and refunded errors, are not stored, so a retry runs normally. Reusing a key for a different request returns 422 IDEMPOTENCY_KEY_REUSED; a duplicate sent while the first is still running returns 409 IDEMPOTENCY_IN_PROGRESS.'
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
   securitySchemes:
     apiKey:
       type: apiKey
@@ -933,11 +2956,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -945,11 +3425,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.

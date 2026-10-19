@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan Phone Intelligence API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -72,6 +105,16 @@ paths:
         '200':
           description: Numbering-plan validation result. Invalid phone values are returned as structured HTTP 200 results; malformed request bodies return HTTP 400.
           headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
             Cache-Control:
               schema:
                 type: string
@@ -81,20 +124,182 @@ paths:
               schema:
                 type: integer
                 example: 1
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PhoneValidationResponse'
+              example:
+                input: +44 20 7946 0123
+                normalized_input: +44 20 7946 0123
+                validation_level: numbering_plan
+                live_checks:
+                  assignment: not_checked
+                  reachability: not_checked
+                  current_carrier: not_checked
+                  subscriber_identity: not_checked
+                  porting: not_checked
+                privacy:
+                  upstream_requests: 0
+                  telecom_provider_queried: false
+                  persisted: false
+                  domscan_edge_relay_used: true
+                  third_party_requests: 0
+                intelligence:
+                  status: available
+                  kind: phone_number
+                  reason: null
+                  coverage:
+                    country: GB
+                    level: global_numbering_metadata
+                    global_numbering_metadata: true
+                    official_snapshot_available: false
+                    official_allocation_match: false
+                    official_source_ids: []
+                    matching_source_ids: []
+                    current_carrier_lookup: false
+                  location:
+                    label: London
+                    country_name: United Kingdom
+                    country: GB
+                    language: en
+                    granularity: numbering_plan_area
+                    current_physical_location: false
+                  possible_time_zones:
+                    values:
+                    - Europe/London
+                    current_location: false
+                    inference: number_prefix
+                  original_prefix_carrier:
+                    name: null
+                    source_id: null
+                    evidence: unavailable
+                    current_carrier: false
+                    portability_may_change_carrier: true
+                  portability:
+                    region_supported: true
+                    current_port_checked: false
+                  dialing:
+                    from_country: US
+                    international: 011 44 20 7946 0123
+                    mobile: +44 20 7946 0123
+                    internationally_diallable: true
+                  number_details:
+                    geographical: true
+                    geographical_area_code: '20'
+                    geographical_area_code_length: 2
+                    national_destination_code: '20'
+                    national_destination_code_length: 2
+                    subscriber_number_length: 8
+                    mobile_token: null
+                  service_signals:
+                    number_type: fixed_line
+                    geographical: true
+                    toll_free: false
+                    premium_rate: false
+                    shared_cost: false
+                    voip: false
+                    personal_number: false
+                    likely_sms_capable: null
+                  short_number: null
+                  regulator_allocations: []
+                  sources:
+                  - id: google_libphonenumber
+                    name: Google libphonenumber metadata
+                    type: offline_metadata
+                    version: 9.0.34
+                    license: Apache-2.0
+                    url: https://github.com/google/libphonenumber
+                  warnings:
+                  - LOCATION_IS_NUMBERING_PLAN_AREA_NOT_DEVICE_LOCATION
+                  - CARRIER_IS_ORIGINAL_PREFIX_CARRIER_NOT_CURRENT_CARRIER
+                  - ALLOCATION_DOES_NOT_PROVE_INDIVIDUAL_ASSIGNMENT
+                  - NO_CURRENT_PORTABILITY_LOOKUP
+                  - NO_LIVE_TELECOM_CHECKS
+                  relay:
+                    configured: true
+                    used: true
+                    persisted: false
+                limitations:
+                - NUMBERING_PLAN_ONLY
+                - DOES_NOT_PROVE_ASSIGNMENT
+                - NO_LIVE_TELECOM_CHECKS
+                metadata:
+                  engine: libphonenumber-js/max
+                  metadata_basis: Google libphonenumber numbering plans
+                kind: phone_number
+                valid: true
+                possible: true
+                status: valid
+                recommendation: accept
+                reason: null
+                warnings: []
+                number:
+                  e164: '+442079460123'
+                  international: +44 20 7946 0123
+                  national: 020 7946 0123
+                  rfc3966: tel:+442079460123
+                  national_number: '2079460123'
+                  extension: null
+                  country: GB
+                  country_name: United Kingdom
+                  country_calling_code: '44'
+                  possible_countries:
+                  - GB
+                  country_match: true
+                  type: fixed_line
+                  non_geographic: false
+                credits_used: 1
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
           description: Phone validation failed unexpectedly
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL
+                  message: Phone number validation failed.
+                  type: api_error
+                  status: 500
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_request
         default: 1
@@ -136,6 +341,16 @@ paths:
         '200':
           description: Ordered phone validation results with aggregate counts
           headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
             Cache-Control:
               schema:
                 type: string
@@ -146,6 +361,10 @@ paths:
                 type: integer
                 example: 3
               description: Total per-item credit cost for the accepted batch.
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -156,238 +375,205 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
         '500':
           description: Bulk phone validation failed unexpectedly
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INTERNAL
+                  message: Bulk phone number validation failed.
+                  type: api_error
+                  status: 500
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 1
 components:
   schemas:
-    ErrorResponse:
+    PhoneIntelligenceLocation:
       type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    PhoneIntelligenceDialing:
-      type: object
-      description: Offline dialing guidance. Caller-relative fields use dialing_from_country when supplied.
+      description: Offline numbering-plan location. This is never the device or subscriber current physical location.
       required:
-      - from_country
-      - international
-      - mobile
-      - internationally_diallable
+      - label
+      - country_name
+      - country
+      - language
+      - granularity
+      - current_physical_location
       properties:
-        from_country:
+        label:
           type:
           - string
           - 'null'
-          example: US
-        international:
+          example: Madrid
+          description: Localized area or country label when the prefix metadata has one.
+        country_name:
           type:
           - string
           - 'null'
-          example: 011 34 612 34 56 78
-        mobile:
+          example: Spain
+        country:
           type:
           - string
           - 'null'
-          example: +34 612 34 56 78
-        internationally_diallable:
-          type: boolean
-    PhoneIntelligenceServiceSignals:
-      type: object
-      description: Numbering-plan service classification. These signals describe the prefix category and do not prove live service capabilities.
-      required:
-      - number_type
-      - geographical
-      - toll_free
-      - premium_rate
-      - shared_cost
-      - voip
-      - personal_number
-      - likely_sms_capable
-      properties:
-        number_type:
-          type: string
-          enum:
-          - fixed_line
-          - mobile
-          - fixed_line_or_mobile
-          - toll_free
-          - premium_rate
-          - shared_cost
-          - voip
-          - personal_number
-          - pager
-          - uan
-          - voicemail
-          - unknown
-        geographical:
-          type: boolean
-        toll_free:
-          type: boolean
-        premium_rate:
-          type: boolean
-        shared_cost:
-          type: boolean
-        voip:
-          type: boolean
-        personal_number:
-          type: boolean
-        likely_sms_capable:
-          type:
-          - boolean
-          - 'null'
-          description: A numbering-plan inference for mobile categories, not an SMS reachability check.
-    PhoneIntelligenceShortNumber:
-      type: object
-      description: Country-specific short-number metadata. Emergency behavior and cost classification depend on the dialing region.
-      required:
-      - region
-      - possible
-      - valid
-      - emergency
-      - connects_to_emergency
-      - sms_service
-      - carrier_specific
-      - expected_cost
-      properties:
-        region:
-          type: string
           example: ES
-        possible:
-          type: boolean
-        valid:
-          type: boolean
-        emergency:
-          type: boolean
-        connects_to_emergency:
-          type: boolean
-        sms_service:
-          type: boolean
-        carrier_specific:
-          type: boolean
-        expected_cost:
+          description: Resolved numbering-plan region.
+        language:
+          type: string
+          example: es
+        granularity:
           type: string
           enum:
-          - toll_free
-          - standard_rate
-          - premium_rate
-          - unknown
-    PhoneIntelligenceRelay:
-      type: object
-      description: Whether supplemental offline enrichment was configured and contributed data.
-      required:
-      - configured
-      - used
-      - persisted
-      properties:
-        configured:
-          type: boolean
-        used:
-          type: boolean
-        persisted:
+          - numbering_plan_area
+          - country
+          description: Whether the label describes a numbering-plan area or only the numbering-plan country. It does not expose device coordinates.
+        current_physical_location:
           type: boolean
           enum:
           - false
-    PhoneValidationBulkResponse:
+          description: Always false. No live device-location lookup is performed.
+    PhoneIntelligence:
       type: object
+      description: Deterministic additive enrichment. The object is always present, including when enrichment is unavailable or not applicable.
       required:
-      - total
-      - valid_count
-      - possible_only_count
-      - invalid_count
-      - validation_level
-      - results
-      - credits_used
+      - status
+      - kind
+      - reason
+      - coverage
+      - location
+      - possible_time_zones
+      - original_prefix_carrier
+      - portability
+      - dialing
+      - number_details
+      - service_signals
+      - short_number
+      - regulator_allocations
+      - sources
+      - warnings
+      - relay
       properties:
-        total:
-          type: integer
-          minimum: 1
-          maximum: 100
-        valid_count:
-          type: integer
-          minimum: 0
-        possible_only_count:
-          type: integer
-          minimum: 0
-        invalid_count:
-          type: integer
-          minimum: 0
-        validation_level:
+        status:
           type: string
           enum:
-          - numbering_plan
-        results:
+          - available
+          - partial
+          - unavailable
+          - not_applicable
+        kind:
+          type:
+          - string
+          - 'null'
+          enum:
+          - phone_number
+          - short_code
+          - null
+        reason:
+          type:
+          - string
+          - 'null'
+          description: Machine-readable explanation when enrichment is unavailable or not applicable.
+        coverage:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceCoverage'
+        location:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceLocation'
+        possible_time_zones:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceTimeZones'
+        original_prefix_carrier:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceCarrier'
+        portability:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligencePortability'
+        dialing:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceDialing'
+        number_details:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceNumberDetails'
+        service_signals:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceServiceSignals'
+        short_number:
+          type:
+          - object
+          - 'null'
+          allOf:
+          - $ref: '#/components/schemas/PhoneIntelligenceShortNumber'
+        regulator_allocations:
           type: array
           items:
-            $ref: '#/components/schemas/PhoneValidationResult'
-        credits_used:
-          type: integer
-          minimum: 1
-          maximum: 100
+            $ref: '#/components/schemas/PhoneRegulatorAllocation'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneIntelligenceSource'
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Machine-readable accuracy and scope warnings, including original-carrier, location, allocation, and live-check limits.
+        relay:
+          $ref: '#/components/schemas/PhoneIntelligenceRelay'
     PhoneValidationResult:
       type: object
       required:
@@ -455,6 +641,7 @@ components:
           - TOO_LONG
           - INVALID_LENGTH
           - INVALID_PATTERN
+          - null
         warnings:
           type: array
           items:
@@ -613,16 +800,249 @@ components:
               type: string
               enum:
               - Google libphonenumber numbering plans
-    PhoneValidationResponse:
-      allOf:
-      - $ref: '#/components/schemas/PhoneValidationResult'
-      - type: object
-        required:
-        - credits_used
-        properties:
-          credits_used:
-            type: integer
-            example: 1
+    PhoneIntelligenceShortNumber:
+      type: object
+      description: Country-specific short-number metadata. Emergency behavior and cost classification depend on the dialing region.
+      required:
+      - region
+      - possible
+      - valid
+      - emergency
+      - connects_to_emergency
+      - sms_service
+      - carrier_specific
+      - expected_cost
+      properties:
+        region:
+          type: string
+          example: ES
+        possible:
+          type: boolean
+        valid:
+          type: boolean
+        emergency:
+          type: boolean
+        connects_to_emergency:
+          type: boolean
+        sms_service:
+          type: boolean
+        carrier_specific:
+          type: boolean
+        expected_cost:
+          type: string
+          enum:
+          - toll_free
+          - standard_rate
+          - premium_rate
+          - unknown
+    PhoneIntelligenceServiceSignals:
+      type: object
+      description: Numbering-plan service classification. These signals describe the prefix category and do not prove live service capabilities.
+      required:
+      - number_type
+      - geographical
+      - toll_free
+      - premium_rate
+      - shared_cost
+      - voip
+      - personal_number
+      - likely_sms_capable
+      properties:
+        number_type:
+          type: string
+          enum:
+          - fixed_line
+          - mobile
+          - fixed_line_or_mobile
+          - toll_free
+          - premium_rate
+          - shared_cost
+          - voip
+          - personal_number
+          - pager
+          - uan
+          - voicemail
+          - unknown
+        geographical:
+          type: boolean
+        toll_free:
+          type: boolean
+        premium_rate:
+          type: boolean
+        shared_cost:
+          type: boolean
+        voip:
+          type: boolean
+        personal_number:
+          type: boolean
+        likely_sms_capable:
+          type:
+          - boolean
+          - 'null'
+          description: A numbering-plan inference for mobile categories, not an SMS reachability check.
+    PhoneIntelligencePortability:
+      type: object
+      description: Whether the resolved region supports mobile number portability. The individual number current porting state is not queried.
+      required:
+      - region_supported
+      - current_port_checked
+      properties:
+        region_supported:
+          type: boolean
+        current_port_checked:
+          type: boolean
+          enum:
+          - false
+    PhoneIntelligenceNumberDetails:
+      type: object
+      description: Additional structural details from offline numbering-plan metadata.
+      required:
+      - geographical
+      - geographical_area_code
+      - geographical_area_code_length
+      - national_destination_code
+      - national_destination_code_length
+      - subscriber_number_length
+      - mobile_token
+      properties:
+        geographical:
+          type: boolean
+        geographical_area_code:
+          type:
+          - string
+          - 'null'
+          description: Geographic area-code digits inferred from the numbering plan, such as 202 for a Washington, D.C. NANP number.
+        geographical_area_code_length:
+          type: integer
+          minimum: 0
+        national_destination_code:
+          type:
+          - string
+          - 'null'
+          description: National destination code digits inferred from the numbering plan. This is often the NANP area code for United States and Canadian numbers.
+        national_destination_code_length:
+          type: integer
+          minimum: 0
+        subscriber_number_length:
+          type: integer
+          minimum: 0
+        mobile_token:
+          type:
+          - string
+          - 'null'
+    PhoneIntelligenceRelay:
+      type: object
+      description: Whether supplemental offline enrichment was configured and contributed data.
+      required:
+      - configured
+      - used
+      - persisted
+      properties:
+        configured:
+          type: boolean
+        used:
+          type: boolean
+        persisted:
+          type: boolean
+          enum:
+          - false
+    PhoneIntelligenceCoverage:
+      type: object
+      description: Country-specific offline coverage. Global metadata supports validation, geography, time zones, service type, and dialing. Official snapshots add regulator allocation evidence only where an openly reusable source is loaded.
+      required:
+      - country
+      - level
+      - global_numbering_metadata
+      - official_snapshot_available
+      - official_allocation_match
+      - official_source_ids
+      - matching_source_ids
+      - current_carrier_lookup
+      properties:
+        country:
+          type:
+          - string
+          - 'null'
+          example: US
+        level:
+          type: string
+          enum:
+          - global_numbering_metadata
+          - official_snapshot
+          - official_allocation_match
+        global_numbering_metadata:
+          type: boolean
+        official_snapshot_available:
+          type: boolean
+        official_allocation_match:
+          type: boolean
+        official_source_ids:
+          type: array
+          items:
+            type: string
+        matching_source_ids:
+          type: array
+          items:
+            type: string
+        current_carrier_lookup:
+          type: boolean
+          enum:
+          - false
+          description: Always false. DomScan performs no live carrier or portability query.
+    PhoneIntelligenceTimeZones:
+      type: object
+      description: Possible IANA time zones inferred from numbering-plan prefixes, not from current device location.
+      required:
+      - values
+      - current_location
+      - inference
+      properties:
+        values:
+          type: array
+          items:
+            type: string
+            example: Europe/Madrid
+        current_location:
+          type: boolean
+          enum:
+          - false
+        inference:
+          type: string
+          enum:
+          - number_prefix
+    PhoneIntelligenceCarrier:
+      type: object
+      description: Original prefix-carrier or code-holder metadata. The source and evidence fields distinguish bundled prefix metadata from an official allocation record. Number portability and thousands-block pooling mean this must never be interpreted as the current carrier.
+      required:
+      - name
+      - source_id
+      - evidence
+      - current_carrier
+      - portability_may_change_carrier
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+          example: Vodafone
+        source_id:
+          type:
+          - string
+          - 'null'
+          example: nanpa_us
+          description: Offline source that supplied the name, or null when no name is available.
+        evidence:
+          type: string
+          enum:
+          - offline_prefix_metadata
+          - official_allocation_record
+          - unavailable
+        current_carrier:
+          type: boolean
+          enum:
+          - false
+        portability_may_change_carrier:
+          type: boolean
     PhoneIntelligenceSource:
       type: object
       description: Offline library or downloaded official dataset that contributed to this result.
@@ -686,40 +1106,23 @@ components:
           type:
           - string
           - 'null'
-    PhoneIntelligencePortability:
-      type: object
-      description: Whether the resolved region supports mobile number portability. The individual number current porting state is not queried.
-      required:
-      - region_supported
-      - current_port_checked
-      properties:
-        region_supported:
-          type: boolean
-        current_port_checked:
-          type: boolean
-          enum:
-          - false
-    PhoneIntelligenceTimeZones:
-      type: object
-      description: Possible IANA time zones inferred from numbering-plan prefixes, not from current device location.
-      required:
-      - values
-      - current_location
-      - inference
-      properties:
-        values:
-          type: array
-          items:
-            type: string
-            example: Europe/Madrid
-        current_location:
-          type: boolean
-          enum:
-          - false
-        inference:
-          type: string
-          enum:
-          - number_prefix
+    PhoneCountryCode:
+      type: string
+      minLength: 2
+      maxLength: 2
+      pattern: ^[A-Za-z]{2}$
+      example: ES
+      description: ISO 3166-1 alpha-2 country or region code supported by the bundled numbering metadata.
+    PhoneValidationResponse:
+      allOf:
+      - $ref: '#/components/schemas/PhoneValidationResult'
+      - type: object
+        required:
+        - credits_used
+        properties:
+          credits_used:
+            type: integer
+            example: 1
     PhoneValidationBulkRequest:
       type: object
       required:
@@ -748,13 +1151,65 @@ components:
         language:
           $ref: '#/components/schemas/PhoneLanguageCode'
           description: Shared language for offline location and original-carrier labels. Per-item objects can override it.
-    PhoneLanguageCode:
-      type: string
-      minLength: 2
-      maxLength: 6
-      pattern: ^[A-Za-z]{2,3}(?:[-_][A-Za-z]{2})?$
-      example: es
-      description: Preferred language for offline location and original-carrier labels. Accepts a two- or three-letter language code with an optional two-letter region, such as en, es, or zh-CN. Unsupported labels fall back safely in the enrichment engine.
+    PhoneValidationRequest:
+      type: object
+      required:
+      - phone
+      properties:
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 256
+          example: +34 612 345 678
+          description: International number, RFC 3966 tel URI, phone-shaped vanity number such as 1-800-FLOWERS, or national number when default_country is supplied. Text surrounding a number is rejected.
+        default_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Parsing context required for national numbers. It is also used for country-match intelligence.
+        expected_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Optional expected country or region. A mismatch adds COUNTRY_MISMATCH and changes an otherwise valid recommendation to review.
+        dialing_from_country:
+          $ref: '#/components/schemas/PhoneCountryCode'
+          description: Optional caller country or region used to produce out-of-country and mobile dialing guidance. It does not change parsing or validation.
+        language:
+          $ref: '#/components/schemas/PhoneLanguageCode'
+          description: Preferred language for offline numbering-plan location and original prefix-carrier labels.
+    PhoneValidationBulkResponse:
+      type: object
+      required:
+      - total
+      - valid_count
+      - possible_only_count
+      - invalid_count
+      - validation_level
+      - results
+      - credits_used
+      properties:
+        total:
+          type: integer
+          minimum: 1
+          maximum: 100
+        valid_count:
+          type: integer
+          minimum: 0
+        possible_only_count:
+          type: integer
+          minimum: 0
+        invalid_count:
+          type: integer
+          minimum: 0
+        validation_level:
+          type: string
+          enum:
+          - numbering_plan
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhoneValidationResult'
+        credits_used:
+          type: integer
+          minimum: 1
+          maximum: 100
     PhoneRegulatorAllocation:
       type: object
       description: Longest matching range from a downloaded official regulator snapshot. It describes a range allocation, not current routing, porting, or assignment of the submitted individual number.
@@ -860,276 +1315,160 @@ components:
         details:
           type: object
           additionalProperties: true
-    PhoneValidationRequest:
+    PhoneIntelligenceDialing:
       type: object
+      description: Offline dialing guidance. Caller-relative fields use dialing_from_country when supplied.
       required:
-      - phone
+      - from_country
+      - international
+      - mobile
+      - internationally_diallable
       properties:
-        phone:
-          type: string
-          minLength: 1
-          maxLength: 256
-          example: +34 612 345 678
-          description: International number, RFC 3966 tel URI, phone-shaped vanity number such as 1-800-FLOWERS, or national number when default_country is supplied. Text surrounding a number is rejected.
-        default_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Parsing context required for national numbers. It is also used for country-match intelligence.
-        expected_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Optional expected country or region. A mismatch adds COUNTRY_MISMATCH and changes an otherwise valid recommendation to review.
-        dialing_from_country:
-          $ref: '#/components/schemas/PhoneCountryCode'
-          description: Optional caller country or region used to produce out-of-country and mobile dialing guidance. It does not change parsing or validation.
-        language:
-          $ref: '#/components/schemas/PhoneLanguageCode'
-          description: Preferred language for offline numbering-plan location and original prefix-carrier labels.
-    PhoneIntelligenceCoverage:
-      type: object
-      description: Country-specific offline coverage. Global metadata supports validation, geography, time zones, service type, and dialing. Official snapshots add regulator allocation evidence only where an openly reusable source is loaded.
-      required:
-      - country
-      - level
-      - global_numbering_metadata
-      - official_snapshot_available
-      - official_allocation_match
-      - official_source_ids
-      - matching_source_ids
-      - current_carrier_lookup
-      properties:
-        country:
+        from_country:
           type:
           - string
           - 'null'
           example: US
-        level:
-          type: string
-          enum:
-          - global_numbering_metadata
-          - official_snapshot
-          - official_allocation_match
-        global_numbering_metadata:
+        international:
+          type:
+          - string
+          - 'null'
+          example: 011 34 612 34 56 78
+        mobile:
+          type:
+          - string
+          - 'null'
+          example: +34 612 34 56 78
+        internationally_diallable:
           type: boolean
-        official_snapshot_available:
-          type: boolean
-        official_allocation_match:
-          type: boolean
-        official_source_ids:
-          type: array
-          items:
-            type: string
-        matching_source_ids:
-          type: array
-          items:
-            type: string
-        current_carrier_lookup:
-          type: boolean
-          enum:
-          - false
-          description: Always false. DomScan performs no live carrier or portability query.
-    PhoneIntelligenceCarrier:
+    ErrorResponse:
       type: object
-      description: Original prefix-carrier or code-holder metadata. The source and evidence fields distinguish bundled prefix metadata from an official allocation record. Number portability and thousands-block pooling mean this must never be interpreted as the current carrier.
-      required:
-      - name
-      - source_id
-      - evidence
-      - current_carrier
-      - portability_may_change_carrier
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
       properties:
-        name:
-          type:
-          - string
-          - 'null'
-          example: Vodafone
-        source_id:
-          type:
-          - string
-          - 'null'
-          example: nanpa_us
-          description: Offline source that supplied the name, or null when no name is available.
-        evidence:
-          type: string
-          enum:
-          - offline_prefix_metadata
-          - official_allocation_record
-          - unavailable
-        current_carrier:
-          type: boolean
-          enum:
-          - false
-        portability_may_change_carrier:
-          type: boolean
-    PhoneIntelligenceNumberDetails:
-      type: object
-      description: Additional structural details from offline numbering-plan metadata.
-      required:
-      - geographical
-      - geographical_area_code
-      - geographical_area_code_length
-      - national_destination_code
-      - national_destination_code_length
-      - subscriber_number_length
-      - mobile_token
-      properties:
-        geographical:
-          type: boolean
-        geographical_area_code:
-          type:
-          - string
-          - 'null'
-          description: Geographic area-code digits inferred from the numbering plan, such as 202 for a Washington, D.C. NANP number.
-        geographical_area_code_length:
-          type: integer
-          minimum: 0
-        national_destination_code:
-          type:
-          - string
-          - 'null'
-          description: National destination code digits inferred from the numbering plan. This is often the NANP area code for United States and Canadian numbers.
-        national_destination_code_length:
-          type: integer
-          minimum: 0
-        subscriber_number_length:
-          type: integer
-          minimum: 0
-        mobile_token:
-          type:
-          - string
-          - 'null'
-    PhoneIntelligence:
-      type: object
-      description: Deterministic additive enrichment. The object is always present, including when enrichment is unavailable or not applicable.
-      required:
-      - status
-      - kind
-      - reason
-      - coverage
-      - location
-      - possible_time_zones
-      - original_prefix_carrier
-      - portability
-      - dialing
-      - number_details
-      - service_signals
-      - short_number
-      - regulator_allocations
-      - sources
-      - warnings
-      - relay
-      properties:
-        status:
-          type: string
-          enum:
-          - available
-          - partial
-          - unavailable
-          - not_applicable
-        kind:
-          type:
-          - string
-          - 'null'
-          enum:
-          - phone_number
-          - short_code
-        reason:
-          type:
-          - string
-          - 'null'
-          description: Machine-readable explanation when enrichment is unavailable or not applicable.
-        coverage:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceCoverage'
-        location:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceLocation'
-        possible_time_zones:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceTimeZones'
-        original_prefix_carrier:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceCarrier'
-        portability:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligencePortability'
-        dialing:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceDialing'
-        number_details:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceNumberDetails'
-        service_signals:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceServiceSignals'
-        short_number:
-          allOf:
-          - $ref: '#/components/schemas/PhoneIntelligenceShortNumber'
-        regulator_allocations:
-          type: array
-          items:
-            $ref: '#/components/schemas/PhoneRegulatorAllocation'
-        sources:
-          type: array
-          items:
-            $ref: '#/components/schemas/PhoneIntelligenceSource'
-        warnings:
-          type: array
-          items:
-            type: string
-          description: Machine-readable accuracy and scope warnings, including original-carrier, location, allocation, and live-check limits.
-        relay:
-          $ref: '#/components/schemas/PhoneIntelligenceRelay'
-    PhoneCountryCode:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    PhoneLanguageCode:
       type: string
       minLength: 2
-      maxLength: 2
-      pattern: ^[A-Za-z]{2}$
-      example: ES
-      description: ISO 3166-1 alpha-2 country or region code supported by the bundled numbering metadata.
-    PhoneIntelligenceLocation:
-      type: object
-      description: Offline numbering-plan location. This is never the device or subscriber current physical location.
-      required:
-      - label
-      - country_name
-      - country
-      - language
-      - granularity
-      - current_physical_location
-      properties:
-        label:
-          type:
-          - string
-          - 'null'
-          example: Madrid
-          description: Localized area or country label when the prefix metadata has one.
-        country_name:
-          type:
-          - string
-          - 'null'
-          example: Spain
-        country:
-          type:
-          - string
-          - 'null'
-          example: ES
-          description: Resolved numbering-plan region.
-        language:
-          type: string
-          example: es
-        granularity:
-          type: string
-          enum:
-          - numbering_plan_area
-          - country
-          description: Whether the label describes a numbering-plan area or only the numbering-plan country. It does not expose device coordinates.
-        current_physical_location:
-          type: boolean
-          enum:
-          - false
-          description: Always false. No live device-location lookup is performed.
+      maxLength: 6
+      pattern: ^[A-Za-z]{2,3}(?:[-_][A-Za-z]{2})?$
+      example: es
+      description: Preferred language for offline location and original-carrier labels. Accepts a two- or three-letter language code with an optional two-letter region, such as en, es, or zh-CN. Unsupported labels fall back safely in the enrichment engine.
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    IdempotentReplayed:
+      description: Present and `true` when this response is a stored replay for a repeated Idempotency-Key. A replay charges nothing.
+      schema:
+        type: string
+        enum:
+        - 'true'
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
   responses:
     BadRequest:
       description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -1139,9 +1478,106 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    IdempotencyInProgress:
+      description: A request with the same Idempotency-Key is still running. Retry after Retry-After seconds to receive its stored response. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_IN_PROGRESS
+              message: A request with this Idempotency-Key is still being processed. Retry shortly to receive its result.
+              type: conflict_error
+              status: 409
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+              retry_after: 1
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
         Retry-After:
           schema:
             type: integer
@@ -1153,15 +1589,6 @@ components:
             - free
             - paid
           description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
         X-RateLimit-Policy:
           schema:
             type: string
@@ -1174,8 +1601,59 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    IdempotencyKeyReused:
+      description: The Idempotency-Key was already used by this API key for a different request (method, path, query or body) in the last 24 hours. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_KEY_REUSED
+              message: This Idempotency-Key was already used with a different request. Use a new key for a new request.
+              type: validation_error
+              status: 422
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -1186,24 +1664,64 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
+  parameters:
+    DryRun:
+      name: dry_run
+      in: query
+      required: false
+      description: 'Set to `true` to return the credit estimate for this exact request instead of running it. Nothing is executed, no source is called and 0 credits are charged. The response has the same shape as POST /v1/estimate plus `dry_run: true`.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+      example: 'true'
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 'Optional client-chosen key (1 to 255 printable ASCII characters, for example a UUID). Retrying with the same key, API key and identical request within 24 hours returns the stored response with `Idempotent-Replayed: true` and charges nothing again. Responses larger than 1 MiB, and refunded errors, are not stored, so a retry runs normally. Reusing a key for a different request returns 422 IDEMPOTENCY_KEY_REUSED; a duplicate sent while the first is still running returns 409 IDEMPOTENCY_IN_PROGRESS.'
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
   securitySchemes:
     apiKey:
       type: apiKey
@@ -1244,11 +1762,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -1256,11 +2231,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.

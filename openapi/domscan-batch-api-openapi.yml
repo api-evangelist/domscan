@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan Batch API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -35,6 +68,9 @@ paths:
           type: string
           minLength: 1
           maxLength: 120
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       requestBody:
         required: true
         content:
@@ -45,6 +81,8 @@ paths:
               required:
               - tlds
               properties:
+                notify_webhook:
+                  $ref: '#/components/schemas/JobNotifyWebhook'
                 tlds:
                   type: array
                   minItems: 1
@@ -97,12 +135,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DomainDiscoveryJobResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '202':
           description: Discovery batch accepted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/DomainDiscoveryJobResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -111,6 +175,34 @@ paths:
           $ref: '#/components/responses/PaymentRequired'
         '409':
           description: Idempotency key was reused with different discovery input
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: IDEMPOTENCY_CONFLICT
+                  message: This Idempotency-Key was already used with a different request.
+                  type: conflict_error
+                  status: 409
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
         '429':
           $ref: '#/components/responses/RateLimited'
       x-domscan-credits:
@@ -131,6 +223,9 @@ paths:
         schema:
           type: string
           maxLength: 128
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       requestBody:
         required: true
         content:
@@ -140,6 +235,8 @@ paths:
               required:
               - requests
               properties:
+                notify_webhook:
+                  $ref: '#/components/schemas/JobNotifyWebhook'
                 requests:
                   type: array
                   minItems: 1
@@ -177,6 +274,19 @@ paths:
       responses:
         '200':
           description: Existing batch returned for an idempotent replay
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '202':
           description: Batch accepted
           content:
@@ -188,6 +298,19 @@ paths:
                 properties:
                   job:
                     $ref: '#/components/schemas/ApiBatchJob'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -196,6 +319,34 @@ paths:
           $ref: '#/components/responses/PaymentRequired'
         '409':
           description: Idempotency key was reused with a different batch payload
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: IDEMPOTENCY_CONFLICT
+                  message: This Idempotency-Key was already used with a different request.
+                  type: conflict_error
+                  status: 409
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
         '429':
           $ref: '#/components/responses/RateLimited'
       x-domscan-credits:
@@ -217,6 +368,9 @@ paths:
           minimum: 1
           maximum: 100
           default: 25
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Recent account batches
@@ -236,6 +390,19 @@ paths:
                     type: integer
                     enum:
                     - 24
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -271,12 +438,29 @@ paths:
                 properties:
                   job:
                     $ref: '#/components/schemas/ApiBatchJob'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -298,6 +482,17 @@ paths:
                 properties:
                   job:
                     $ref: '#/components/schemas/ApiBatchJob'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -348,6 +543,9 @@ paths:
           - json
           - csv
           default: json
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Ordered batch results
@@ -359,6 +557,19 @@ paths:
               schema:
                 type: string
                 description: RFC 4180 CSV with stable request, result, error, billing, and timestamp columns.
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -370,73 +581,497 @@ paths:
       x-domscan-credits:
         model: per_request
         default: 0
+  /v1/jobs:
+    get:
+      tags:
+      - Batch
+      summary: List asynchronous jobs
+      description: List every asynchronous job you own, newest first, across API batches, domain discovery, technology scans and scrape jobs, in one shared job shape. Batches and scrape jobs are shared across the customer account; technology scans belong to the user who created them. Free.
+      operationId: listJobs
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Items per page, from 1 to 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: cursor
+        in: query
+        required: false
+        description: Opaque cursor from next_cursor on the previous page. It is signed and bound to the caller and to the kind filter; an edited or foreign cursor returns 400.
+        schema:
+          type: string
+          maxLength: 512
+      - name: kind
+        in: query
+        required: false
+        description: Only list jobs of this kind.
+        schema:
+          $ref: '#/components/schemas/JobKind'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: One page of jobs, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          description: Invalid limit, kind or cursor
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INVALID_CURSOR
+                  message: 'Invalid parameter: cursor (invalid)'
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/jobs/{job_id}:
+    parameters:
+    - name: job_id
+      in: path
+      required: true
+      description: 'Job id from any job creation endpoint: bat_ (API batch or domain discovery), tsj_ (technology scan) or scj_ (scrape).'
+      schema:
+        type: string
+        pattern: ^(bat|tsj|scj)_[a-f0-9]{32}$
+    get:
+      tags:
+      - Batch
+      summary: Get asynchronous job
+      description: Get the status, progress, credits and links of any job you own by its id. Jobs of another account read as not found. Free.
+      operationId: getJob
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Job not found
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: Job not found
+                  type: not_found_error
+                  status: 404
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/jobs/{job_id}/results:
+    parameters:
+    - name: job_id
+      in: path
+      required: true
+      description: 'Job id from any job creation endpoint: bat_ (API batch or domain discovery), tsj_ (technology scan) or scj_ (scrape).'
+      schema:
+        type: string
+        pattern: ^(bat|tsj|scj)_[a-f0-9]{32}$
+    get:
+      tags:
+      - Batch
+      summary: Get asynchronous job results
+      description: Get the ordered item results of any job you own, in one shared item shape. API batch and domain discovery results are kept for 24 hours, technology scan results for 48 hours and scrape results for 24 hours. Free.
+      operationId: getJobResults
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        description: Items per page, from 1 to 100.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: cursor
+        in: query
+        required: false
+        description: Opaque cursor from next_cursor on the previous page. It is signed and bound to this job; an edited cursor or one from another job returns 400.
+        schema:
+          type: string
+          maxLength: 512
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      responses:
+        '200':
+          description: Ordered job results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResultsResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '400':
+          description: Invalid limit or cursor
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: INVALID_CURSOR
+                  message: 'Invalid parameter: cursor (invalid)'
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Job not found
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: Job not found
+                  type: not_found_error
+                  status: 404
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '410':
+          description: Job results expired
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: RESULTS_EXPIRED
+                  message: The results of this job have expired and are no longer available
+                  type: request_error
+                  status: 410
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      x-domscan-credits:
+        model: per_request
+        default: 0
+  /v1/jobs/{job_id}/cancel:
+    parameters:
+    - name: job_id
+      in: path
+      required: true
+      description: 'Job id from any job creation endpoint: bat_ (API batch or domain discovery), tsj_ (technology scan) or scj_ (scrape).'
+      schema:
+        type: string
+        pattern: ^(bat|tsj|scj)_[a-f0-9]{32}$
+    post:
+      tags:
+      - Batch
+      summary: Cancel asynchronous job
+      description: Cancel an API batch, domain discovery or technology scan job. Unstarted items are cancelled and their credits refunded; an item already running may finish. Returns 202 when cancellation starts and 200 when the job was already cancelled. Scrape jobs cannot be cancelled, and finished jobs return 409. Free.
+      operationId: cancelJob
+      responses:
+        '200':
+          description: The job was already cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCancelResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '202':
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobCancelResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Job not found
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: Job not found
+                  type: not_found_error
+                  status: 404
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '409':
+          description: The job already finished, or its kind cannot be cancelled
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: JOB_NOT_CANCELLABLE
+                  message: This job has already finished and can no longer be cancelled
+                  type: conflict_error
+                  status: 409
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/error-codes
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      x-domscan-credits:
+        model: per_request
+        default: 0
 components:
   schemas:
-    ErrorResponse:
+    ApiBatchRequestItem:
       type: object
-      description: Standard error response format
+      required:
+      - path
       properties:
-        error:
+        method:
+          type: string
+          enum:
+          - GET
+          default: GET
+          description: Only supported public GET endpoints can be batched.
+        path:
+          type: string
+          description: Exact non-parameterized public API path, without a query string.
+        query:
           type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
+          additionalProperties:
+            oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              maxItems: 100
+              items:
+                oneOf:
+                - type: string
+                - type: number
+                - type: boolean
+        reference:
+          type: string
+          maxLength: 128
+    JobNotifyWebhook:
+      description: Optional completion webhook. true sends one signed job.completed, job.failed or job.cancelled event to every active signed webhook endpoint subscribed to it (or to all events) when the job finishes; an endpoint id sends it to that endpoint only. Free. Omit or false for no event.
+      oneOf:
+      - type: boolean
+      - type: string
+        pattern: ^whe_[a-f0-9]{32}$
+      example: true
+    JobKind:
+      type: string
+      enum:
+      - batch
+      - tech_scan
+      - scrape
+      - domain_discovery
+      description: 'batch: POST /v1/batches. domain_discovery: POST /v1/domain-discovery/jobs. tech_scan: POST /v1/tech/jobs. scrape: POST /v1/scrape/jobs.'
     ApiBatchJob:
       type: object
       required:
@@ -562,6 +1197,364 @@ components:
         results_expires_at:
           type: string
           format: date-time
+    JobResultsResponse:
+      type: object
+      required:
+      - job
+      - results
+      - limit
+      - has_more
+      - next_cursor
+      properties:
+        job:
+          $ref: '#/components/schemas/Job'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobResultItem'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        has_more:
+          type: boolean
+        next_cursor:
+          type:
+          - string
+          - 'null'
+    JobCancelResponse:
+      type: object
+      required:
+      - job
+      - cancellation
+      properties:
+        job:
+          $ref: '#/components/schemas/Job'
+        cancellation:
+          type: string
+          enum:
+          - accepted
+          - already_cancelled
+    Job:
+      type: object
+      required:
+      - id
+      - kind
+      - status
+      - native_status
+      - created_at
+      - updated_at
+      - started_at
+      - completed_at
+      - results_expires_at
+      - progress
+      - credits
+      - notify_webhook
+      - links
+      properties:
+        id:
+          type: string
+          pattern: ^(bat|tsj|scj)_[a-f0-9]{32}$
+        kind:
+          $ref: '#/components/schemas/JobKind'
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        native_status:
+          type: string
+          enum:
+          - queued
+          - running
+          - cancelling
+          - completed
+          - completed_with_errors
+          - cancelled
+          - expired
+          description: Status reported by the endpoint that created the job.
+        created_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        started_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        completed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: Set once the job is completed, failed or cancelled.
+        results_expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        progress:
+          type: object
+          required:
+          - total
+          - done
+          - succeeded
+          - failed
+          - cancelled
+          properties:
+            total:
+              type: integer
+              minimum: 0
+            done:
+              type: integer
+              minimum: 0
+              description: 'Items in a final state: succeeded, failed or cancelled.'
+            succeeded:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            cancelled:
+              type: integer
+              minimum: 0
+        credits:
+          type: object
+          required:
+          - charged
+          - refunded
+          description: Credits are charged per item when the job is created, so nothing stays reserved; failed or cancelled items are refunded under each endpoint rules.
+          properties:
+            charged:
+              type: integer
+              minimum: 0
+            refunded:
+              type: integer
+              minimum: 0
+        notify_webhook:
+          type:
+          - object
+          - 'null'
+          description: Completion webhook opt-in, or null when the job was created without one.
+          required:
+          - endpoint_id
+          - status
+          - event_type
+          - deliveries
+          properties:
+            endpoint_id:
+              type:
+              - string
+              - 'null'
+              description: Targeted endpoint, or null for every subscribed endpoint.
+            status:
+              type: string
+              enum:
+              - waiting
+              - published
+              - skipped
+            event_type:
+              type:
+              - string
+              - 'null'
+              enum:
+              - job.completed
+              - job.failed
+              - job.cancelled
+              - null
+            deliveries:
+              type: integer
+              minimum: 0
+        links:
+          type: object
+          required:
+          - self
+          - results
+          - cancel
+          properties:
+            self:
+              type: string
+              format: uri
+            results:
+              type: string
+              format: uri
+            cancel:
+              type:
+              - string
+              - 'null'
+              format: uri
+              description: Null when the job cannot be cancelled.
+    JobResultItem:
+      type: object
+      required:
+      - index
+      - status
+      - reference
+      - input
+      - data
+      - error
+      - credits
+      properties:
+        index:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+          - pending
+          - processing
+          - succeeded
+          - failed
+          - cancelled
+        reference:
+          type:
+          - string
+          - 'null'
+        input:
+          description: 'The submitted item: a URL for technology scans and scrape jobs, or the API request for batches and domain discovery.'
+          oneOf:
+          - type: string
+          - type: object
+            required:
+            - method
+            - path
+            - query
+            properties:
+              method:
+                type: string
+                enum:
+                - GET
+              path:
+                type: string
+              query:
+                type: object
+                additionalProperties: true
+        data:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+          description: Item result, with the same shape as the endpoint that produced it.
+        error:
+          type:
+          - object
+          - 'null'
+          required:
+          - code
+          - message
+          - retryable
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            retryable:
+              type: boolean
+        credits:
+          type: object
+          required:
+          - charged
+          - refunded
+          properties:
+            charged:
+              type: integer
+              minimum: 0
+            refunded:
+              type: integer
+              minimum: 0
+    JobStatus:
+      type: string
+      enum:
+      - queued
+      - running
+      - completed
+      - failed
+      - cancelled
+      description: Unified status. A job that is cancelling reports running. completed_with_errors maps to completed, or to failed when no item succeeded. An expired technology scan reports the outcome it expired from.
+    JobResponse:
+      type: object
+      required:
+      - job
+      properties:
+        job:
+          $ref: '#/components/schemas/Job'
+    DomainDiscoveryJobResponse:
+      type: object
+      required:
+      - job
+      - discovery
+      properties:
+        job:
+          $ref: '#/components/schemas/ApiBatchJob'
+        discovery:
+          type: object
+          required:
+          - corpus
+          - corpus_version
+          - total_matching_words
+          - page_offset
+          - page_words
+          - domain_checks
+          - tlds
+          - filters
+          - credits_per_domain
+          - next_cursor
+          properties:
+            corpus:
+              type: string
+              enum:
+              - iannuttall/unclaimed
+            corpus_version:
+              type: string
+            total_matching_words:
+              type: integer
+              minimum: 1
+            page_offset:
+              type: integer
+              minimum: 0
+            page_words:
+              type: integer
+              minimum: 1
+              maximum: 100
+            domain_checks:
+              type: integer
+              minimum: 1
+              maximum: 100
+            tlds:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: string
+            filters:
+              type: object
+              required:
+              - min_length
+              - max_length
+              - singular_only
+              properties:
+                min_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                max_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 63
+                singular_only:
+                  type: boolean
+            credits_per_domain:
+              type: integer
+              minimum: 0
+              description: Normal /v1/status cost at job creation time.
+            next_cursor:
+              type:
+              - string
+              - 'null'
+              description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
     ApiBatchResultsResponse:
       type: object
       required:
@@ -649,115 +1642,217 @@ components:
           type:
           - integer
           - 'null'
-    ApiBatchRequestItem:
+    ErrorResponse:
       type: object
-      required:
-      - path
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
       properties:
-        method:
-          type: string
-          enum:
-          - GET
-          default: GET
-          description: Only supported public GET endpoints can be batched.
-        path:
-          type: string
-          description: Exact non-parameterized public API path, without a query string.
-        query:
+        error:
           type: object
-          additionalProperties:
-            oneOf:
-            - type: string
-            - type: number
-            - type: boolean
-            - type: array
-              maxItems: 100
-              items:
-                oneOf:
-                - type: string
-                - type: number
-                - type: boolean
-        reference:
-          type: string
-          maxLength: 128
-    DomainDiscoveryJobResponse:
-      type: object
-      required:
-      - job
-      - discovery
-      properties:
-        job:
-          $ref: '#/components/schemas/ApiBatchJob'
-        discovery:
-          type: object
-          required:
-          - corpus
-          - corpus_version
-          - total_matching_words
-          - page_offset
-          - page_words
-          - domain_checks
-          - tlds
-          - filters
-          - credits_per_domain
-          - next_cursor
+          additionalProperties: true
           properties:
-            corpus:
+            code:
+              type: string
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
+              example: INVALID_DOMAIN
+            type:
               type: string
               enum:
-              - iannuttall/unclaimed
-            corpus_version:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
               type: string
-            total_matching_words:
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
               type: integer
-              minimum: 1
-            page_offset:
-              type: integer
-              minimum: 0
-            page_words:
-              type: integer
-              minimum: 1
-              maximum: 100
-            domain_checks:
-              type: integer
-              minimum: 1
-              maximum: 100
-            tlds:
-              type: array
-              minItems: 1
-              maxItems: 5
-              items:
-                type: string
-            filters:
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
               type: object
-              required:
-              - min_length
-              - max_length
-              - singular_only
-              properties:
-                min_length:
-                  type: integer
-                  minimum: 1
-                  maximum: 63
-                max_length:
-                  type: integer
-                  minimum: 1
-                  maximum: 63
-                singular_only:
-                  type: boolean
-            credits_per_domain:
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
               type: integer
               minimum: 0
-              description: Normal /v1/status cost at job creation time.
-            next_cursor:
-              type:
-              - string
-              - 'null'
-              description: Opaque cursor for the next page of the filtered corpus. Null when the corpus is exhausted.
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+    JobListResponse:
+      type: object
+      required:
+      - jobs
+      - limit
+      - has_more
+      - next_cursor
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        has_more:
+          type: boolean
+        next_cursor:
+          type:
+          - string
+          - 'null'
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
   responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
         Retry-After:
           schema:
             type: integer
@@ -769,15 +1864,6 @@ components:
             - free
             - paid
           description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
         X-RateLimit-Policy:
           schema:
             type: string
@@ -790,8 +1876,89 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    Conflict:
+      description: The requested change conflicts with the current state.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: CONFLICT
+              message: The request conflicts with the current state.
+              type: conflict_error
+              status: 409
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+    NotFound:
+      description: The requested resource was not found.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found.
+              type: not_found_error
+              status: 404
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -802,47 +1969,45 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
+  parameters:
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
   securitySchemes:
     apiKey:
       type: apiKey
@@ -883,11 +2048,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -895,11 +2517,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.

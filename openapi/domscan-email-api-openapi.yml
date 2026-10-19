@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan Email API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -63,14 +96,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkLookupResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 3
@@ -103,6 +161,9 @@ paths:
         schema:
           type: string
           example: google,microsoft
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Email compliance readiness report
@@ -232,6 +293,19 @@ paths:
                 - DNS-visible checks cannot prove live message-level SPF, DKIM, DMARC alignment, RFC 5322 formatting, spam rate, or one-click unsubscribe behavior.
                 checked_at: '2026-04-26T12:00:00Z'
                 check_duration_ms: 642
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -294,6 +368,9 @@ paths:
         schema:
           type: string
           example: disposable,role,free,mx,dnsbl
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Email check result
@@ -333,7 +410,11 @@ paths:
                             - high
                             - medium
                             - low
+                            - null
                             example: high
+                          matched_pattern:
+                            type: string
+                            description: Wildcard pattern that matched, when the domain matched a pattern rather than an exact entry.
                       role:
                         type:
                         - object
@@ -364,22 +445,67 @@ paths:
                         - 'null'
                         properties:
                           has_mx:
-                            type: boolean
+                            type:
+                            - boolean
+                            - 'null'
                             example: true
+                            description: null when the MX lookup failed, so it is unknown
                           records:
                             type: array
                             items:
                               type: string
                             example:
                             - mx1.tempmail.org
+                          null_mx:
+                            type: boolean
+                            description: True when the domain publishes an RFC 7505 null MX, explicitly accepting no mail.
                       dnsbl:
                         type:
                         - object
                         - 'null'
                         properties:
+                          domain:
+                            type: string
+                            description: Domain that was checked
+                          ip:
+                            type: string
+                            description: IP that was checked, for IP checks
                           listed:
                             type: boolean
                             example: false
+                          lists:
+                            type: array
+                            description: Per-blocklist results
+                            items:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                listed:
+                                  type: boolean
+                                status:
+                                  type: string
+                                  enum:
+                                  - listed
+                                  - not_listed
+                                  - unknown
+                                  description: unknown when the list could not answer; never a clean result
+                                code:
+                                  type: string
+                                  description: Return code from the list
+                                meaning:
+                                  type: string
+                                  description: Meaning of the return code when listed
+                                unknown_reason:
+                                  type: string
+                                  enum:
+                                  - lookup_failed
+                                  - query_refused
+                                  - unexpected_answer
+                          lists_unknown:
+                            type: integer
+                            description: Lists that could not give an answer for this check
+                            example: 0
                           threat_level:
                             type: string
                             enum:
@@ -388,6 +514,14 @@ paths:
                             - medium
                             - high
                             example: none
+                          check_type:
+                            type: string
+                            enum:
+                            - ip
+                            - domain
+                          checked_at:
+                            type: string
+                            format: date-time
                   risk_score:
                     type: integer
                     minimum: 0
@@ -409,8 +543,77 @@ paths:
                   checked_at:
                     type: string
                     format: date-time
+              example:
+                email: support@acme-widgets.com
+                domain: acme-widgets.com
+                local_part: support
+                valid_syntax: true
+                checks:
+                  disposable:
+                    is_disposable: false
+                    confidence: null
+                  role:
+                    is_role: true
+                    role_type: support
+                  free:
+                    is_free: false
+                    provider: null
+                  mx:
+                    has_mx: true
+                    records:
+                    - mx1.mailhost-example.net
+                    - mx2.mailhost-example.net
+                  dnsbl:
+                    listed: false
+                    threat_level: none
+                risk_score: 20
+                risk_level: low
+                flags:
+                - ROLE_ADDRESS
+                checked_at: '2026-10-09T10:15:30.000Z'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           description: Invalid email format
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: email is required
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/request-headers
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
@@ -461,6 +664,14 @@ paths:
                   - disposable
                   - role
                   - free
+            example:
+              emails:
+              - jane.doe@example.com
+              - support@example.org
+              checks:
+              - disposable
+              - role
+              - mx
       responses:
         '200':
           description: Bulk check results with summary
@@ -506,14 +717,67 @@ paths:
                   checked_at:
                     type: string
                     format: date-time
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           description: Invalid request body
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: emails array is required
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/request-headers
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 1
@@ -608,6 +872,9 @@ paths:
         schema:
           type: boolean
           default: false
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Email verification result
@@ -691,6 +958,9 @@ paths:
                       null_mx:
                         type: boolean
                         example: false
+                      mx_lookup_failed:
+                        type: boolean
+                        description: The MX lookup failed; the result is unknown (mx_lookup_failed) and is not charged
                       mx_records:
                         type: array
                         items:
@@ -736,6 +1006,7 @@ paths:
                         - high
                         - medium
                         - low
+                        - null
                       role_based:
                         type: boolean
                         example: false
@@ -757,6 +1028,14 @@ paths:
                       dnsbl_listed:
                         type: boolean
                         example: false
+                      dnsbl_status:
+                        type: string
+                        enum:
+                        - listed
+                        - not_listed
+                        - unknown
+                        - not_checked
+                        description: unknown when nothing is listed but a blocklist could not answer; threat_level is then null.
                       threat_level:
                         type:
                         - string
@@ -766,6 +1045,7 @@ paths:
                         - medium
                         - low
                         - none
+                        - null
                   quality:
                     type: object
                     properties:
@@ -1059,8 +1339,297 @@ paths:
                   verified_at:
                     type: string
                     format: date-time
+              example:
+                email: jane.doe@acme-widgets.com
+                normalized_email: jane.doe@acme-widgets.com
+                risk: low
+                confidence: 0.62
+                confidence_level: medium
+                decision: accept
+                reasons:
+                - mx_found
+                - not_disposable
+                - redundant_mx_records
+                - domain_authentication_strong
+                - mailbox_not_checked
+                signals:
+                  syntax:
+                    status: pass
+                    confidence: 1
+                    reason: syntax_valid
+                  dns:
+                    status: pass
+                    confidence: 0.92
+                    reason: mx_found
+                    details:
+                      mx_records:
+                      - mx1.mailhost-example.net
+                      - mx2.mailhost-example.net
+                      null_mx: false
+                  mailbox:
+                    status: not_checked
+                    confidence: 0.35
+                    reason: mailbox_not_checked
+                  catch_all:
+                    status: unknown
+                    confidence: 0.35
+                    reason: not_checked
+                  disposable:
+                    status: pass
+                    confidence: 0.7
+                    reason: not_disposable
+                    details:
+                      confidence: null
+                  role:
+                    status: pass
+                    confidence: 0.86
+                    reason: not_role_based
+                    details:
+                      role_type: null
+                  free_provider:
+                    status: pass
+                    confidence: 0.9
+                    reason: business_or_custom_domain
+                    details:
+                      provider: null
+                  reputation:
+                    status: pass
+                    confidence: 0.72
+                    reason: not_listed
+                    details:
+                      threat_level: none
+                  typo:
+                    status: pass
+                    confidence: 0.7
+                    reason: no_common_provider_typo
+                    details:
+                      did_you_mean: null
+                  random_input:
+                    status: pass
+                    confidence: 0.65
+                    reason: not_random_like
+                  reserved_domain:
+                    status: pass
+                    confidence: 0.78
+                    reason: not_reserved_domain
+                    details:
+                      domain: acme-widgets.com
+                      tld: com
+                      reserved: false
+                      domain_literal: false
+                  domain_profile:
+                    status: pass
+                    confidence: 0.68
+                    reason: clean_domain_profile
+                    details:
+                      normalized: acme-widgets.com
+                      tld: com
+                      label_count: 2
+                      reserved: false
+                      domain_literal: false
+                      punycode: false
+                      suspicious_reasons: []
+                  local_part:
+                    status: pass
+                    confidence: 0.66
+                    reason: clean_local_part
+                    details:
+                      base_local_part: jane.doe
+                      numeric_ratio: 0
+                      separator_count: 1
+                      suspicious_reasons: []
+                  subaddressing:
+                    status: pass
+                    confidence: 0.65
+                    reason: no_plus_tag
+                    details:
+                      plus_addressed: false
+                      base_local_part: jane.doe
+                      tag: null
+                  mx_redundancy:
+                    status: pass
+                    confidence: 0.82
+                    reason: redundant_mx_records
+                    details:
+                      mx_count: 2
+                  domain_authentication:
+                    status: pass
+                    confidence: 0.86
+                    reason: domain_authentication_strong
+                    details:
+                      checked: true
+                      spf:
+                        exists: true
+                        policy: fail
+                        record: v=spf1 include:_spf.mailhost-example.net -all
+                      dmarc:
+                        exists: true
+                        policy: reject
+                        record: v=DMARC1; p=reject; rua=mailto:dmarc@acme-widgets.com
+                        percentage: null
+                      mta_sts:
+                        exists: true
+                        record: v=STSv1; id=20260101T000000
+                      tls_rpt:
+                        exists: true
+                        record: v=TLSRPTv1; rua=mailto:tls@acme-widgets.com
+                      status: strong
+                      issues: []
+                  toxicity:
+                    status: pass
+                    confidence: 0.68
+                    reason: not_toxic
+                    details:
+                      score: 0
+                      toxic: false
+                      do_not_mail: false
+                      reasons: []
+                  provider_profile:
+                    status: unknown
+                    confidence: 0.55
+                    reason: custom_domain_mail
+                    details:
+                      provider: null
+                      category: custom_domain_mail
+                      confidence: 0.55
+                  smtp_server:
+                    status: not_checked
+                    confidence: 0
+                    reason: not_checked
+                evidence:
+                  mx_records:
+                  - mx1.mailhost-example.net
+                  - mx2.mailhost-example.net
+                  provider: null
+                  checked_via:
+                  - worker
+                  normalized_parts:
+                    local_part: jane.doe
+                    domain: acme-widgets.com
+                    base_local_part: jane.doe
+                    tag: null
+                  domain_profile:
+                    tld: com
+                    label_count: 2
+                    reserved: false
+                    domain_literal: false
+                    punycode: false
+                    suspicious_reasons: []
+                  domain_authentication:
+                    checked: true
+                    spf:
+                      exists: true
+                      policy: fail
+                      record: v=spf1 include:_spf.mailhost-example.net -all
+                    dmarc:
+                      exists: true
+                      policy: reject
+                      record: v=DMARC1; p=reject; rua=mailto:dmarc@acme-widgets.com
+                      percentage: null
+                    mta_sts:
+                      exists: true
+                      record: v=STSv1; id=20260101T000000
+                    tls_rpt:
+                      exists: true
+                      record: v=TLSRPTv1; rua=mailto:tls@acme-widgets.com
+                    status: strong
+                    issues: []
+                recommendation:
+                  signup: allow
+                  marketing: send
+                  cold_outreach: send
+                deliverability:
+                  status: deliverable
+                  sub_status: mx_verified
+                  safe_to_send: true
+                  mailbox_checked: false
+                  smtp_confirmed: false
+                  domain_accepts_mail: true
+                  accepts_all: null
+                  is_role: false
+                  is_free_provider: false
+                  is_disposable: false
+                  is_toxic: false
+                  is_no_reply: false
+                  is_gibberish: false
+                suggestions:
+                  did_you_mean: null
+                limitations:
+                - basic_tier_does_not_confirm_mailbox_existence
+                result: valid
+                result_detail: mx_verified
+                verification:
+                  syntax_valid: true
+                  mx_found: true
+                  mx_records:
+                  - mx1.mailhost-example.net
+                  - mx2.mailhost-example.net
+                  null_mx: false
+                  smtp_verified: null
+                  mailbox_exists: null
+                  catch_all: null
+                  full_inbox: null
+                  smtp_provider: null
+                classification:
+                  disposable: false
+                  disposable_confidence: null
+                  role_based: false
+                  role_type: null
+                  free_provider: false
+                  provider: null
+                reputation:
+                  dnsbl_listed: false
+                  threat_level: none
+                quality:
+                  score: 100
+                  grade: A
+                  flags: []
+                tier: basic
+                credits_used: 2
+                verified_at: '2026-10-09T10:15:30.000Z'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           description: Invalid email format
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: email is required
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/request-headers
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
@@ -1108,6 +1677,10 @@ paths:
                   default: false
                   deprecated: true
                   description: Deprecated and ignored. Mailbox-level SMTP verification is not charged or performed.
+            example:
+              emails:
+              - jane.doe@example.com
+              - support@example.org
       responses:
         '200':
           description: Bulk verification results with summary
@@ -1145,118 +1718,379 @@ paths:
                   credits_used:
                     type: integer
                     example: 6
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '400':
           description: Invalid request body
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: Request identifier; equals error.request_id in the body.
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: BAD_REQUEST
+                  message: emails array is required
+                  type: validation_error
+                  status: 400
+                  retryable: false
+                  request_id: m5x7k2p-a9f3
+                  docs_url: https://domscan.net/docs/request-headers
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
+        '409':
+          $ref: '#/components/responses/IdempotencyInProgress'
+        '422':
+          $ref: '#/components/responses/IdempotencyKeyReused'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/DryRun'
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
+      - $ref: '#/components/parameters/IdempotencyKey'
       x-domscan-credits:
         model: per_item
         default: 2
 components:
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    IdempotentReplayed:
+      description: Present and `true` when this response is a stored replay for a repeated Idempotency-Key. A replay charges nothing.
+      schema:
+        type: string
+        enum:
+        - 'true'
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid domain format
+              suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    IdempotencyInProgress:
+      description: A request with the same Idempotency-Key is still running. Retry after Retry-After seconds to receive its stored response. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_IN_PROGRESS
+              message: A request with this Idempotency-Key is still being processed. Retry shortly to receive its result.
+              type: conflict_error
+              status: 409
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+              retry_after: 1
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
+    RateLimited:
+      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+        X-RateLimit-Plan:
+          schema:
+            type: string
+            enum:
+            - free
+            - paid
+          description: The account plan whose policy was applied.
+        X-RateLimit-Policy:
+          schema:
+            type: string
+          description: Machine-readable summary of the active tier and limit policy.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    IdempotencyKeyReused:
+      description: The Idempotency-Key was already used by this API key for a different request (method, path, query or body) in the last 24 hours. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: IDEMPOTENCY_KEY_REUSED
+              message: This Idempotency-Key was already used with a different request. Use a new key for a new request.
+              type: validation_error
+              status: 422
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    Unauthorized:
+      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: AUTH_REQUIRED
+              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
+              docs: https://domscan.net/docs/authentication
+              get_key: https://domscan.net/login
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
+  parameters:
+    DryRun:
+      name: dry_run
+      in: query
+      required: false
+      description: 'Set to `true` to return the credit estimate for this exact request instead of running it. Nothing is executed, no source is called and 0 credits are charged. The response has the same shape as POST /v1/estimate plus `dry_run: true`.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+      example: 'true'
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 'Optional client-chosen key (1 to 255 printable ASCII characters, for example a UUID). Retrying with the same key, API key and identical request within 24 hours returns the stored response with `Idempotent-Replayed: true` and charges nothing again. Responses larger than 1 MiB, and refunded errors, are not stored, so a retry runs normally. Reusing a key for a different request returns 422 IDEMPOTENCY_KEY_REUSED; a duplicate sent while the first is still running returns 409 IDEMPOTENCY_IN_PROGRESS.'
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
   schemas:
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
-    EmailComplianceRequirement:
-      type: object
-      properties:
-        id:
-          type: string
-        label:
-          type: string
-        status:
-          type: string
-          enum:
-          - pass
-          - warn
-          - fail
-          - unknown
-        severity:
-          type: string
-          enum:
-          - critical
-          - high
-          - medium
-          - low
-          - info
-        category:
-          type: string
-          enum:
-          - dns
-          - message
-          - transport
-          - reputation
-          - content
-        evidence:
-          type: string
-        recommendation:
-          type: string
     EmailComplianceResponse:
       type: object
       description: Provider-oriented email sender compliance readiness report with DNS-visible status separated from live message-level verification.
@@ -1282,6 +2116,15 @@ components:
           - C
           - D
           - F
+        checks_unknown:
+          type: integer
+          minimum: 0
+          description: SPF, DKIM, DMARC and blacklist checks that could not be determined. They are reported as unknown and left out of the score.
+        score_confidence:
+          type: string
+          enum:
+          - full
+          - partial
         provider_readiness:
           type: object
           properties:
@@ -1331,31 +2174,6 @@ components:
           format: date-time
         check_duration_ms:
           type: integer
-    EmailComplianceActionItem:
-      type: object
-      properties:
-        priority:
-          type: string
-          enum:
-          - critical
-          - high
-          - medium
-          - low
-          - info
-        category:
-          type: string
-          enum:
-          - authentication
-          - transport
-          - dns
-          - brand
-          - reputation
-        title:
-          type: string
-        detail:
-          type: string
-        fix:
-          type: string
     BulkLookupResponse:
       type: object
       description: Ordered bulk lookup response. A successful outer response can contain per-item failures.
@@ -1431,6 +2249,65 @@ components:
             duration_ms:
               type: integer
               minimum: 0
+    EmailComplianceActionItem:
+      type: object
+      properties:
+        priority:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          - info
+        category:
+          type: string
+          enum:
+          - authentication
+          - transport
+          - dns
+          - brand
+          - reputation
+        title:
+          type: string
+        detail:
+          type: string
+        fix:
+          type: string
+    EmailComplianceRequirement:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum:
+          - pass
+          - warn
+          - fail
+          - unknown
+        severity:
+          type: string
+          enum:
+          - critical
+          - high
+          - medium
+          - low
+          - info
+        category:
+          type: string
+          enum:
+          - dns
+          - message
+          - transport
+          - reputation
+          - content
+        evidence:
+          type: string
+        recommendation:
+          type: string
     EmailProviderReadiness:
       type: object
       properties:
@@ -1465,83 +2342,73 @@ components:
           type: array
           items:
             type: string
-  responses:
-    RateLimited:
-      description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying
-        X-RateLimit-Plan:
-          schema:
-            type: string
-            enum:
-            - free
-            - paid
-          description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
-        X-RateLimit-Policy:
-          schema:
-            type: string
-          description: Machine-readable summary of the active tier and limit policy.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: RATE_LIMITED
-              message: Rate limit exceeded. Please wait before making more requests.
-    Unauthorized:
-      description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: AUTH_REQUIRED
-              message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
-              docs: https://domscan.net/docs/authentication
-              get_key: https://domscan.net/login
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid domain format
-              suggestion: Domain must be a valid format like example.com
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
+    ErrorResponse:
+      type: object
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
   securitySchemes:
     apiKey:
       type: apiKey
@@ -1582,11 +2449,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -1594,11 +2918,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.

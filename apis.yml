@@ -659,6 +659,53 @@ apis:
     url: mcp/domscan-tool-crosswalk.yml
   - type: Documentation
     url: https://domscan.net/docs
+- aid: domscan:domscan-business-verification-api
+  name: DomScan Business Verification API
+  description: >-
+    Bank details, VAT numbers, healthcare providers and sanctions screening against official registers
+    and lists
+  humanURL: https://domscan.net/docs
+  tags:
+  - Business Verification
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-business-verification-api-openapi.yml
+- aid: domscan:domscan-healthcare-api
+  name: DomScan Healthcare API
+  description: US healthcare provider lookup and verification by NPI
+  humanURL: https://domscan.net/docs
+  tags:
+  - Healthcare
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-healthcare-api-openapi.yml
+- aid: domscan:domscan-privacy-api
+  name: DomScan Privacy API
+  description: Website legal pages, consent tooling and trackers
+  humanURL: https://domscan.net/docs
+  tags:
+  - Privacy
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-privacy-api-openapi.yml
+- aid: domscan:domscan-seo-api
+  name: DomScan SEO API
+  description: The SEO API from DomScan — 16 operation(s) for seo.
+  humanURL: https://domscan.net/docs
+  tags:
+  - SEO
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-seo-api-openapi.yml
+- aid: domscan:domscan-webhooks-api
+  name: DomScan Webhooks API
+  description: Signed monitoring alerts delivered to your HTTPS endpoints, billed per delivered alert
+  humanURL: https://domscan.net/docs
+  tags:
+  - Webhooks
+  properties:
+  - type: OpenAPI
+    url: openapi/domscan-webhooks-api-openapi.yml
 maintainers:
 - FN: estevecastells
   email: support@domscan.net

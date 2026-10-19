@@ -1,7 +1,40 @@
 openapi: 3.2.0
 info:
   title: DomScan User API
-  description: DomScan is a domain intelligence API providing domain analysis tools.
+  description: 'DomScan is a domain intelligence API providing domain analysis tools. **Core Features:**
+
+    - Domain Availability: Check single or bulk domains using RDAP with 1,100+ TLDs supported
+
+    - Domain Intelligence: AI suggestions, valuations, health checks, typosquatting detection
+
+    - OSINT Tools: DNS lookup, WHOIS/RDAP, SSL certificates, subdomain discovery, IP geolocation, tech stack detection
+
+    - Social & Branding: Social handle checker, brand name scoring
+
+    - Phone Intelligence: Privacy-first phone number validation, normalization, and classification
+
+    - Pricing: Scheduled standard-TLD tables from verified official registrar sources, plus separate credential-backed exact-domain quotes
+
+    - Watchlist: Domain monitoring for expiration and availability alerts
+
+
+    **Authentication:**
+
+    Most API endpoints require authentication. Pass your API key via the x-api-key header or Authorization: Bearer header. Operations marked with an empty security requirement are intentionally public, including API specifications and selected catalog endpoints. Get your free API key at https://domscan.net/dashboard. Logged-in users on domscan.net tools pages are authenticated automatically via session cookie. **Rate Limits:**
+
+    Free accounts can sustain 120 requests per minute per account, with a burst capacity of 60. All API keys and dashboard sessions belonging to the same free account share this budget. Bulk endpoints have an additional free-tier budget of 20 HTTP requests per minute per account across all bulk endpoints. Free-tier bulk traffic is also capped at 100 requests per minute per IPv4 address or IPv6 /56 network. Platform-wide edge protections still apply to every tier. Paid accounts can sustain 600 requests per minute, with a burst capacity of 120, shared by every API key and dashboard session of the account. Paid accounts do not receive the additional free-tier bulk budget. Scope: RapidAPI subscribers are counted per subscriber. (scope=rapidapi-customer) Zyla subscribers are counted per subscriber when the gateway identifies them, (scope=zyla-customer) and as one shared gateway budget when it does not. (scope=zyla-gateway) Other authenticated requests are counted per account: every API key and dashboard session of the account shares one budget. (scope=account) A key that is not linked to an account is counted on its own. (scope=api-key) Unauthenticated requests to public endpoints are counted per client IP address (scope unknown when the address cannot be determined, as one shared budget). (scope=ip)
+
+
+    Every authenticated response, success or error, includes X-RateLimit-Plan, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, and X-RateLimit-Policy. X-RateLimit-Limit and X-RateLimit-Remaining describe the immediate burst bucket; X-RateLimit-Reset is the Unix time in seconds when that bucket is full again; X-RateLimit-Policy also states the sustained per-minute rate, scope, and any free bulk limits. Exceeding a limit returns HTTP 429 with Retry-After. Retry only after the indicated delay. **Credits System:**
+
+    API calls consume credits based on endpoint complexity. Sign up for free to receive 10,000 credits monthly. - 1 credit: Status checks, DNS lookups, tool builders
+
+    - 2-5 credits: Health checks, valuations, OSINT tools
+
+    - Bulk endpoints: standard per-item rate for batching multiple items into fewer HTTP requests. - 6-25 credits: Recipe compound operations
+
+
+    When credits reach zero, the API returns HTTP 402 with credits_remaining, credits_required, and a purchase_url. API responses include X-Credits-Requested, X-Credits-Charged, and X-Credits-Refunded. X-Credits-Charged is the net charge after any refund made during the request. Authenticated responses also include X-Credits-Remaining whenever the balance is known without an extra lookup. Free credits refresh monthly on the account''s signup anniversary. POST /v1/estimate returns the credits a request would charge without running it, at no cost.'
   version: 2.15.0
   contact:
     name: DomScan Support
@@ -36,12 +69,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiKeysResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -71,6 +121,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiKeyCreateResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -79,6 +142,10 @@ paths:
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -127,6 +194,17 @@ paths:
                     type: boolean
                   name:
                     type: string
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -169,6 +247,17 @@ paths:
                     type: boolean
                   message:
                     type: string
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
@@ -197,10 +286,20 @@ paths:
         '200':
           description: Current account credit balance
           headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
             X-Credits-Remaining:
               schema:
                 type: integer
               description: Current account credit balance
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
           content:
             application/json:
               schema:
@@ -220,6 +319,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -255,12 +358,29 @@ paths:
                   type: usage
                   description: /v1/health check
                   created_at: '2024-01-15T12:00:00Z'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -288,6 +408,9 @@ paths:
         schema:
           type: boolean
           default: false
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Usage statistics
@@ -295,6 +418,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UsageResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '402':
@@ -320,10 +456,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmailPreferences'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -348,6 +501,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmailPreferences'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -381,10 +545,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CustomerAccountResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -392,7 +573,7 @@ paths:
       tags:
       - User
       summary: Update customer account
-      description: Rename the customer account. Only the account owner can update it.
+      description: Rename the customer account. Only the account owner can update it. Names are 2 to 64 characters and must not contain URLs, domain names, email addresses or control characters; rejected names return 400 ACCOUNT_NAME_INVALID.
       operationId: updateCustomerAccount
       security:
       - sessionCookie: []
@@ -407,8 +588,8 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 1
-                  maxLength: 120
+                  minLength: 2
+                  maxLength: 64
       responses:
         '200':
           description: Customer account updated
@@ -416,6 +597,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CustomerAccountSummaryResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -456,6 +648,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccountInvitationCreateResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -468,6 +673,10 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '503':
           $ref: '#/components/responses/EmailServiceUnavailable'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -495,6 +704,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -535,6 +755,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CustomerAccountSummaryResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -549,6 +782,10 @@ paths:
           $ref: '#/components/responses/Gone'
         '429':
           $ref: '#/components/responses/RateLimited'
+      parameters:
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       x-domscan-credits:
         model: per_request
         default: 0
@@ -602,6 +839,17 @@ paths:
                     enum:
                     - admin
                     - guest
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -640,6 +888,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -669,6 +928,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -755,6 +1025,9 @@ paths:
         schema:
           type: string
           maxLength: 200
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: Account API request logs
@@ -779,6 +1052,19 @@ paths:
                     type: integer
                     enum:
                     - 30
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -805,6 +1091,9 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: API request log detail
@@ -817,6 +1106,19 @@ paths:
                 properties:
                   log:
                     $ref: '#/components/schemas/ApiRequestLogDetail'
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -845,6 +1147,9 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: '#/components/parameters/Fields'
+      - $ref: '#/components/parameters/Compact'
+      - $ref: '#/components/parameters/Naming'
       responses:
         '200':
           description: AI analysis of the logged request
@@ -878,6 +1183,19 @@ paths:
                   stored:
                     type: boolean
                     description: Whether the analysis was saved with the log. False means the answer is still valid but will not be available after a reload.
+          headers:
+            X-Credits-Charged:
+              $ref: '#/components/headers/XCreditsCharged'
+            X-Credits-Remaining:
+              $ref: '#/components/headers/XCreditsRemaining'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+            X-Fields-Ignored:
+              $ref: '#/components/headers/XFieldsIgnored'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -907,71 +1225,6 @@ paths:
         default: 0
 components:
   schemas:
-    ErrorResponse:
-      type: object
-      description: Standard error response format
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code for programmatic handling
-              example: INVALID_DOMAIN
-            type:
-              type: string
-              enum:
-              - authentication_error
-              - credits_error
-              - permission_error
-              - not_found_error
-              - conflict_error
-              - rate_limit_error
-              - timeout_error
-              - validation_error
-              - upstream_error
-              - api_error
-              - request_error
-              description: Stable error category used by official SDK subclasses
-            message:
-              type: string
-              description: Human-readable error message
-              example: Invalid domain format
-            status:
-              type: integer
-              minimum: 400
-              maximum: 599
-              description: HTTP status repeated in the JSON error for queue and log processors
-            retryable:
-              type: boolean
-              description: Whether retrying can be appropriate after applying retry guidance
-            request_id:
-              type: string
-              description: Request identifier matching the X-Request-Id response header
-            suggestion:
-              type: string
-              description: Suggestion for fixing the error
-            details:
-              type: object
-              description: Optional structured context for the error
-              additionalProperties: true
-            retry_after:
-              type: integer
-              minimum: 0
-              description: Seconds to wait before retrying when the error is temporary
-              example: 300
-            docs_url:
-              type: string
-              description: Link to relevant documentation
-              example: /docs#parameters
-          required:
-          - type
-          - code
-          - message
-          - status
-          - retryable
-          - request_id
-          - docs_url
     ApiKeysResponse:
       type: object
       description: API keys and credit balance for the active customer account
@@ -1011,13 +1264,14 @@ components:
               type: integer
             free_credits:
               type: integer
+              description: Credits remaining from the account's current monthly allocation, whether it comes from DomScan's standard monthly plan or an active AppSumo license.
             paid_credits:
               type: integer
             free_cycle_month:
               type:
               - string
               - 'null'
-              description: Current monthly free-credit cycle in YYYY-MM format
+              description: Current UTC calendar month used for the monthly allocation, in YYYY-MM format.
             id:
               type: string
               format: uuid
@@ -1027,324 +1281,63 @@ components:
               - owner
               - admin
               - guest
-    ApiKeyCreateResponse:
+    CustomerAccountSummary:
       type: object
-      description: Newly created API key (full key only shown once)
+      required:
+      - id
+      - name
+      - role
       properties:
         id:
           type: string
-        key:
-          type: string
-          description: Full API key - save this, shown only once!
-        prefix:
-          type: string
-        name:
-          type: string
-        account_credits:
-          type: integer
-          description: Current account-level credit balance after the key is created
-        created_at:
-          type: string
-          format: date-time
-        message:
-          type: string
-    CustomerAccountSummaryResponse:
-      type: object
-      required:
-      - account
-      properties:
-        success:
-          type: boolean
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
-    SuccessResponse:
-      type: object
-      required:
-      - success
-      properties:
-        success:
-          type: boolean
-          example: true
-    CreditsResponse:
-      type: object
-      description: Active customer account credit balance and transaction history
-      properties:
-        credits:
-          type: integer
-          description: Current account credit balance
-        free_credits:
-          type: integer
-          description: Current account monthly free-credit balance
-        paid_credits:
-          type: integer
-          description: Current account paid credit balance
-        free_cycle_month:
-          type:
-          - string
-          - 'null'
-          description: Current monthly free-credit cycle in YYYY-MM format
-        transactions:
-          type: array
-          items:
-            type: object
-            properties:
-              amount:
-                type: integer
-                description: Transaction amount (negative for usage)
-              balance_after:
-                type: integer
-              type:
-                type: string
-                enum:
-                - usage
-                - purchase
-                - auto_recharge
-                - refund
-                - signup_bonus
-                - monthly_grant
-                - admin_adjustment
-                - migration_opening_balance
-                - reconciliation_adjustment
-              description:
-                type: string
-              created_at:
-                type: string
-                format: date-time
-    CustomerAccountMember:
-      type: object
-      required:
-      - user_id
-      - email
-      - role
-      - joined_at
-      - is_current_user
-      properties:
-        user_id:
-          type: string
           format: uuid
-        email:
-          type: string
-          format: email
         name:
-          type:
-          - string
-          - 'null'
-        picture:
-          type:
-          - string
-          - 'null'
-          format: uri
+          type: string
         role:
           type: string
           enum:
           - owner
           - admin
           - guest
-        joined_at:
+        owner_user_id:
           type: string
-          format: date-time
-        is_current_user:
-          type: boolean
-    EmailPreferences:
+          format: uuid
+        member_count:
+          type: integer
+          minimum: 1
+    AccountInvitationCreateResponse:
       type: object
       required:
-      - policy_version
-      - categories
-      - marketing_suppressed
-      - preferred_locale
-      - frequency
-      - consent
+      - invitation
       properties:
+        invitation:
+          $ref: '#/components/schemas/AccountInvitation'
+    EmailConsentState:
+      type:
+      - object
+      - 'null'
+      required:
+      - enabled
+      - source
+      - policy_version
+      - occurred_at
+      properties:
+        enabled:
+          type: boolean
+        source:
+          type: string
+          enum:
+          - dashboard
+          - signup
+          - email_unsubscribe
+          - admin
+          - import
+          - system
         policy_version:
           type: string
-          example: '2026-08-02'
-        categories:
-          $ref: '#/components/schemas/EmailPreferenceCategories'
-        marketing_suppressed:
-          type: boolean
-          default: false
-        preferred_locale:
+        occurred_at:
           type: string
-          enum:
-          - en
-          - es
-          - de
-          - fr
-          - pt
-          - ja
-          - zh
-          - ar
-          - it
-          - ko
-          - ru
-          - nl
-          - tr
-          - pl
-          - sv
-          default: en
-        frequency:
-          type: object
-          required:
-          - digest
-          properties:
-            digest:
-              type: string
-              enum:
-              - weekly
-              - monthly
-              default: monthly
-        consent:
-          type: object
-          required:
-          - requested_alerts
-          - onboarding
-          - lifecycle
-          - digest
-          - product_updates
-          - reactivation
-          - all_marketing
-          properties:
-            requested_alerts:
-              $ref: '#/components/schemas/EmailConsentState'
-            onboarding:
-              $ref: '#/components/schemas/EmailConsentState'
-            lifecycle:
-              $ref: '#/components/schemas/EmailConsentState'
-            digest:
-              $ref: '#/components/schemas/EmailConsentState'
-            product_updates:
-              $ref: '#/components/schemas/EmailConsentState'
-            reactivation:
-              $ref: '#/components/schemas/EmailConsentState'
-            all_marketing:
-              $ref: '#/components/schemas/EmailConsentState'
-    ApiRequestLogDetail:
-      allOf:
-      - $ref: '#/components/schemas/ApiRequestLogSummary'
-      - type: object
-        required:
-        - request
-        - response
-        properties:
-          request:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON request preview.
-          response:
-            type:
-            - object
-            - 'null'
-            additionalProperties: true
-            description: Privacy-safe bounded JSON response preview.
-          aiHelp:
-            type:
-            - object
-            - 'null'
-            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
-            required:
-            - answer
-            - language
-            - model
-            - createdAt
-            properties:
-              answer:
-                type: string
-                description: Plain-text analysis of the logged request.
-              language:
-                type: string
-                description: Language the analysis was written in.
-              model:
-                type: string
-                description: Model that produced the analysis.
-              createdAt:
-                type: string
-                format: date-time
-    UsageResponse:
-      type: object
-      description: API usage statistics for the active customer account
-      properties:
-        period_days:
-          type: integer
-        by_endpoint:
-          type: array
-          items:
-            type: object
-            properties:
-              endpoint:
-                type: string
-              requests:
-                type: integer
-              credits:
-                type: integer
-        by_date:
-          type: array
-          items:
-            type: object
-            properties:
-              date:
-                type: string
-                format: date
-              requests:
-                type: integer
-              credits:
-                type: integer
-        total_requests:
-          type: integer
-        total_credits_spent:
-          type: integer
-        previous_period:
-          type: object
-          description: Totals for the preceding period when compare=true
-          properties:
-            total_requests:
-              type: integer
-            total_credits_spent:
-              type: integer
-        trends:
-          type: object
-          description: Percentage changes from the preceding period when compare=true
-          properties:
-            requests_change_pct:
-              type: number
-            credits_change_pct:
-              type: number
-    EmailPreferenceCategories:
-      type: object
-      additionalProperties: false
-      required:
-      - required_transactional
-      - requested_alerts
-      - onboarding
-      - lifecycle
-      - digest
-      - product_updates
-      - reactivation
-      properties:
-        required_transactional:
-          type: boolean
-          enum:
-          - true
-          description: Always enabled for authentication, security, account, and billing messages.
-        requested_alerts:
-          type: boolean
-          default: true
-        onboarding:
-          type: boolean
-          default: true
-        lifecycle:
-          type: boolean
-          default: true
-        digest:
-          type: boolean
-          default: true
-        product_updates:
-          type: boolean
-          default: true
-        reactivation:
-          type: boolean
-          default: true
+          format: date-time
     EmailPreferencesUpdate:
       type: object
       additionalProperties: false
@@ -1401,13 +1394,58 @@ components:
               enum:
               - weekly
               - monthly
-    AccountInvitationCreateResponse:
+    ApiRequestLogDetail:
+      allOf:
+      - $ref: '#/components/schemas/ApiRequestLogSummary'
+      - type: object
+        required:
+        - request
+        - response
+        properties:
+          request:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON request preview.
+          response:
+            type:
+            - object
+            - 'null'
+            additionalProperties: true
+            description: Privacy-safe bounded JSON response preview.
+          aiHelp:
+            type:
+            - object
+            - 'null'
+            description: The stored AI analysis for this log, or null when none was generated yet. Only the most recent analysis is kept, and it expires with the log.
+            required:
+            - answer
+            - language
+            - model
+            - createdAt
+            properties:
+              answer:
+                type: string
+                description: Plain-text analysis of the logged request.
+              language:
+                type: string
+                description: Language the analysis was written in.
+              model:
+                type: string
+                description: Model that produced the analysis.
+              createdAt:
+                type: string
+                format: date-time
+    CustomerAccountSummaryResponse:
       type: object
       required:
-      - invitation
+      - account
       properties:
-        invitation:
-          $ref: '#/components/schemas/AccountInvitation'
+        success:
+          type: boolean
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
     ApiRequestLogSummary:
       type: object
       required:
@@ -1488,74 +1526,6 @@ components:
         expiresAt:
           type: string
           format: date-time
-    CreditBalanceResponse:
-      type: object
-      description: Current balance for the authenticated customer account
-      additionalProperties: false
-      required:
-      - credits
-      - free_credits
-      - paid_credits
-      - free_cycle_month
-      properties:
-        credits:
-          type: integer
-          description: Current total account credit balance
-        free_credits:
-          type: integer
-          description: Current account monthly free-credit balance
-        paid_credits:
-          type: integer
-          description: Current account paid credit balance
-        free_cycle_month:
-          type:
-          - string
-          - 'null'
-          description: Current monthly free-credit cycle in YYYY-MM format
-    EmailConsentState:
-      type:
-      - object
-      - 'null'
-      required:
-      - enabled
-      - source
-      - policy_version
-      - occurred_at
-      properties:
-        enabled:
-          type: boolean
-        source:
-          type: string
-          enum:
-          - dashboard
-          - signup
-          - email_unsubscribe
-          - admin
-          - import
-          - system
-        policy_version:
-          type: string
-        occurred_at:
-          type: string
-          format: date-time
-    CustomerAccountResponse:
-      type: object
-      required:
-      - account
-      - members
-      - invitations
-      properties:
-        account:
-          $ref: '#/components/schemas/CustomerAccountSummary'
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/CustomerAccountMember'
-        invitations:
-          type: array
-          description: Visible to the account owner. Admins and guests receive an empty array.
-          items:
-            $ref: '#/components/schemas/AccountInvitation'
     AccountInvitation:
       type: object
       required:
@@ -1584,33 +1554,429 @@ components:
         created_at:
           type: string
           format: date-time
-    CustomerAccountSummary:
+    CustomerAccountResponse:
       type: object
       required:
-      - id
-      - name
-      - role
+      - account
+      - members
+      - invitations
+      properties:
+        account:
+          $ref: '#/components/schemas/CustomerAccountSummary'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAccountMember'
+        invitations:
+          type: array
+          description: Visible to the account owner. Admins and guests receive an empty array.
+          items:
+            $ref: '#/components/schemas/AccountInvitation'
+    CreditBalanceResponse:
+      type: object
+      description: Current balance for the authenticated customer account
+      additionalProperties: false
+      required:
+      - credits
+      - free_credits
+      - paid_credits
+      - free_cycle_month
+      properties:
+        credits:
+          type: integer
+          description: Current total account credit balance
+        free_credits:
+          type: integer
+          description: Credits remaining from the account's current monthly allocation, whether it comes from DomScan's standard monthly plan or an active AppSumo license.
+        paid_credits:
+          type: integer
+          description: Current account paid credit balance
+        free_cycle_month:
+          type:
+          - string
+          - 'null'
+          description: Current UTC calendar month used for the monthly allocation, in YYYY-MM format.
+    ApiKeyCreateResponse:
+      type: object
+      description: Newly created API key (full key only shown once)
       properties:
         id:
           type: string
-          format: uuid
+        key:
+          type: string
+          description: Full API key - save this, shown only once!
+        prefix:
+          type: string
         name:
           type: string
+        account_credits:
+          type: integer
+          description: Current account-level credit balance after the key is created
+        created_at:
+          type: string
+          format: date-time
+        message:
+          type: string
+    EmailPreferences:
+      type: object
+      required:
+      - policy_version
+      - categories
+      - marketing_suppressed
+      - preferred_locale
+      - frequency
+      - consent
+      properties:
+        policy_version:
+          type: string
+          example: '2026-08-02'
+        categories:
+          $ref: '#/components/schemas/EmailPreferenceCategories'
+        marketing_suppressed:
+          type: boolean
+          default: false
+        preferred_locale:
+          type: string
+          enum:
+          - en
+          - es
+          - de
+          - fr
+          - pt
+          - ja
+          - zh
+          - ar
+          - it
+          - ko
+          - ru
+          - nl
+          - tr
+          - pl
+          - sv
+          default: en
+        frequency:
+          type: object
+          required:
+          - digest
+          properties:
+            digest:
+              type: string
+              enum:
+              - weekly
+              - monthly
+              default: monthly
+        consent:
+          type: object
+          required:
+          - requested_alerts
+          - onboarding
+          - lifecycle
+          - digest
+          - product_updates
+          - reactivation
+          - all_marketing
+          properties:
+            requested_alerts:
+              $ref: '#/components/schemas/EmailConsentState'
+            onboarding:
+              $ref: '#/components/schemas/EmailConsentState'
+            lifecycle:
+              $ref: '#/components/schemas/EmailConsentState'
+            digest:
+              $ref: '#/components/schemas/EmailConsentState'
+            product_updates:
+              $ref: '#/components/schemas/EmailConsentState'
+            reactivation:
+              $ref: '#/components/schemas/EmailConsentState'
+            all_marketing:
+              $ref: '#/components/schemas/EmailConsentState'
+    EmailPreferenceCategories:
+      type: object
+      additionalProperties: false
+      required:
+      - required_transactional
+      - requested_alerts
+      - onboarding
+      - lifecycle
+      - digest
+      - product_updates
+      - reactivation
+      properties:
+        required_transactional:
+          type: boolean
+          enum:
+          - true
+          description: Always enabled for authentication, security, account, and billing messages.
+        requested_alerts:
+          type: boolean
+          default: true
+        onboarding:
+          type: boolean
+          default: true
+        lifecycle:
+          type: boolean
+          default: true
+        digest:
+          type: boolean
+          default: true
+        product_updates:
+          type: boolean
+          default: true
+        reactivation:
+          type: boolean
+          default: true
+    UsageResponse:
+      type: object
+      description: API usage statistics for the active customer account
+      properties:
+        period_days:
+          type: integer
+        by_endpoint:
+          type: array
+          items:
+            type: object
+            properties:
+              endpoint:
+                type: string
+              requests:
+                type: integer
+              credits:
+                type: integer
+        by_date:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              requests:
+                type: integer
+              credits:
+                type: integer
+        total_requests:
+          type: integer
+        total_credits_spent:
+          type: integer
+        previous_period:
+          type: object
+          description: Totals for the preceding period when compare=true
+          properties:
+            total_requests:
+              type: integer
+            total_credits_spent:
+              type: integer
+        trends:
+          type: object
+          description: Percentage changes from the preceding period when compare=true
+          properties:
+            requests_change_pct:
+              type: number
+            credits_change_pct:
+              type: number
+    CustomerAccountMember:
+      type: object
+      required:
+      - user_id
+      - email
+      - role
+      - joined_at
+      - is_current_user
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type:
+          - string
+          - 'null'
+        picture:
+          type:
+          - string
+          - 'null'
+          format: uri
         role:
           type: string
           enum:
           - owner
           - admin
           - guest
-        owner_user_id:
+        joined_at:
           type: string
-          format: uuid
-        member_count:
+          format: date-time
+        is_current_user:
+          type: boolean
+    CreditsResponse:
+      type: object
+      description: Active customer account credit balance and transaction history
+      properties:
+        credits:
           type: integer
-          minimum: 1
+          description: Current account credit balance
+        free_credits:
+          type: integer
+          description: Credits remaining from the account's current monthly allocation, whether it comes from DomScan's standard monthly plan or an active AppSumo license.
+        paid_credits:
+          type: integer
+          description: Current account paid credit balance
+        free_cycle_month:
+          type:
+          - string
+          - 'null'
+          description: Current UTC calendar month used for the monthly allocation, in YYYY-MM format.
+        transactions:
+          type: array
+          items:
+            type: object
+            properties:
+              amount:
+                type: integer
+                description: Transaction amount (negative for usage)
+              balance_after:
+                type: integer
+              type:
+                type: string
+                enum:
+                - usage
+                - purchase
+                - auto_recharge
+                - refund
+                - signup_bonus
+                - monthly_grant
+                - admin_adjustment
+                - migration_opening_balance
+                - reconciliation_adjustment
+              description:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+    SuccessResponse:
+      type: object
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+          example: true
+    ErrorResponse:
+      type: object
+      description: Canonical error format shared by every API error response. Endpoint-specific fields (for example credits_remaining, login_url or evidence_summary) may appear next to error or inside it; clients should ignore fields they do not recognise.
+      additionalProperties: true
+      properties:
+        error:
+          type: object
+          additionalProperties: true
+          properties:
+            code:
+              type: string
+              description: Stable, upper-case machine code. Codes are never renamed; the full catalog with HTTP status, type and retryability is published as x-domscan-error-codes.
+              example: INVALID_DOMAIN
+            type:
+              type: string
+              enum:
+              - authentication_error
+              - credits_error
+              - permission_error
+              - not_found_error
+              - conflict_error
+              - rate_limit_error
+              - timeout_error
+              - validation_error
+              - upstream_error
+              - api_error
+              - request_error
+              description: Stable error category used by official SDK subclasses
+            message:
+              type: string
+              description: Human-readable error message
+              example: Invalid domain format
+            status:
+              type: integer
+              minimum: 400
+              maximum: 599
+              description: HTTP status repeated in the JSON error for queue and log processors
+            retryable:
+              type: boolean
+              description: Whether retrying can be appropriate after applying retry guidance
+            request_id:
+              type: string
+              description: Request identifier matching the X-Request-Id response header
+            suggestion:
+              type: string
+              description: Suggestion for fixing the error
+            details:
+              type: object
+              description: Optional structured context for the error
+              additionalProperties: true
+            retry_after:
+              type: integer
+              minimum: 0
+              description: Seconds to wait before retrying when the error is temporary
+              example: 300
+            docs_url:
+              type: string
+              description: Absolute link to the documentation section for this error
+              example: https://domscan.net/docs/check-availability
+          required:
+          - type
+          - code
+          - message
+          - status
+          - retryable
+          - request_id
+          - docs_url
+  headers:
+    XRateLimitLimit:
+      description: Burst capacity of the rate limit that applies to this API key.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitReset:
+      description: Unix time in seconds when the burst capacity is fully refilled.
+      schema:
+        type: integer
+        minimum: 0
+    XRateLimitRemaining:
+      description: Requests that can still be sent immediately before the rate limit applies.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsRemaining:
+      description: Credits remaining on the account after this request. Omitted when the balance is not already known without an extra lookup.
+      schema:
+        type: integer
+        minimum: 0
+    XCreditsCharged:
+      description: Credits charged by this request, net of any refund made in the same request. Sent on authenticated /v1 responses, including errors (0 when nothing was charged).
+      schema:
+        type: integer
+        minimum: 0
+    XFieldsIgnored:
+      description: 'Sent when `fields` was used and some paths matched nothing in this response: those paths, comma-separated, at most 20.'
+      schema:
+        type: string
   responses:
     BadRequest:
       description: Bad request - invalid parameters
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -1620,9 +1986,101 @@ components:
               code: BAD_REQUEST
               message: Invalid domain format
               suggestion: Domain must be a valid format like example.com
+              type: validation_error
+              status: 400
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/request-headers
+    PaymentRequired:
+      description: Insufficient credits for this request. Nothing is charged.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          schema:
+            type: integer
+          description: Credits remaining on the account
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INSUFFICIENT_CREDITS
+              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
+              credits_remaining: 0
+              credits_required: 2
+              purchase_url: https://domscan.net/billing
+              type: credits_error
+              status: 402
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/credits-pricing
+    Conflict:
+      description: The requested change conflicts with the current state.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: CONFLICT
+              message: The request conflicts with the current state.
+              type: conflict_error
+              status: 409
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
     RateLimited:
       description: Rate limit exceeded. Free accounts can sustain 120 requests per minute per account with a burst capacity of 60. Free bulk traffic is additionally limited to 20 requests per minute per account across all bulk endpoints and 100 per minute per IPv4 address or IPv6 /56 network. Paid accounts can sustain 600 requests per minute with a burst capacity of 120.
       headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+            example: 1791590400
+          description: Unix time in seconds when the limit that was exceeded allows a new request again.
         Retry-After:
           schema:
             type: integer
@@ -1634,15 +2092,6 @@ components:
             - free
             - paid
           description: The account plan whose policy was applied.
-        X-RateLimit-Limit:
-          schema:
-            type: integer
-          description: The immediate burst capacity, or the active bulk fixed-window limit when a bulk-specific limit is exceeded.
-        X-RateLimit-Remaining:
-          schema:
-            type: integer
-            example: 0
-          description: Immediate burst tokens remaining, or requests remaining in the active bulk fixed window.
         X-RateLimit-Policy:
           schema:
             type: string
@@ -1655,8 +2104,149 @@ components:
             error:
               code: RATE_LIMITED
               message: Rate limit exceeded. Please wait before making more requests.
+              type: rate_limit_error
+              status: 429
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/rate-limits
+              retry_after: 12
+    NotFound:
+      description: The requested resource was not found.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found.
+              type: not_found_error
+              status: 404
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+    Forbidden:
+      description: The signed-in member does not have permission to perform this action.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FORBIDDEN
+              message: You do not have permission to perform this action.
+              type: permission_error
+              status: 403
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+    EmailServiceUnavailable:
+      description: The invitation email could not be delivered, so the invitation was cancelled.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INVITATION_DELIVERY_FAILED
+              message: The invitation email could not be delivered. Please try again later.
+              type: upstream_error
+              status: 503
+              retryable: true
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
+    Gone:
+      description: The invitation has expired and can no longer be accepted.
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: INVITATION_EXPIRED
+              message: This invitation has expired.
+              type: request_error
+              status: 410
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/error-codes
     Unauthorized:
       description: 'Authentication required. All API endpoints require a valid API key (x-api-key header or Authorization: Bearer) or an active session cookie.'
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+          description: Request identifier; equals error.request_id in the body.
+        X-Credits-Charged:
+          $ref: '#/components/headers/XCreditsCharged'
+        X-Credits-Remaining:
+          $ref: '#/components/headers/XCreditsRemaining'
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/XRateLimitLimit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/XRateLimitRemaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/XRateLimitReset'
       content:
         application/json:
           schema:
@@ -1667,54 +2257,45 @@ components:
               message: 'Authentication required. Provide an API key via x-api-key header or Authorization: Bearer header.'
               docs: https://domscan.net/docs/authentication
               get_key: https://domscan.net/login
-    NotFound:
-      description: The requested account resource was not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Gone:
-      description: The invitation has expired and can no longer be accepted.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Conflict:
-      description: The requested account change conflicts with current account state.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Forbidden:
-      description: The signed-in member does not have permission to perform this action.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    PaymentRequired:
-      description: Insufficient credits for this request
-      headers:
-        X-Credits-Remaining:
-          schema:
-            type: integer
-          description: Credits remaining on your API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: INSUFFICIENT_CREDITS
-              message: Insufficient credits. This endpoint costs 2 credits but you have 0. Purchase more at https://domscan.net/billing or wait for your monthly reset.
-              credits_remaining: 0
-              credits_required: 2
-              purchase_url: https://domscan.net/billing
-    EmailServiceUnavailable:
-      description: The invitation email could not be delivered, so the invitation was cancelled.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+              type: authentication_error
+              status: 401
+              retryable: false
+              request_id: m5x7k2p-a9f3
+              docs_url: https://domscan.net/docs/authentication
+  parameters:
+    Fields:
+      name: fields
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: Comma-separated dot paths to keep in a successful JSON response, e.g. `domain,classification.status` (arrays apply the path to each item; max 50 paths, 6 levels). Unmatched paths are listed in X-Fields-Ignored. Cost is unchanged.
+      schema:
+        type: string
+      example: domain,classification.status
+    Naming:
+      name: naming
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`snake` returns every camelCase key of a successful JSON response in snake_case (for example `registrarName` becomes `registrar_name`); values are never changed. The `DomScan-Naming: snake` request header does the same; when both are sent this parameter wins, and `default` keeps the original names. Runs before `compact` and `fields`, so `fields` paths use snake_case. Error bodies are already snake_case. Cost is unchanged.'
+      schema:
+        type: string
+        enum:
+        - snake
+        - default
+      example: snake
+    Compact:
+      name: compact
+      in: query
+      required: false
+      x-domscan-global-parameter: true
+      description: '`true` drops serving metadata (meta timings and served_by, empty warnings/caveats/notes/errors arrays, a request_id that repeats X-Request-Id) from a successful JSON response. Data fields are never removed.'
+      schema:
+        type: string
+        enum:
+        - 'true'
+        - 'false'
+      example: 'true'
   securitySchemes:
     apiKey:
       type: apiKey
@@ -1755,11 +2336,468 @@ x-domscan-rate-limits:
     - X-RateLimit-Plan
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
+    - X-RateLimit-Reset
     - X-RateLimit-Policy
+    reset_header: X-RateLimit-Reset
     burst_headers:
     - X-RateLimit-Limit
     - X-RateLimit-Remaining
     policy_header: X-RateLimit-Policy
+x-domscan-error-codes:
+  BAD_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PARAMETER:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_JSON:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+  SUBDOMAIN_NOT_SUPPORTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  VALIDATION_ERROR:
+    status: 422
+    type: validation_error
+    retryable: false
+  INVALID_TLD:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: UNSUPPORTED_TLD
+  MISSING_DOMAIN:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  LOOKUP_ERROR:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSUPPORTED_REGISTRAR:
+    status: 400
+    type: validation_error
+    retryable: false
+  URL_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_INPUT:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REQUEST:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: BAD_REQUEST
+  INVALID_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+  MISSING_ID:
+    status: 400
+    type: validation_error
+    retryable: false
+    alias_of: MISSING_PARAMETER
+  INVALID_CURSOR:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_STATE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_HANDLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_PLATFORM:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_FREQUENCY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_IDEMPOTENCY_KEY:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_WEBHOOK_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_SITEMAP_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_REFERENCE:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVALID_BATCH_ITEM:
+    status: 400
+    type: validation_error
+    retryable: false
+  DISPOSABLE_EMAIL:
+    status: 400
+    type: validation_error
+    retryable: false
+  UNSAFE_TARGET_URL:
+    status: 400
+    type: validation_error
+    retryable: false
+  BODY_NOT_ALLOWED:
+    status: 400
+    type: validation_error
+    retryable: false
+  LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  JOB_LIMIT_EXCEEDED:
+    status: 400
+    type: validation_error
+    retryable: false
+  CORPUS_EXHAUSTED:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACTIVE_JOB_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  JOB_NOT_CANCELLABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  DOMAIN_LIMIT_REACHED:
+    status: 400
+    type: validation_error
+    retryable: false
+  FREQUENCY_RESTRICTED:
+    status: 403
+    type: permission_error
+    retryable: false
+  USE_HTTPS:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_DELETION_CONFIRMATION_REQUIRED:
+    status: 400
+    type: validation_error
+    retryable: false
+  NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  METHOD_NOT_ALLOWED:
+    status: 405
+    type: request_error
+    retryable: false
+  REQUEST_FAILED:
+    status: 413
+    type: request_error
+    retryable: false
+  RESULTS_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  AUTH_REQUIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_API_KEY:
+    status: 401
+    type: authentication_error
+    retryable: false
+  UNAUTHORIZED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  SESSION_EXPIRED:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_RAPIDAPI_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  INVALID_ZYLA_AUTH:
+    status: 401
+    type: authentication_error
+    retryable: false
+  FORBIDDEN:
+    status: 403
+    type: permission_error
+    retryable: false
+  CROSS_ORIGIN_REQUEST_BLOCKED:
+    status: 403
+    type: permission_error
+    retryable: false
+  RAPIDAPI_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  ZYLA_ENDPOINT_NOT_AVAILABLE:
+    status: 403
+    type: permission_error
+    retryable: false
+  DRY_RUN_NOT_AVAILABLE:
+    status: 400
+    type: validation_error
+    retryable: false
+  ACCOUNT_BILLING_ACCESS_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_ACCESS_CHANGED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  LEGACY_WEBHOOK_RETIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_CONFLICT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  IDEMPOTENCY_KEY_REUSED:
+    status: 422
+    type: validation_error
+    retryable: false
+  IDEMPOTENCY_IN_PROGRESS:
+    status: 409
+    type: conflict_error
+    retryable: true
+  TOO_EARLY:
+    status: 425
+    type: request_error
+    retryable: true
+  ACCOUNT_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  ACCOUNT_OWNER_REQUIRED:
+    status: 403
+    type: permission_error
+    retryable: false
+  ACCOUNT_OWNER_CANNOT_LEAVE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_OWNER_HAS_MEMBERS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_LIMIT:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_MEMBER_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_ALREADY_MEMBER:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_NOT_JOINABLE:
+    status: 409
+    type: conflict_error
+    retryable: false
+  ACCOUNT_INVITATION_RATE_LIMIT:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  ACCOUNT_NAME_INVALID:
+    status: 400
+    type: validation_error
+    retryable: false
+  INVITATION_EXISTS:
+    status: 409
+    type: conflict_error
+    retryable: false
+  INVITATION_EXPIRED:
+    status: 410
+    type: request_error
+    retryable: false
+  INVITATION_EMAIL_MISMATCH:
+    status: 403
+    type: permission_error
+    retryable: false
+  INVITATION_NOT_FOUND:
+    status: 404
+    type: not_found_error
+    retryable: false
+  INVITATION_DELIVERY_FAILED:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CRITICAL_EMAIL_REQUIRED:
+    status: 409
+    type: conflict_error
+    retryable: false
+  AI_HELP_FAILED:
+    status: 502
+    type: upstream_error
+    retryable: true
+  AI_HELP_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  AI_HELP_LIMIT_REACHED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  INSUFFICIENT_CREDITS:
+    status: 402
+    type: credits_error
+    retryable: false
+  CREDIT_DEDUCTION_FAILED:
+    status: 500
+    type: credits_error
+    retryable: false
+  RATE_LIMITED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+  RATE_LIMIT_EXCEEDED:
+    status: 429
+    type: rate_limit_error
+    retryable: true
+    alias_of: RATE_LIMITED
+  RDAP_RATE_LIMITED:
+    status: 503
+    type: rate_limit_error
+    retryable: true
+  UPSTREAM_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  UPSTREAM_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  SERVICE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  TIMEOUT:
+    status: 504
+    type: timeout_error
+    retryable: true
+  EXTERNAL_SERVICE_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SOURCE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_UNAVAILABLE
+  FETCH_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+    alias_of: UPSTREAM_ERROR
+  SERVICE_BUSY:
+    status: 503
+    type: upstream_error
+    retryable: true
+  DATABASE_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  RDAP_UNREACHABLE:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_PROTOCOL_ERROR:
+    status: 502
+    type: upstream_error
+    retryable: true
+  RDAP_ERROR:
+    status: 503
+    type: upstream_error
+    retryable: true
+  CERTIFICATE_SOURCES_UNAVAILABLE:
+    status: 503
+    type: upstream_error
+    retryable: true
+  INTERNAL:
+    status: 500
+    type: api_error
+    retryable: false
+  INTERNAL_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+    alias_of: INTERNAL
+  CONFIGURATION_ERROR:
+    status: 500
+    type: api_error
+    retryable: false
+  UPDATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  ADD_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  REMOVE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  DELETE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  MARK_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  JOB_CREATE_FAILED:
+    status: 500
+    type: api_error
+    retryable: false
+  BILLING_CONTEXT_REQUIRED:
+    status: 500
+    type: api_error
+    retryable: false
 x-domscan-response-metadata:
   compatibility: additive response headers; established JSON success bodies are unchanged
   headers:
@@ -1767,11 +2805,14 @@ x-domscan-response-metadata:
     X-API-Version: DomScan API release version
     X-Response-Time: Server processing duration in milliseconds
     X-Credits-Requested: Credits requested before refund settlement
-    X-Credits-Charged: Credits retained after settlement
+    X-Credits-Charged: Credits retained after settlement, net of any refund in the request
     X-Credits-Refunded: Credits returned during settlement
-    X-Credits-Remaining: Authenticated account balance after the request
+    X-Credits-Remaining: Authenticated account balance after the request; omitted when it is not known without an extra lookup
     X-Data-Freshness: fresh, cached, stale, mixed, or unknown
     X-RateLimit-Limit: Active burst capacity
     X-RateLimit-Remaining: Remaining burst capacity
+    X-RateLimit-Reset: Unix time in seconds when the burst capacity is full again
     X-RateLimit-Plan: Active plan, or not_applicable before authentication
     X-RateLimit-Policy: Machine-readable active rate policy
+    Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
+  mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.
