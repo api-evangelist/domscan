@@ -2759,3 +2759,9 @@ x-domscan-response-metadata:
     X-RateLimit-Policy: Machine-readable active rate policy
     Idempotent-Replayed: true when the response is a stored Idempotency-Key replay
   mcp: POST /mcp responses carry X-Credits-Charged (summed over a JSON-RPC batch, which only protocols before 2025-06-18 accept, at most 20 messages) and X-Credits-Remaining when known. MCP tool calls do not use the REST burst bucket, so X-RateLimit headers are not sent there.
+x-provenance:
+  method: harvested
+  publisher: DomScan
+  source: https://domscan.net/v1/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
