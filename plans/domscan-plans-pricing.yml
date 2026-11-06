@@ -50,7 +50,7 @@ plans:
   unit: 1,000,000 credits
   included_quota: $0.00009 per credit, never expires, auto-recharge, priority support
 x-canonical:
-  generated: '2026-11-02'
+  generated: '2026-11-06'
   vocabulary: engine/economics/plans-canonical.yml
   models:
   - hybrid
